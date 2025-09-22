@@ -1,0 +1,981 @@
+console.log('Loading SimpleMultiplayerIntegration class...');
+
+class SimpleMultiplayerIntegration {
+    constructor(mapSystem) {
+        console.log('SimpleMultiplayerIntegration constructor called');
+        this.mapSystem = mapSystem;
+        this.wsManager = new WebSocketManager();
+        this.isInMultiplayer = false;
+        this.currentRoom = null;
+        this.playerId = null;
+        this.playerName = null;
+        this.players = new Map();
+        this.chatMessages = [];
+        this.currentTurn = 0;
+        this.turnOrder = [];
+        this.pendingActions = new Map();
+        this.playerColors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+            '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
+        ];
+    }
+
+    async initializeMultiplayer() {
+        try {
+            await this.wsManager.connect();
+            this.setupEventHandlers();
+            console.log('Multiplayer initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize multiplayer:', error);
+        }
+    }
+
+    setupEventHandlers() {
+        this.wsManager.on('game_created', (data) => {
+            this.currentRoom = data.roomCode;
+            this.playerId = data.playerId;
+            this.playerName = data.game.players[0].username;
+            this.isInMultiplayer = true;
+            this.updatePlayersList(data.game.players);
+            this.updateUI();
+            console.log('Game created:', data.roomCode, 'as', this.playerName);
+        });
+
+        this.wsManager.on('game_joined', (data) => {
+            this.currentRoom = data.roomCode;
+            this.playerId = data.playerId;
+            this.playerName = data.game.players.find(p => p.id === data.playerId)?.username || 'Player';
+            this.isInMultiplayer = true;
+            this.updatePlayersList(data.game.players);
+            this.updateUI();
+            console.log('Successfully joined game:', data.roomCode, 'as', this.playerName);
+        });
+
+        this.wsManager.on('player_joined', (data) => {
+            console.log('Player joined:', data.player.username);
+            this.updatePlayersList(data.game.players);
+            this.turnOrder = data.game.gameState.turnOrder;
+            this.updateUI();
+        });
+
+        this.wsManager.on('turn_changed', (data) => {
+            this.currentTurn = data.currentTurn;
+            this.turnOrder = data.turnOrder;
+            this.updateUI();
+            console.log('Turn changed to:', data.currentTurn);
+        });
+
+        this.wsManager.on('action_executed', (data) => {
+            this.handleActionExecuted(data);
+        });
+
+        this.wsManager.on('action_rejected', (data) => {
+            this.handleActionRejected(data);
+        });
+
+        this.wsManager.on('trade_offer', (data) => {
+            this.handleTradeOffer(data);
+        });
+
+        this.wsManager.on('trade_completed', (data) => {
+            this.handleTradeCompleted(data);
+        });
+
+        this.wsManager.on('trade_rejected', (data) => {
+            this.handleTradeRejected(data);
+        });
+
+        this.wsManager.on('victory_achieved', (data) => {
+            this.handleVictoryAchieved(data);
+        });
+
+        this.wsManager.on('game_state_update', (data) => {
+            this.handleGameStateUpdate(data);
+        });
+
+        // Team management events
+        this.wsManager.on('team_created', (data) => {
+            this.handleTeamCreated(data);
+        });
+
+        this.wsManager.on('team_joined', (data) => {
+            this.handleTeamJoined(data);
+        });
+
+        this.wsManager.on('team_left', (data) => {
+            this.handleTeamLeft(data);
+        });
+
+        this.wsManager.on('team_member_joined', (data) => {
+            this.handleTeamMemberJoined(data);
+        });
+
+        this.wsManager.on('team_member_left', (data) => {
+            this.handleTeamMemberLeft(data);
+        });
+
+        this.wsManager.on('team_list_updated', (data) => {
+            this.handleTeamListUpdated(data);
+        });
+
+        // Shared resources events
+        this.wsManager.on('shared_resources_updated', (data) => {
+            this.handleSharedResourcesUpdated(data);
+        });
+
+        this.wsManager.on('shared_resources_failed', (data) => {
+            this.handleSharedResourcesFailed(data);
+        });
+
+        // Joint projects events
+        this.wsManager.on('joint_project_created', (data) => {
+            this.handleJointProjectCreated(data);
+        });
+
+        this.wsManager.on('project_progress_updated', (data) => {
+            this.handleProjectProgressUpdated(data);
+        });
+
+        // Team objectives events
+        this.wsManager.on('team_objective_created', (data) => {
+            this.handleTeamObjectiveCreated(data);
+        });
+
+        this.wsManager.on('objectives_completed', (data) => {
+            this.handleObjectivesCompleted(data);
+        });
+
+        // Team chat events
+        this.wsManager.on('team_chat_message', (data) => {
+            this.handleTeamChatMessage(data);
+        });
+
+        // Map markers events
+        this.wsManager.on('map_marker_placed', (data) => {
+            this.handleMapMarkerPlaced(data);
+        });
+
+        // Game mode events
+        this.wsManager.on('game_modes_list', (data) => {
+            this.handleGameModesList(data);
+        });
+
+        this.wsManager.on('game_creation_failed', (data) => {
+            this.handleGameCreationFailed(data);
+        });
+    }
+
+    showMultiplayerUI() {
+        console.log('showMultiplayerUI called');
+        this.createMultiplayerPanel();
+        this.updateUI();
+        console.log('Multiplayer UI created and updated');
+    }
+
+    createMultiplayerPanel() {
+        this.multiplayerPanel = document.createElement('div');
+        this.multiplayerPanel.id = 'multiplayer-panel';
+        this.multiplayerPanel.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 350px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            color: white;
+            font-family: Arial, sans-serif;
+            max-height: 80vh;
+            overflow-y: auto;
+        `;
+
+        this.multiplayerPanel.innerHTML = `
+            <h3 style="margin: 0 0 15px 0; text-align: center;">🌐 Multiplayer</h3>
+            <div id="connection-status" style="margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px; text-align: center;">
+                <span id="status-text">Connecting...</span>
+            </div>
+            <div id="game-mode-selection" style="margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Game Mode:</h4>
+                <select id="game-mode-select" style="width: 100%; padding: 6px; margin-bottom: 8px; border: none; border-radius: 3px; background: rgba(255,255,255,0.9);">
+                    <option value="free_for_all">Free-for-All City Building</option>
+                    <option value="team_based">Team-Based City Development</option>
+                    <option value="competitive">Competitive Resource Management</option>
+                    <option value="collaborative">Collaborative Megacity Building</option>
+                </select>
+                <div id="game-mode-description" style="font-size: 12px; color: #ccc; margin-bottom: 8px;">
+                    Build your city independently, compete for resources and territory
+                </div>
+            </div>
+            <div id="room-controls" style="margin-bottom: 15px;">
+                <button id="create-game-btn" style="width: 100%; padding: 8px; margin-bottom: 8px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Create Game</button>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="room-code-input" placeholder="Room Code" style="flex: 1; padding: 8px; border: none; border-radius: 5px;">
+                    <button id="join-game-btn" style="padding: 8px 15px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">Join</button>
+                </div>
+            </div>
+            <div id="room-info" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <div><strong>Room:</strong> <span id="room-code-display"></span></div>
+                <div><strong>Players:</strong> <span id="player-count">1</span></div>
+                <div><strong>Your Turn:</strong> <span id="turn-indicator">No</span></div>
+                <div id="pending-actions" style="display: none; margin-top: 8px; padding: 5px; background: rgba(255,193,7,0.2); border-radius: 3px; font-size: 12px;">
+                    <span id="pending-count">0</span> actions pending...
+                </div>
+            </div>
+            <div id="players-list" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Players:</h4>
+                <div id="players-container"></div>
+            </div>
+            <div id="victory-conditions" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Victory Conditions:</h4>
+                <div id="victory-list"></div>
+            </div>
+            <div id="trading-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Trading:</h4>
+                <button id="initiate-trade-btn" style="width: 100%; padding: 6px; margin-bottom: 8px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Initiate Trade</button>
+                <div id="trade-offers" style="max-height: 100px; overflow-y: auto;"></div>
+            </div>
+            <div id="team-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Team:</h4>
+                <div id="team-info" style="font-size: 12px; margin-bottom: 8px;">
+                    <div>Status: <span id="team-status">No Team</span></div>
+                    <div>Members: <span id="team-members">0</span></div>
+                </div>
+                <button id="create-team-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Create Team</button>
+                <button id="join-team-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Join Team</button>
+                <button id="leave-team-btn" style="display: none; width: 100%; padding: 6px; margin-bottom: 4px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Leave Team</button>
+            </div>
+            <div id="shared-resources-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Shared Resources:</h4>
+                <div id="shared-resources-display" style="font-size: 12px; margin-bottom: 8px;">
+                    <div>Wood: <span id="shared-wood">0</span></div>
+                    <div>Ore: <span id="shared-ore">0</span></div>
+                    <div>Power: <span id="shared-power">0</span></div>
+                    <div>Goods: <span id="shared-goods">0</span></div>
+                </div>
+                <button id="contribute-resources-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Contribute Resources</button>
+            </div>
+            <div id="joint-projects-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Joint Projects:</h4>
+                <div id="projects-list" style="max-height: 100px; overflow-y: auto; font-size: 12px;"></div>
+                <button id="create-project-btn" style="width: 100%; padding: 6px; margin-top: 8px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Create Project</button>
+            </div>
+            <div id="team-chat-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0;">Team Chat:</h4>
+                <div id="team-chat-messages" style="height: 100px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 3px; margin-bottom: 8px; font-size: 12px;"></div>
+                <input type="text" id="team-chat-input" placeholder="Type team message..." style="width: 100%; padding: 4px; border: none; border-radius: 3px; font-size: 12px;">
+            </div>
+            <button id="next-turn-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Next Turn</button>
+            <button id="leave-game-btn" style="display: none; width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Leave Game</button>
+        `;
+
+        document.body.appendChild(this.multiplayerPanel);
+        this.setupUIEventListeners();
+    }
+
+    setupUIEventListeners() {
+        console.log('Setting up UI event listeners...');
+        const createBtn = document.getElementById('create-game-btn');
+        const joinBtn = document.getElementById('join-game-btn');
+        const leaveBtn = document.getElementById('leave-game-btn');
+        
+        if (createBtn) {
+            console.log('Create game button found, adding listener');
+            createBtn.addEventListener('click', () => {
+                console.log('Create game button clicked!');
+                this.createGame();
+            });
+        } else {
+            console.error('Create game button not found!');
+        }
+        
+        if (joinBtn) {
+            joinBtn.addEventListener('click', () => this.joinGame());
+        }
+        
+        if (leaveBtn) {
+            leaveBtn.addEventListener('click', () => this.leaveGame());
+        }
+
+        // Game mode selection
+        const gameModeSelect = document.getElementById('game-mode-select');
+        if (gameModeSelect) {
+            gameModeSelect.addEventListener('change', () => this.updateGameModeDescription());
+        }
+
+        const nextTurnBtn = document.getElementById('next-turn-btn');
+        if (nextTurnBtn) {
+            nextTurnBtn.addEventListener('click', () => this.advanceTurn());
+        }
+
+        const initiateTradeBtn = document.getElementById('initiate-trade-btn');
+        if (initiateTradeBtn) {
+            initiateTradeBtn.addEventListener('click', () => this.showTradeDialog());
+        }
+
+        // Team management buttons
+        const createTeamBtn = document.getElementById('create-team-btn');
+        if (createTeamBtn) {
+            createTeamBtn.addEventListener('click', () => this.showCreateTeamDialog());
+        }
+
+        const joinTeamBtn = document.getElementById('join-team-btn');
+        if (joinTeamBtn) {
+            joinTeamBtn.addEventListener('click', () => this.showJoinTeamDialog());
+        }
+
+        const leaveTeamBtn = document.getElementById('leave-team-btn');
+        if (leaveTeamBtn) {
+            leaveTeamBtn.addEventListener('click', () => this.leaveTeam());
+        }
+
+        // Shared resources buttons
+        const contributeResourcesBtn = document.getElementById('contribute-resources-btn');
+        if (contributeResourcesBtn) {
+            contributeResourcesBtn.addEventListener('click', () => this.showContributeResourcesDialog());
+        }
+
+        // Joint projects buttons
+        const createProjectBtn = document.getElementById('create-project-btn');
+        if (createProjectBtn) {
+            createProjectBtn.addEventListener('click', () => this.showCreateProjectDialog());
+        }
+
+        // Team chat
+        const teamChatInput = document.getElementById('team-chat-input');
+        if (teamChatInput) {
+            teamChatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendTeamChatMessage();
+                }
+            });
+        }
+    }
+
+    updatePlayersList(players) {
+        this.players.clear();
+        players.forEach(player => {
+            this.players.set(player.id, player);
+        });
+        this.updatePlayersDisplay();
+    }
+
+    updatePlayersDisplay() {
+        const playersContainer = document.getElementById('players-container');
+        if (!playersContainer) return;
+
+        playersContainer.innerHTML = '';
+        this.players.forEach((player, playerId) => {
+            const playerDiv = document.createElement('div');
+            playerDiv.style.cssText = `
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+                padding: 5px;
+                background: rgba(255,255,255,0.1);
+                border-radius: 5px;
+            `;
+            
+            const isCurrentPlayer = playerId === this.playerId;
+            const isCurrentTurn = this.turnOrder[this.currentTurn] === playerId;
+            
+            playerDiv.innerHTML = `
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: ${player.color}; margin-right: 8px; ${isCurrentTurn ? 'box-shadow: 0 0 8px #fff;' : ''}"></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: ${isCurrentPlayer ? 'bold' : 'normal'}; color: ${isCurrentPlayer ? '#FFD700' : 'white'};">${player.username} ${isCurrentPlayer ? '(You)' : ''}</div>
+                    <div style="font-size: 12px; opacity: 0.8;">
+                        Wood: ${player.resources.wood} | Ore: ${player.resources.ore} | Power: ${player.resources.power}
+                    </div>
+                </div>
+                ${isCurrentTurn ? '<div style="color: #4CAF50; font-weight: bold;">TURN</div>' : ''}
+            `;
+            
+            playersContainer.appendChild(playerDiv);
+        });
+    }
+
+    updateUI() {
+        const statusText = document.getElementById('status-text');
+        const roomControls = document.getElementById('room-controls');
+        const roomInfo = document.getElementById('room-info');
+        const playersList = document.getElementById('players-list');
+        const leaveBtn = document.getElementById('leave-game-btn');
+
+        if (this.wsManager.isConnected) {
+            statusText.textContent = 'Connected';
+            statusText.style.color = '#4CAF50';
+        } else {
+            statusText.textContent = 'Disconnected';
+            statusText.style.color = '#f44336';
+        }
+
+        if (this.isInMultiplayer) {
+            roomControls.style.display = 'none';
+            roomInfo.style.display = 'block';
+            playersList.style.display = 'block';
+            leaveBtn.style.display = 'block';
+            
+            // Show new panels
+            const victoryConditions = document.getElementById('victory-conditions');
+            const tradingPanel = document.getElementById('trading-panel');
+            const teamPanel = document.getElementById('team-panel');
+            const sharedResourcesPanel = document.getElementById('shared-resources-panel');
+            const jointProjectsPanel = document.getElementById('joint-projects-panel');
+            const teamChatPanel = document.getElementById('team-chat-panel');
+            
+            if (victoryConditions) victoryConditions.style.display = 'block';
+            if (tradingPanel) tradingPanel.style.display = 'block';
+            if (teamPanel) teamPanel.style.display = 'block';
+            if (sharedResourcesPanel) sharedResourcesPanel.style.display = 'block';
+            if (jointProjectsPanel) jointProjectsPanel.style.display = 'block';
+            if (teamChatPanel) teamChatPanel.style.display = 'block';
+            
+            document.getElementById('room-code-display').textContent = this.currentRoom;
+            document.getElementById('player-count').textContent = this.players.size;
+            
+            const isMyTurn = this.turnOrder[this.currentTurn] === this.playerId;
+            document.getElementById('turn-indicator').textContent = isMyTurn ? 'Yes' : 'No';
+            document.getElementById('turn-indicator').style.color = isMyTurn ? '#4CAF50' : '#f44336';
+            
+            // Show/hide next turn button
+            const nextTurnBtn = document.getElementById('next-turn-btn');
+            if (nextTurnBtn) {
+                nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
+            }
+            
+            this.updatePlayersDisplay();
+            this.updateVictoryConditions();
+        } else {
+            roomControls.style.display = 'block';
+            roomInfo.style.display = 'none';
+            playersList.style.display = 'none';
+            leaveBtn.style.display = 'none';
+            
+            // Hide new panels
+            const victoryConditions = document.getElementById('victory-conditions');
+            const tradingPanel = document.getElementById('trading-panel');
+            if (victoryConditions) victoryConditions.style.display = 'none';
+            if (tradingPanel) tradingPanel.style.display = 'none';
+            
+            const nextTurnBtn = document.getElementById('next-turn-btn');
+            if (nextTurnBtn) {
+                nextTurnBtn.style.display = 'none';
+            }
+        }
+    }
+
+    createGame() {
+        const playerName = prompt('Enter your name:') || 'Player';
+        const gameMode = document.getElementById('game-mode-select')?.value || 'free_for_all';
+        console.log('Creating game with player name:', playerName, 'in mode:', gameMode);
+        this.wsManager.send('create_game', {
+            playerName: playerName,
+            gameMode: gameMode
+        });
+    }
+
+    joinGame() {
+        const roomCode = document.getElementById('room-code-input').value.trim();
+        if (!roomCode) {
+            alert('Please enter a room code');
+            return;
+        }
+        this.wsManager.send('join_game', {
+            roomCode: roomCode,
+            playerName: prompt('Enter your name:') || 'Player'
+        });
+    }
+
+    leaveGame() {
+        this.wsManager.send('leave_game', {});
+        this.isInMultiplayer = false;
+        this.currentRoom = null;
+        this.playerId = null;
+        this.players.clear();
+        this.updateUI();
+    }
+
+    sendGameAction(action, row, col, attribute, className) {
+        if (!this.isInMultiplayer) return;
+        
+        const actionId = `${this.playerId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Track pending action
+        this.pendingActions.set(actionId, {
+            type: action,
+            row: row,
+            col: col,
+            attribute: attribute,
+            className: className,
+            timestamp: Date.now()
+        });
+        
+        this.updatePendingActionsDisplay();
+        
+        this.wsManager.send('game_action', {
+            action: action,
+            row: row,
+            col: col,
+            attribute: attribute,
+            className: className,
+            playerId: this.playerId,
+            timestamp: Date.now()
+        });
+    }
+
+    updatePendingActionsDisplay() {
+        const pendingDiv = document.getElementById('pending-actions');
+        const pendingCount = document.getElementById('pending-count');
+        
+        if (pendingDiv && pendingCount) {
+            const count = this.pendingActions.size;
+            if (count > 0) {
+                pendingDiv.style.display = 'block';
+                pendingCount.textContent = count;
+            } else {
+                pendingDiv.style.display = 'none';
+            }
+        }
+    }
+
+    handleActionExecuted(data) {
+        console.log('Action executed:', data);
+        
+        // Remove from pending actions if it was ours
+        this.pendingActions.forEach((action, actionId) => {
+            if (action.row === data.row && action.col === data.col && 
+                action.type === data.type && action.attribute === data.attribute) {
+                this.pendingActions.delete(actionId);
+            }
+        });
+        
+        this.updatePendingActionsDisplay();
+        
+        if (data.type === 'place') {
+            // Update the cell data
+            this.mapSystem.cells[data.row][data.col].attribute = data.attribute;
+            this.mapSystem.cells[data.row][data.col].class = data.className;
+            
+            // Update visual representation
+            this.mapSystem.updateCellVisual(data.row, data.col);
+            
+            // Update stats
+            this.mapSystem.updateStats();
+            
+            console.log(`Placed ${data.attribute} at (${data.row}, ${data.col})`);
+        } else if (data.type === 'remove') {
+            // Erase the cell
+            this.mapSystem.erasePlayerModifications(data.row, data.col);
+            
+            // Update visual representation
+            this.mapSystem.updateCellVisual(data.row, data.col);
+            
+            // Update stats
+            this.mapSystem.updateStats();
+            
+            console.log(`Removed building at (${data.row}, ${data.col})`);
+        }
+    }
+
+    handleActionRejected(data) {
+        console.log('Action rejected:', data);
+        
+        // Remove from pending actions
+        this.pendingActions.delete(data.actionId);
+        this.updatePendingActionsDisplay();
+        
+        this.showActionRejectedMessage(data.reason);
+    }
+
+    showActionRejectedMessage(reason) {
+        // Create a temporary notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f44336;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            text-align: center;
+        `;
+        notification.textContent = `Action Rejected: ${reason}`;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+
+    isInMultiplayerMode() {
+        return this.isInMultiplayer;
+    }
+
+    isMyTurn() {
+        if (!this.isInMultiplayer || this.turnOrder.length === 0) return true;
+        return this.turnOrder[this.currentTurn] === this.playerId;
+    }
+
+    advanceTurn() {
+        if (!this.isInMultiplayer) return;
+        
+        this.wsManager.send('advance_turn', {
+            roomCode: this.currentRoom,
+            playerId: this.playerId
+        });
+    }
+
+    canPlaceBuilding() {
+        return this.isInMultiplayer ? this.isMyTurn() : true;
+    }
+
+    // Victory conditions
+    updateVictoryConditions() {
+        const victoryList = document.getElementById('victory-list');
+        if (!victoryList) return;
+
+        victoryList.innerHTML = `
+            <div style="font-size: 12px; margin-bottom: 5px;">
+                <div>🏙️ Population: <span id="population-progress">0/1000</span></div>
+                <div>⚡ Efficiency: <span id="efficiency-progress">0/80%</span></div>
+                <div>💰 Resources: <span id="resources-progress">0/5000</span></div>
+            </div>
+        `;
+    }
+
+    // Trading system
+    showTradeDialog() {
+        const targetPlayer = prompt('Enter target player name:');
+        if (!targetPlayer) return;
+
+        const targetPlayerId = Array.from(this.players.keys()).find(id => 
+            this.players.get(id).username === targetPlayer
+        );
+
+        if (!targetPlayerId) {
+            alert('Player not found!');
+            return;
+        }
+
+        const resources = prompt('Resources to give (format: wood:10,ore:5):');
+        const payment = prompt('Resources to receive (format: wood:15,ore:8):');
+
+        if (resources && payment) {
+            this.wsManager.send('initiate_trade', {
+                targetPlayerId: targetPlayerId,
+                resources: this.parseResourceString(resources),
+                payment: this.parseResourceString(payment)
+            });
+        }
+    }
+
+    parseResourceString(str) {
+        const resources = {};
+        str.split(',').forEach(item => {
+            const [resource, amount] = item.split(':');
+            if (resource && amount) {
+                resources[resource.trim()] = parseInt(amount.trim());
+            }
+        });
+        return resources;
+    }
+
+    handleTradeOffer(data) {
+        const accept = confirm(`${data.fromPlayerName} wants to trade:\nGive: ${JSON.stringify(data.resources)}\nReceive: ${JSON.stringify(data.payment)}\n\nAccept trade?`);
+        
+        this.wsManager.send('trade_response', {
+            fromPlayerId: data.fromPlayerId,
+            accepted: accept,
+            resources: data.resources,
+            payment: data.payment
+        });
+    }
+
+    handleTradeCompleted(data) {
+        this.showNotification('Trade completed successfully!', 'success');
+    }
+
+    handleTradeRejected(data) {
+        this.showNotification('Trade was rejected', 'error');
+    }
+
+    // Victory handling
+    handleVictoryAchieved(data) {
+        const winners = data.winners.map(w => `${w.playerName} (${w.condition})`).join(', ');
+        this.showNotification(`Victory! Winners: ${winners}`, 'victory');
+    }
+
+    // Game state updates
+    handleGameStateUpdate(data) {
+        this.updatePlayersList(data.players);
+        this.updateUI();
+    }
+
+    // Utility methods
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        const colors = {
+            success: '#4CAF50',
+            error: '#f44336',
+            victory: '#FFD700',
+            info: '#2196F3'
+        };
+        
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${colors[type] || colors.info};
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            text-align: center;
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+
+    // Team management methods
+    showCreateTeamDialog() {
+        const teamName = prompt('Enter team name:');
+        if (teamName) {
+            this.wsManager.send('create_team', { teamName: teamName });
+        }
+    }
+
+    showJoinTeamDialog() {
+        const teamId = prompt('Enter team ID to join:');
+        if (teamId) {
+            this.wsManager.send('join_team', { teamId: teamId });
+        }
+    }
+
+    leaveTeam() {
+        this.wsManager.send('leave_team', {});
+    }
+
+    // Shared resources methods
+    showContributeResourcesDialog() {
+        const resources = prompt('Resources to contribute (format: wood:10,ore:5):');
+        if (resources) {
+            this.wsManager.send('contribute_resources', {
+                resources: this.parseResourceString(resources)
+            });
+        }
+    }
+
+    // Joint projects methods
+    showCreateProjectDialog() {
+        const projectType = prompt('Project type (mega_power_plant, trade_network, mega_city):');
+        const location = prompt('Location (x,y):');
+        const cost = prompt('Cost (format: wood:100,ore:50):');
+        
+        if (projectType && location && cost) {
+            const [x, y] = location.split(',').map(Number);
+            this.wsManager.send('create_joint_project', {
+                projectType: projectType,
+                location: { x: x, y: y },
+                cost: this.parseResourceString(cost)
+            });
+        }
+    }
+
+    // Team chat methods
+    sendTeamChatMessage() {
+        const input = document.getElementById('team-chat-input');
+        if (input && input.value.trim()) {
+            this.wsManager.send('team_chat_message', { message: input.value });
+            input.value = '';
+        }
+    }
+
+    // Event handlers for cooperative features
+    handleTeamCreated(data) {
+        this.currentTeam = data.team;
+        this.updateTeamUI();
+        this.showNotification('Team created successfully!', 'success');
+    }
+
+    handleTeamJoined(data) {
+        this.currentTeam = data.team;
+        this.updateTeamUI();
+        this.showNotification('Joined team successfully!', 'success');
+    }
+
+    handleTeamLeft(data) {
+        this.currentTeam = null;
+        this.updateTeamUI();
+        this.showNotification('Left team', 'info');
+    }
+
+    handleTeamMemberJoined(data) {
+        this.updateTeamUI();
+        this.showNotification(`${data.playerName} joined the team!`, 'info');
+    }
+
+    handleTeamMemberLeft(data) {
+        this.updateTeamUI();
+        this.showNotification(`${data.playerName} left the team`, 'info');
+    }
+
+    handleTeamListUpdated(data) {
+        // Update team list if needed
+        console.log('Team list updated:', data.teams);
+    }
+
+    handleSharedResourcesUpdated(data) {
+        this.updateSharedResourcesDisplay(data.sharedResources);
+    }
+
+    handleSharedResourcesFailed(data) {
+        this.showNotification(`Failed to use shared resources: ${data.reason}`, 'error');
+    }
+
+    handleJointProjectCreated(data) {
+        this.updateProjectsList();
+        this.showNotification('New joint project created!', 'success');
+    }
+
+    handleProjectProgressUpdated(data) {
+        this.updateProjectsList();
+        if (data.project.status === 'completed') {
+            this.showNotification('Joint project completed!', 'victory');
+        }
+    }
+
+    handleTeamObjectiveCreated(data) {
+        this.updateObjectivesList();
+        this.showNotification('New team objective created!', 'info');
+    }
+
+    handleObjectivesCompleted(data) {
+        this.updateObjectivesList();
+        this.showNotification('Team objective completed!', 'victory');
+    }
+
+    handleTeamChatMessage(data) {
+        this.addTeamChatMessage(data);
+    }
+
+    handleMapMarkerPlaced(data) {
+        this.addMapMarker(data);
+    }
+
+    // UI update methods
+    updateTeamUI() {
+        const teamStatus = document.getElementById('team-status');
+        const teamMembers = document.getElementById('team-members');
+        const createTeamBtn = document.getElementById('create-team-btn');
+        const joinTeamBtn = document.getElementById('join-team-btn');
+        const leaveTeamBtn = document.getElementById('leave-team-btn');
+
+        if (this.currentTeam) {
+            if (teamStatus) teamStatus.textContent = this.currentTeam.name;
+            if (teamMembers) teamMembers.textContent = this.currentTeam.members.length;
+            if (createTeamBtn) createTeamBtn.style.display = 'none';
+            if (joinTeamBtn) joinTeamBtn.style.display = 'none';
+            if (leaveTeamBtn) leaveTeamBtn.style.display = 'block';
+        } else {
+            if (teamStatus) teamStatus.textContent = 'No Team';
+            if (teamMembers) teamMembers.textContent = '0';
+            if (createTeamBtn) createTeamBtn.style.display = 'block';
+            if (joinTeamBtn) joinTeamBtn.style.display = 'block';
+            if (leaveTeamBtn) leaveTeamBtn.style.display = 'none';
+        }
+    }
+
+    updateSharedResourcesDisplay(sharedResources) {
+        const wood = document.getElementById('shared-wood');
+        const ore = document.getElementById('shared-ore');
+        const power = document.getElementById('shared-power');
+        const goods = document.getElementById('shared-goods');
+
+        if (wood) wood.textContent = sharedResources.wood || 0;
+        if (ore) ore.textContent = sharedResources.ore || 0;
+        if (power) power.textContent = sharedResources.power || 0;
+        if (goods) goods.textContent = sharedResources.commercialGoods || 0;
+    }
+
+    updateProjectsList() {
+        const projectsList = document.getElementById('projects-list');
+        if (!projectsList || !this.currentTeam) return;
+
+        projectsList.innerHTML = this.currentTeam.jointProjects.map(project => `
+            <div style="margin-bottom: 5px; padding: 3px; background: rgba(255,255,255,0.1); border-radius: 3px;">
+                <div><strong>${project.type}</strong> - ${project.progress}%</div>
+                <div style="font-size: 10px;">Status: ${project.status}</div>
+            </div>
+        `).join('');
+    }
+
+    updateObjectivesList() {
+        // This would update the objectives display
+        console.log('Objectives updated');
+    }
+
+    addTeamChatMessage(data) {
+        const chatMessages = document.getElementById('team-chat-messages');
+        if (!chatMessages) return;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.style.marginBottom = '3px';
+        messageDiv.innerHTML = `<strong>${data.playerName}:</strong> ${data.message}`;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    addMapMarker(data) {
+        // This would add a visual marker to the map
+        console.log('Map marker placed:', data);
+    }
+
+    // Game mode methods
+    updateGameModeDescription() {
+        const gameModeSelect = document.getElementById('game-mode-select');
+        const descriptionDiv = document.getElementById('game-mode-description');
+        
+        if (!gameModeSelect || !descriptionDiv) return;
+        
+        const descriptions = {
+            'free_for_all': 'Build your city independently, compete for resources and territory',
+            'team_based': 'Work in teams to build connected cities and shared infrastructure',
+            'competitive': 'Compete for limited resources in a high-stakes economic battle',
+            'collaborative': 'Work together to build the ultimate megacity with shared goals'
+        };
+        
+        descriptionDiv.textContent = descriptions[gameModeSelect.value] || descriptions['free_for_all'];
+    }
+
+    handleGameModesList(data) {
+        console.log('Available game modes:', data.modes);
+        // This could be used to dynamically populate the game mode selector
+    }
+
+    handleGameCreationFailed(data) {
+        this.showNotification(`Game creation failed: ${data.reason}`, 'error');
+    }
+}

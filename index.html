@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗺️ City Builder Pro</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Header Bar -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="tab-container">
+                    <div class="tab active" data-tab="builder">
+                        <h1>🗺️ City Builder Pro</h1>
+                        <span class="subtitle">Strategic Urban Planning System</span>
+                    </div>
+                    <div class="tab" data-tab="player">
+                        <h1>🏙️ City Player Pro</h1>
+                        <span class="subtitle">Infrastructure & Zoning Management</span>
+                    </div>
+                    <div class="tab" data-tab="viewer">
+                        <h1>👁️ City Viewer Pro</h1>
+                        <span class="subtitle">Advanced Map Analysis & Visualization</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="map-controls" id="mapControls">
+                    <button id="clearMap" class="control-btn danger">🗑️ Clear</button>
+                    <button id="saveMap" class="control-btn primary">💾 Save</button>
+                    <button id="loadMap" class="control-btn secondary">📁 Load</button>
+                    <button id="generateRandomMap" class="control-btn success">🎲 Generate</button>
+                    <input type="file" id="fileInput" accept=".json" style="display: none;">
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Left Sidebar - Tools -->
+            <aside class="tools-panel">
+                <div class="panel-header">
+                    <h3>🛠️ Tools</h3>
+                </div>
+                
+                <!-- Terrain Tools -->
+                <div class="tool-section">
+                    <h4>🌍 Terrain</h4>
+                    <div class="tool-grid">
+                        <button class="tool-btn" data-attribute="water" data-class="basic" style="background: linear-gradient(135deg, #4A90E2, #2E86AB);">💧 Water</button>
+                        <button class="tool-btn" data-attribute="grassland" data-class="grassland" style="background: linear-gradient(135deg, #7ED321, #5BA317);">🌱 Grass</button>
+                        <button class="tool-btn" data-attribute="forest" data-class="forest" style="background: linear-gradient(135deg, #417505, #2D5016);">🌲 Forest</button>
+                        <button class="tool-btn" data-attribute="mountain" data-class="mountain" style="background: linear-gradient(135deg, #D3D3D3, #A9A9A9);">⛰️ Mountain</button>
+                        <button class="tool-btn" data-attribute="desert" data-class="desert" style="background: linear-gradient(135deg, #F5A623, #D68910);">🏜️ Desert</button>
+                    </div>
+                </div>
+
+                <!-- Infrastructure Tools -->
+
+                <!-- Water Features -->
+                <div class="tool-section">
+                    <h4>💧 Water Features</h4>
+                    <div class="tool-grid">
+                        <button class="tool-btn" data-attribute="riverStart" data-class="riverStart" style="background: linear-gradient(135deg, #85C1E9, #5DADE2);">🌊 Start</button>
+                        <button class="tool-btn" data-attribute="riverEnd" data-class="riverEnd" style="background: linear-gradient(135deg, #AED6F1, #85C1E9);">🌊 End</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center - Map Area -->
+            <main class="map-area">
+                <div class="tool-panel" id="toolPanel">
+                    
+                    <div class="tool-section">
+                        <h4>📦 Resources</h4>
+                        <div class="resource-display" id="resourceDisplay">
+                            <div class="resource-item">
+                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                    <span class="resource-icon">🪵</span>
+                                    <span class="resource-name">Wood: </span>
+                                    <span class="resource-amount">0</span>
+                                </div>
+                                <span class="resource-rate">(+0.0/s)</span>
+                            </div>
+                            <div class="resource-item">
+                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                    <span class="resource-icon">⛏️</span>
+                                    <span class="resource-name">Ore: </span>
+                                    <span class="resource-amount">0</span>
+                                </div>
+                                <span class="resource-rate">(+0.0/s)</span>
+                            </div>
+                            <div class="resource-item">
+                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                    <span class="resource-icon">📦</span>
+                                    <span class="resource-name">Goods: </span>
+                                    <span class="resource-amount">0</span>
+                                </div>
+                                <span class="resource-rate">(+0.0/s)</span>
+                            </div>
+                            <div class="resource-item">
+                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                    <span class="resource-icon">⚡</span>
+                                    <span class="resource-name">Power: </span>
+                                    <span class="resource-amount">0</span>
+                                </div>
+                                <span class="resource-rate">(+0.0/s)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="map-container">
+                    <div id="map" class="map-grid"></div>
+                </div>
+            </main>
+
+            <!-- Right Sidebar - Info -->
+            <aside class="info-panel">
+                <div class="panel-header">
+                    <h3>📊 Information</h3>
+                </div>
+                
+                <div class="info-section">
+                    <h4>📍 Cell Details</h4>
+                    <div id="cellInfo" class="cell-info">
+                        <p>Click on a cell to see its information</p>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h4>📈 Statistics</h4>
+                    <div id="stats" class="stats-grid"></div>
+                </div>
+
+                <div class="info-section">
+                    <h4>🎯 Instructions</h4>
+                    <div class="instructions">
+                        <p><strong>Click:</strong> Place single tile</p>
+                        <p><strong>Drag:</strong> Paint multiple tiles</p>
+                        <p><strong>Rules:</strong> Follow placement requirements</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- City Player Pro Control Panel (only visible in player mode) -->
+            <aside class="player-control-panel" id="playerControls" style="display: none;">
+                <div class="panel-header">
+                    <h3>🏙️ City Management</h3>
+                </div>
+                
+                <div class="player-section">
+                    <h4>🏗️ Infrastructure</h4>
+                    <div class="player-controls">
+                        <div class="player-btn-container">
+                            <button id="buildRoad" class="player-btn active" data-attribute="road" data-class="road">🛣️ Road</button>
+                            <div class="cost-display">4🪵</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="buildBridge" class="player-btn" data-attribute="bridge" data-class="bridge">🌉 Bridge</button>
+                            <div class="cost-display">16🪵 6⛏️</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="buildPowerPlant" class="player-btn" data-attribute="powerPlant" data-class="powerPlant">⚡ Power</button>
+                            <div class="cost-display">25🪵 15⛏️</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="buildPowerLines" class="player-btn" data-attribute="powerLines" data-class="powerLines">🔌 Lines</button>
+                            <div class="cost-display">3🪵 1⛏️</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="buildLumberYard" class="player-btn" data-attribute="lumberYard" data-class="lumberYard">🪚 Lumber Yard</button>
+                            <div class="cost-display">10🪵</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="buildMiningOutpost" class="player-btn" data-attribute="miningOutpost" data-class="miningOutpost">⛏️ Mining Outpost</button>
+                            <div class="cost-display">20🪵 10⛏️</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="buildErase" class="player-btn erase-btn" data-attribute="erase" data-class="erase">🧹 Erase</button>
+                            <div class="cost-display">Free</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="player-section">
+                    <h4>🏘️ Zoning</h4>
+                    <div class="player-controls">
+                        <div class="player-btn-container">
+                            <button id="zoneResidential" class="player-btn" data-attribute="residential" data-class="residential">🏠 Residential</button>
+                            <div class="cost-display">20🪵 4⛏️</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="zoneCommercial" class="player-btn" data-attribute="commercial" data-class="commercial">🏢 Commercial</button>
+                            <div class="cost-display">30🪵 10⛏️</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="zoneIndustrial" class="player-btn" data-attribute="industrial" data-class="industrial">🏭 Industrial</button>
+                            <div class="cost-display">40🪵 20⛏️</div>
+                        </div>
+                        <div class="player-btn-container">
+                            <button id="zoneMixed" class="player-btn" data-attribute="mixed" data-class="mixed">🏬 Mixed Use</button>
+                            <div class="cost-display">36🪵 16⛏️</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="player-section">
+                    <h4>📊 City Stats</h4>
+                    <div id="playerStats" class="player-stats"></div>
+                </div>
+
+            </aside>
+
+            <!-- Viewer Control Panel (only visible in viewer mode) -->
+            <aside class="viewer-control-panel" id="viewerControls" style="display: none;">
+                <div class="panel-header">
+                    <h3>🎨 View Modes</h3>
+                </div>
+                
+                <div class="viewer-section">
+                    <h4>🖼️ Display Style</h4>
+                    <div class="viewer-controls">
+                        <button id="toggleArtStyle" class="viewer-btn active">🎨 Pixel Art</button>
+                        <button id="toggleTestingStyle" class="viewer-btn">🧪 Testing</button>
+                    </div>
+                </div>
+
+
+                <div class="viewer-section">
+                    <h4>📊 Map Info</h4>
+                    <div id="viewerStats" class="viewer-stats"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    <script src="classInfo.js"></script>
+    <script src="waterProperties.js"></script>
+    <script src="core-map-system.js"></script>
+    <script src="tab-management.js"></script>
+    <script src="wave-animation.js"></script>
+    <script src="viewer-system.js"></script>
+    <script src="cell-interaction.js"></script>
+    <script src="water-system.js"></script>
+    <script src="road-system.js"></script>
+    <script src="procedural-generation.js"></script>
+    <script src="utility-functions.js"></script>
+    <script src="resource-management.js"></script>
+    <script src="script.js"></script>
+    
+    <!-- Multiplayer WebSocket -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="websocket-manager.js"></script>
+    <script src="multiplayer-integration-simple.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
