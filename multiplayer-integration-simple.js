@@ -168,8 +168,35 @@ class SimpleMultiplayerIntegration {
     showMultiplayerUI() {
         console.log('showMultiplayerUI called');
         this.createMultiplayerPanel();
+        this.setupTabListeners();
         this.updateUI();
         console.log('Multiplayer UI created and updated');
+    }
+
+    setupTabListeners() {
+        // Listen for tab changes
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabType = tab.getAttribute('data-tab');
+                this.handleTabChange(tabType);
+            });
+        });
+
+        // Check initial tab state
+        const activeTab = document.querySelector('.tab.active');
+        if (activeTab) {
+            const tabType = activeTab.getAttribute('data-tab');
+            this.handleTabChange(tabType);
+        }
+    }
+
+    handleTabChange(tabType) {
+        if (tabType === 'player') {
+            this.multiplayerPanel.style.display = 'block';
+        } else {
+            this.multiplayerPanel.style.display = 'none';
+        }
     }
 
     createMultiplayerPanel() {
@@ -178,24 +205,44 @@ class SimpleMultiplayerIntegration {
         this.multiplayerPanel.style.cssText = `
             position: fixed;
             top: 20px;
-            right: 20px;
-            width: 350px;
+            right: 250px;
+            width: 300px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 10px;
-            padding: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             z-index: 1000;
             color: white;
             font-family: Arial, sans-serif;
-            max-height: 80vh;
-            overflow-y: auto;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            opacity: 0.95;
+            display: none;
         `;
+        
+        // Add hover effect
+        this.multiplayerPanel.addEventListener('mouseenter', () => {
+            this.multiplayerPanel.style.opacity = '1';
+            this.multiplayerPanel.style.transform = 'translateY(-2px)';
+        });
+        
+        this.multiplayerPanel.addEventListener('mouseleave', () => {
+            this.multiplayerPanel.style.opacity = '0.95';
+            this.multiplayerPanel.style.transform = 'translateY(0)';
+        });
 
         this.multiplayerPanel.innerHTML = `
-            <h3 style="margin: 0 0 15px 0; text-align: center;">🌐 Multiplayer</h3>
-            <div id="connection-status" style="margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px; text-align: center;">
-                <span id="status-text">Connecting...</span>
+            <div id="multiplayer-header" style="padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3 style="margin: 0; font-size: 16px;">🌐 Multiplayer</h3>
+                    <div id="header-status-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #f44336; transition: background 0.3s ease;"></div>
+                </div>
+                <button id="multiplayer-toggle" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">▼</button>
             </div>
+            <div id="multiplayer-content" style="padding: 15px; max-height: calc(100vh - 200px); overflow-y: auto; transition: all 0.3s ease;">
+                <div id="connection-status" style="margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px; text-align: center;">
+                    <span id="status-text">Connecting...</span>
+                </div>
             <div id="game-mode-selection" style="margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
                 <h4 style="margin: 0 0 10px 0;">Game Mode:</h4>
                 <select id="game-mode-select" style="width: 100%; padding: 6px; margin-bottom: 8px; border: none; border-radius: 3px; background: rgba(255,255,255,0.9);">
@@ -268,6 +315,7 @@ class SimpleMultiplayerIntegration {
             </div>
             <button id="next-turn-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Next Turn</button>
             <button id="leave-game-btn" style="display: none; width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Leave Game</button>
+            </div>
         `;
 
         document.body.appendChild(this.multiplayerPanel);
@@ -276,6 +324,38 @@ class SimpleMultiplayerIntegration {
 
     setupUIEventListeners() {
         console.log('Setting up UI event listeners...');
+        
+        // Toggle functionality
+        const toggleBtn = document.getElementById('multiplayer-toggle');
+        const header = document.getElementById('multiplayer-header');
+        const content = document.getElementById('multiplayer-content');
+        
+        if (toggleBtn && header && content) {
+            let isCollapsed = false;
+            
+            const toggleCollapse = () => {
+                isCollapsed = !isCollapsed;
+                if (isCollapsed) {
+                    content.style.maxHeight = '0';
+                    content.style.padding = '0 15px';
+                    toggleBtn.textContent = '▶';
+                    this.multiplayerPanel.style.width = '150px';
+                } else {
+                    content.style.maxHeight = 'calc(100vh - 200px)';
+                    content.style.padding = '15px';
+                    toggleBtn.textContent = '▼';
+                    this.multiplayerPanel.style.width = '300px';
+                }
+            };
+            
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleCollapse();
+            });
+            
+            header.addEventListener('click', toggleCollapse);
+        }
+        
         const createBtn = document.getElementById('create-game-btn');
         const joinBtn = document.getElementById('join-game-btn');
         const leaveBtn = document.getElementById('leave-game-btn');
@@ -397,6 +477,7 @@ class SimpleMultiplayerIntegration {
 
     updateUI() {
         const statusText = document.getElementById('status-text');
+        const headerStatusIndicator = document.getElementById('header-status-indicator');
         const roomControls = document.getElementById('room-controls');
         const roomInfo = document.getElementById('room-info');
         const playersList = document.getElementById('players-list');
@@ -405,9 +486,15 @@ class SimpleMultiplayerIntegration {
         if (this.wsManager.isConnected) {
             statusText.textContent = 'Connected';
             statusText.style.color = '#4CAF50';
+            if (headerStatusIndicator) {
+                headerStatusIndicator.style.background = '#4CAF50';
+            }
         } else {
             statusText.textContent = 'Disconnected';
             statusText.style.color = '#f44336';
+            if (headerStatusIndicator) {
+                headerStatusIndicator.style.background = '#f44336';
+            }
         }
 
         if (this.isInMultiplayer) {

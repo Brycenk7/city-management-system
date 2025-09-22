@@ -736,13 +736,16 @@ Add this to your existing `script.js`:
 ```javascript
 // Add to your existing MapSystem constructor or create a new instance
 let mapSystem;
+let multiplayerIntegration = null;
 let multiplayerManager;
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize your existing map system
     mapSystem = new MapSystem();
-    
+    multiplayerIntegration = new SimpleMultiplayerIntegration(mapSystem);
+    multiplayerIntegration.initializeMultiplayer();
+    multiplayerIntegration.showMultiplayerUI();
     // Initialize multiplayer manager
     multiplayerManager = new MultiplayerManager(mapSystem);
     
@@ -800,19 +803,13 @@ function handleCellClick(e) {
     const row = parseInt(cell.dataset.row);
     const col = parseInt(cell.dataset.col);
     
-    // If in multiplayer mode, send action via WebSocket
-    if (multiplayerManager && multiplayerManager.currentGame) {
+    // If multiplayer is on, send to other players
+    if (multiplayerIntegration && multiplayerIntegration.isInMultiplayerMode()) {
         const action = mapSystem.selectedAttribute === 'erase' ? 'remove' : 'place';
-        multiplayerManager.sendGameAction(
-            action,
-            row,
-            col,
-            mapSystem.selectedAttribute,
-            mapSystem.selectedClass
-        );
+        multiplayerIntegration.sendGameAction(action, row, col, mapSystem.selectedAttribute, mapSystem.selectedClass);
     } else {
-        // Single player mode - use existing logic
-        // ... your existing cell click logic
+        // Your normal single-player code goes here
+        // (keep whatever you had before)
     }
 }
 ```
@@ -866,3 +863,4 @@ multiplayerManager.websocket.on('error', (error) => {
 ```
 
 This setup provides a complete WebSocket connection system for your multiplayer City Builder Pro game with robust error handling, reconnection, and real-time communication!
+
