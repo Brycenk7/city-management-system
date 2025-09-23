@@ -1,4 +1,4 @@
-console.log('Loading SimpleMultiplayerIntegration class...');
+console.log('Loading SimpleMultiplayerIntegration class... v2.1');
 
 class SimpleMultiplayerIntegration {
     constructor(mapSystem) {
@@ -224,6 +224,7 @@ class SimpleMultiplayerIntegration {
         this.wsManager.on('map_state_updated', (data) => {
             console.log('Map state updated from another player');
             this.syncMap(data.cells);
+            this.showNotification('Map synchronized with other players', 'success');
         });
     }
 
@@ -460,7 +461,12 @@ class SimpleMultiplayerIntegration {
         if (syncMapBtn) {
             syncMapBtn.addEventListener('click', () => {
                 console.log('Manual map sync requested');
-                this.sendMapState();
+                if (this.isInMultiplayer) {
+                    this.sendMapState();
+                    this.showNotification('Map state sent to other players', 'info');
+                } else {
+                    this.showNotification('Not in multiplayer mode', 'error');
+                }
             });
         }
 
@@ -1240,10 +1246,15 @@ class SimpleMultiplayerIntegration {
 
     // Map synchronization methods
     syncMap(cellData) {
-        console.log('Syncing map with server data...');
+        console.log('Syncing map with server data...', cellData);
         
         if (!this.mapSystem || !this.mapSystem.cells) {
             console.error('MapSystem not available for sync');
+            return;
+        }
+
+        if (!cellData || !Array.isArray(cellData)) {
+            console.error('Invalid cell data received:', cellData);
             return;
         }
 
@@ -1263,17 +1274,24 @@ class SimpleMultiplayerIntegration {
 
         if (hasPlayerModifications) {
             console.log('Player has modifications, skipping map sync to prevent overwrite');
+            this.showNotification('Map sync skipped - you have modifications', 'warning');
             return;
         }
+
+        console.log('Applying map sync...');
+        let cellsUpdated = 0;
 
         // Update each cell with the server data
         for (let row = 0; row < cellData.length; row++) {
             for (let col = 0; col < cellData[row].length; col++) {
                 if (cellData[row][col]) {
                     this.mapSystem.cells[row][col] = { ...cellData[row][col] };
+                    cellsUpdated++;
                 }
             }
         }
+
+        console.log(`Updated ${cellsUpdated} cells`);
 
         // Update the visual representation
         this.mapSystem.updateStats();
@@ -1285,18 +1303,22 @@ class SimpleMultiplayerIntegration {
             }
         }
 
-        console.log('Map sync completed');
+        console.log('Map sync completed successfully');
     }
 
     // Send current map state to server
     sendMapState() {
-        if (!this.isInMultiplayer || !this.mapSystem) return;
+        if (!this.isInMultiplayer || !this.mapSystem) {
+            console.log('Cannot send map state: not in multiplayer or mapSystem not available');
+            return;
+        }
 
         const mapData = {
             cells: this.mapSystem.cells,
             timestamp: Date.now()
         };
 
+        console.log('Sending map state to server:', mapData);
         this.wsManager.send('update_map_state', mapData);
     }
 
