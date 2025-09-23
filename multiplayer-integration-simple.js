@@ -1301,7 +1301,12 @@ class SimpleMultiplayerIntegration {
         for (let row = 0; row < cellData.length; row++) {
             for (let col = 0; col < cellData[row].length; col++) {
                 if (cellData[row][col]) {
-                    this.mapSystem.cells[row][col] = { ...cellData[row][col] };
+                    // Preserve the existing element reference
+                    const existingElement = this.mapSystem.cells[row][col]?.element;
+                    this.mapSystem.cells[row][col] = { 
+                        ...cellData[row][col],
+                        element: existingElement // Keep the existing DOM element
+                    };
                     cellsUpdated++;
                 }
             }
@@ -1316,16 +1321,16 @@ class SimpleMultiplayerIntegration {
         console.log('Forcing complete visual refresh...');
         for (let row = 0; row < this.mapSystem.cells.length; row++) {
             for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
-                // Clear the cell first
-                const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                if (cellElement) {
-                    cellElement.className = 'cell';
-                    cellElement.style.background = '';
-                    cellElement.style.border = '';
+                const cell = this.mapSystem.cells[row][col];
+                if (cell && cell.element) {
+                    // Clear the cell first
+                    cell.element.className = 'cell';
+                    cell.element.style.background = '';
+                    cell.element.style.border = '';
+                    
+                    // Update the visual
+                    this.mapSystem.updateCellVisual(row, col);
                 }
-                
-                // Then update the visual
-                this.mapSystem.updateCellVisual(row, col);
             }
         }
 
@@ -1334,7 +1339,10 @@ class SimpleMultiplayerIntegration {
             console.log('Performing additional visual refresh...');
             for (let row = 0; row < this.mapSystem.cells.length; row++) {
                 for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
-                    this.mapSystem.updateCellVisual(row, col);
+                    const cell = this.mapSystem.cells[row][col];
+                    if (cell && cell.element) {
+                        this.mapSystem.updateCellVisual(row, col);
+                    }
                 }
             }
         }, 100);
@@ -1343,6 +1351,11 @@ class SimpleMultiplayerIntegration {
         
         // Force a complete map re-render as a final step
         this.forceMapRerender();
+        
+        // Additional aggressive refresh
+        setTimeout(() => {
+            this.forceCompleteMapRefresh();
+        }, 200);
     }
 
     // Force complete map re-render
@@ -1363,12 +1376,51 @@ class SimpleMultiplayerIntegration {
             // Update all cells one more time
             for (let row = 0; row < this.mapSystem.cells.length; row++) {
                 for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
-                    this.mapSystem.updateCellVisual(row, col);
+                    const cell = this.mapSystem.cells[row][col];
+                    if (cell && cell.element) {
+                        this.mapSystem.updateCellVisual(row, col);
+                    }
                 }
             }
             
             console.log('Map re-render completed');
         }, 50);
+    }
+
+    // Force complete map refresh - most aggressive approach
+    forceCompleteMapRefresh() {
+        console.log('Forcing complete map refresh...');
+        
+        if (!this.mapSystem) return;
+        
+        // Force the map system to completely rebuild its visual representation
+        if (this.mapSystem.rebuildMapVisuals) {
+            this.mapSystem.rebuildMapVisuals();
+        } else {
+            // Fallback: manually update every cell
+            for (let row = 0; row < this.mapSystem.cells.length; row++) {
+                for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                    const cell = this.mapSystem.cells[row][col];
+                    if (cell && cell.element) {
+                        // Force a complete visual reset
+                        cell.element.className = 'cell';
+                        cell.element.style.cssText = '';
+                        
+                        // Reapply all visual properties
+                        if (cell.attribute) {
+                            cell.element.classList.add(cell.attribute);
+                            cell.element.dataset.attribute = cell.attribute;
+                        }
+                        if (cell.class && cell.class !== cell.attribute) {
+                            cell.element.classList.add(cell.class);
+                            cell.element.dataset.class = cell.class;
+                        }
+                    }
+                }
+            }
+        }
+        
+        console.log('Complete map refresh finished');
     }
 
     // Send current map state to server
