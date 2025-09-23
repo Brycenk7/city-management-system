@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Multiplayer UI</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .test-info {
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>🎮 Multiplayer UI Test</h1>
+        <p>This page tests the new compact multiplayer UI design.</p>
+        <p>You should see a small, modern multiplayer panel in the top-right corner.</p>
+        
+        <h3>Test Buttons:</h3>
+        <button class="test-button" onclick="testDebugUI()">Force Show UI Elements</button>
+        <button class="test-button" onclick="testMultiplayerPanel()">Test Panel Visibility</button>
+        <button class="test-button" onclick="testConnection()">Test Connection Status</button>
+    </div>
+
+    <!-- Include the game files -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="websocket-manager.js"></script>
+    <script src="multiplayer-integration-simple.js"></script>
+    <script src="core-map-system.js"></script>
+    <script src="resource-management.js"></script>
+    <script src="cell-interaction.js"></script>
+    <script src="main.js"></script>
+
+    <script>
+        // Test functions
+        function testDebugUI() {
+            console.log('Testing debug UI...');
+            if (window.multiplayerIntegration && window.multiplayerIntegration.debugShowUI) {
+                window.multiplayerIntegration.debugShowUI();
+                console.log('Debug UI called');
+            } else {
+                console.log('Multiplayer integration not available');
+            }
+        }
+
+        function testMultiplayerPanel() {
+            console.log('Testing multiplayer panel...');
+            const panel = document.getElementById('multiplayer-panel');
+            if (panel) {
+                console.log('Panel found:', panel);
+                console.log('Panel display:', panel.style.display);
+                console.log('Panel visibility:', panel.style.visibility);
+                console.log('Panel opacity:', panel.style.opacity);
+            } else {
+                console.log('Panel not found');
+            }
+        }
+
+        function testConnection() {
+            console.log('Testing connection...');
+            if (window.multiplayerIntegration) {
+                console.log('Multiplayer integration available');
+                console.log('Is connected:', window.multiplayerIntegration.isConnected);
+                console.log('Is in multiplayer:', window.multiplayerIntegration.isInMultiplayer);
+            } else {
+                console.log('Multiplayer integration not available');
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, running auto-tests...');
+            setTimeout(() => {
+                testMultiplayerPanel();
+                testConnection();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

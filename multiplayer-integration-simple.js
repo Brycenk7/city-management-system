@@ -283,6 +283,12 @@ class SimpleMultiplayerIntegration {
         this.createMultiplayerPanel();
         console.log('Multiplayer panel created, checking elements...');
         
+        // Force the panel to be visible
+        if (this.multiplayerPanel) {
+            this.multiplayerPanel.style.display = 'block';
+            console.log('Multiplayer panel forced to be visible');
+        }
+        
         // Check if elements were created
         const roomInfo = document.getElementById('room-info');
         const syncBtn = document.getElementById('sync-map-btn');
@@ -314,10 +320,9 @@ class SimpleMultiplayerIntegration {
     }
 
     handleTabChange(tabType) {
-        if (tabType === 'player') {
+        // Always show multiplayer panel regardless of tab
+        if (this.multiplayerPanel) {
             this.multiplayerPanel.style.display = 'block';
-        } else {
-            this.multiplayerPanel.style.display = 'none';
         }
     }
 
@@ -340,7 +345,7 @@ class SimpleMultiplayerIntegration {
             max-height: calc(100vh - 80px);
             overflow: hidden;
             transition: all 0.3s ease;
-            display: none;
+            display: block;
         `;
         
         // Add hover effect
@@ -451,6 +456,18 @@ class SimpleMultiplayerIntegration {
 
         document.body.appendChild(this.multiplayerPanel);
         console.log('Multiplayer panel appended to body');
+        
+        // Add CSS override to ensure visibility
+        const style = document.createElement('style');
+        style.textContent = `
+            #multiplayer-panel {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
         this.setupUIEventListeners();
         console.log('Event listeners set up');
     }
@@ -1674,6 +1691,22 @@ class SimpleMultiplayerIntegration {
             turnTimer.textContent = '60s';
             turnTimer.style.color = '#4CAF50';
             console.log('Turn timer forced to show');
+        }
+        
+        // Force show the multiplayer panel
+        if (this.multiplayerPanel) {
+            this.multiplayerPanel.style.display = 'block';
+            this.multiplayerPanel.style.opacity = '1';
+            this.multiplayerPanel.style.visibility = 'visible';
+            console.log('Multiplayer panel forced visible');
+        }
+        
+        // Force show the main content
+        const content = document.getElementById('multiplayer-content');
+        if (content) {
+            content.style.display = 'block';
+            content.style.maxHeight = 'calc(100vh - 120px)';
+            console.log('Multiplayer content forced visible');
         }
     }
 
