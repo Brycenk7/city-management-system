@@ -632,6 +632,7 @@ class SimpleMultiplayerIntegration {
             roomInfo.style.display = 'block';
             playersList.style.display = 'block';
             leaveBtn.style.display = 'block';
+            console.log('Multiplayer UI shown - room info, players list, buttons visible');
             
             // Show new panels
             const victoryConditions = document.getElementById('victory-conditions');
@@ -670,12 +671,18 @@ class SimpleMultiplayerIntegration {
             const syncMapBtn = document.getElementById('sync-map-btn');
             if (syncMapBtn) {
                 syncMapBtn.style.display = 'block';
+                console.log('Sync map button shown');
+            } else {
+                console.log('Sync map button not found!');
             }
             
             // Show refresh map button
             const refreshMapBtn = document.getElementById('refresh-map-btn');
             if (refreshMapBtn) {
                 refreshMapBtn.style.display = 'block';
+                console.log('Refresh map button shown');
+            } else {
+                console.log('Refresh map button not found!');
             }
             
             this.updatePlayersDisplay();
