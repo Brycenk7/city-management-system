@@ -122,6 +122,13 @@ class SimpleMultiplayerIntegration {
         this.wsManager.on('turn_changed', (data) => {
             this.currentTurn = data.currentTurn;
             this.turnOrder = data.turnOrder;
+            
+            // Recalculate resources when turn changes to ensure proper ownership
+            if (this.mapSystem && this.mapSystem.resourceManagement) {
+                this.mapSystem.resourceManagement.recalculate();
+                console.log('Resources recalculated on turn change');
+            }
+            
             this.updateUI();
             console.log('Turn changed to:', data.currentTurn);
         });
@@ -788,6 +795,12 @@ class SimpleMultiplayerIntegration {
                     this.mapSystem.updateStats();
                 }
                 
+                // Recalculate resources after any building placement
+                if (this.mapSystem.resourceManagement) {
+                    this.mapSystem.resourceManagement.recalculate();
+                    console.log('Resources recalculated after building placement');
+                }
+                
                 console.log(`Successfully placed ${data.attribute} at (${data.row}, ${data.col})`);
             } else {
                 console.error('MapSystem not available or cell not found');
@@ -808,6 +821,12 @@ class SimpleMultiplayerIntegration {
             // Update stats
             if (this.mapSystem && this.mapSystem.updateStats) {
                 this.mapSystem.updateStats();
+            }
+            
+            // Recalculate resources after any building removal
+            if (this.mapSystem.resourceManagement) {
+                this.mapSystem.resourceManagement.recalculate();
+                console.log('Resources recalculated after building removal');
             }
             
             console.log(`Successfully removed building at (${data.row}, ${data.col})`);
@@ -1531,6 +1550,9 @@ class SimpleMultiplayerIntegration {
 
         this.resourceUpdateInterval = setInterval(() => {
             if (this.isInMultiplayer && this.mapSystem && this.mapSystem.resourceManagement) {
+                // Recalculate resources to ensure proper ownership
+                this.mapSystem.resourceManagement.recalculate();
+                
                 // Get current resources
                 const currentResources = this.mapSystem.resourceManagement.resources;
                 
