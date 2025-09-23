@@ -44,6 +44,9 @@ class SimpleMultiplayerIntegration {
             // Start resource updates
             this.startResourceUpdates();
             
+            // Start game state updates
+            this.startGameStateUpdates();
+            
             // Send current map state to server
             setTimeout(() => {
                 this.sendMapState();
@@ -68,6 +71,9 @@ class SimpleMultiplayerIntegration {
             // Start resource updates
             this.startResourceUpdates();
             
+            // Start game state updates
+            this.startGameStateUpdates();
+            
             // Sync the map if it exists
             if (data.game.gameState && data.game.gameState.cells) {
                 this.syncMap(data.game.gameState.cells);
@@ -88,9 +94,17 @@ class SimpleMultiplayerIntegration {
         this.wsManager.on('player_left', (data) => {
             console.log('Player left:', data.playerId);
             console.log('Remaining players:', data.game.players);
+            
+            // Remove the player from our local players map
+            this.players.delete(data.playerId);
+            
+            // Update with server data
             this.updatePlayersList(data.game.players);
             this.turnOrder = data.game.gameState.turnOrder;
+            this.currentTurn = data.game.gameState.currentTurn;
             this.updateUI();
+            
+            console.log('Player count after leave:', this.players.size);
         });
 
         this.wsManager.on('turn_changed', (data) => {
@@ -658,6 +672,9 @@ class SimpleMultiplayerIntegration {
         
         // Stop resource updates
         this.stopResourceUpdates();
+        
+        // Stop game state updates
+        this.stopGameStateUpdates();
         
         this.updateUI();
     }
@@ -1230,6 +1247,25 @@ class SimpleMultiplayerIntegration {
             return;
         }
 
+        // Only sync if we don't have any player modifications yet
+        // This prevents overwriting the current player's work
+        let hasPlayerModifications = false;
+        for (let row = 0; row < this.mapSystem.cells.length; row++) {
+            for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell && this.mapSystem.isPlayerPlaced && this.mapSystem.isPlayerPlaced(row, col)) {
+                    hasPlayerModifications = true;
+                    break;
+                }
+            }
+            if (hasPlayerModifications) break;
+        }
+
+        if (hasPlayerModifications) {
+            console.log('Player has modifications, skipping map sync to prevent overwrite');
+            return;
+        }
+
         // Update each cell with the server data
         for (let row = 0; row < cellData.length; row++) {
             for (let col = 0; col < cellData[row].length; col++) {
@@ -1273,7 +1309,7 @@ class SimpleMultiplayerIntegration {
         this.resourceUpdateInterval = setInterval(() => {
             if (this.isInMultiplayer && this.mapSystem && this.mapSystem.resourceManagement) {
                 // Get current resources
-                const currentResources = this.mapSystem.resourceManagement.getResources();
+                const currentResources = this.mapSystem.resourceManagement.resources;
                 
                 // Send resource update to server
                 this.wsManager.send('update_player_resources', {
@@ -1282,6 +1318,29 @@ class SimpleMultiplayerIntegration {
                 });
             }
         }, 5000); // Update every 5 seconds
+    }
+
+    // Periodically request game state updates
+    startGameStateUpdates() {
+        if (this.gameStateUpdateInterval) {
+            clearInterval(this.gameStateUpdateInterval);
+        }
+
+        this.gameStateUpdateInterval = setInterval(() => {
+            if (this.isInMultiplayer) {
+                // Request current game state from server
+                this.wsManager.send('request_game_state', {
+                    roomCode: this.currentRoom
+                });
+            }
+        }, 10000); // Update every 10 seconds
+    }
+
+    stopGameStateUpdates() {
+        if (this.gameStateUpdateInterval) {
+            clearInterval(this.gameStateUpdateInterval);
+            this.gameStateUpdateInterval = null;
+        }
     }
 
     stopResourceUpdates() {

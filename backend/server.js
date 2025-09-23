@@ -1122,6 +1122,27 @@ io.on('connection', (socket) => {
       }
     }
   });
+
+  // Handle game state requests
+  socket.on('request_game_state', (data) => {
+    console.log(`📊 Game state request from ${socket.id}`);
+    
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    if (roomCode) {
+      const game = games.get(roomCode);
+      if (game) {
+        // Send current game state
+        socket.emit('game_state_update', {
+          players: game.players,
+          gameState: game.gameState
+        });
+        
+        console.log(`📡 Game state sent to ${socket.id}`);
+      }
+    }
+  });
   
   // Handle turn advancement
   socket.on('advance_turn', (data) => {
