@@ -327,125 +327,125 @@ class SimpleMultiplayerIntegration {
         this.multiplayerPanel.id = 'multiplayer-panel';
         this.multiplayerPanel.style.cssText = `
             position: fixed;
-            top: 20px;
-            right: 250px;
-            width: 300px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            top: 60px;
+            right: 10px;
+            width: 240px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #4CAF50;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.7);
             z-index: 1000;
             color: white;
             font-family: Arial, sans-serif;
-            max-height: calc(100vh - 40px);
+            max-height: calc(100vh - 80px);
             overflow: hidden;
             transition: all 0.3s ease;
-            opacity: 0.95;
             display: none;
         `;
         
         // Add hover effect
         this.multiplayerPanel.addEventListener('mouseenter', () => {
             this.multiplayerPanel.style.opacity = '1';
-            this.multiplayerPanel.style.transform = 'translateY(-2px)';
+            this.multiplayerPanel.style.transform = 'translateY(-1px)';
+            this.multiplayerPanel.style.boxShadow = '0 4px 15px rgba(0,0,0,0.8)';
         });
-        
+
         this.multiplayerPanel.addEventListener('mouseleave', () => {
             this.multiplayerPanel.style.opacity = '0.95';
             this.multiplayerPanel.style.transform = 'translateY(0)';
+            this.multiplayerPanel.style.boxShadow = '0 2px 10px rgba(0,0,0,0.7)';
         });
 
         this.multiplayerPanel.innerHTML = `
-            <div id="multiplayer-header" style="padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2);">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <h3 style="margin: 0; font-size: 16px;">🌐 Multiplayer</h3>
-                    <div id="header-status-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #f44336; transition: background 0.3s ease;"></div>
+            <div id="multiplayer-header" style="padding: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4CAF50; background: rgba(76, 175, 80, 0.1);">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <h3 style="margin: 0; font-size: 14px; color: #4CAF50;">🎮 Multiplayer</h3>
+                    <div id="header-status-indicator" style="width: 6px; height: 6px; border-radius: 50%; background: #f44336; transition: background 0.3s ease;"></div>
                 </div>
-                <button id="multiplayer-toggle" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">▼</button>
+                <button id="multiplayer-toggle" style="background: none; border: none; color: #4CAF50; font-size: 14px; cursor: pointer; padding: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">▼</button>
             </div>
-            <div id="multiplayer-content" style="padding: 15px; max-height: calc(100vh - 200px); overflow-y: auto; transition: all 0.3s ease;">
-                <div id="connection-status" style="margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px; text-align: center;">
+            <div id="multiplayer-content" style="padding: 8px; max-height: calc(100vh - 120px); overflow-y: auto; transition: all 0.3s ease;">
+                <!-- Connection Status -->
+                <div id="connection-status" style="margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; text-align: center; font-size: 11px;">
                     <span id="status-text">Connecting...</span>
                 </div>
-            <div id="game-mode-selection" style="margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Game Mode:</h4>
-                <select id="game-mode-select" style="width: 100%; padding: 6px; margin-bottom: 8px; border: none; border-radius: 3px; background: rgba(255,255,255,0.9);">
-                    <option value="free_for_all">Free-for-All City Building</option>
-                    <option value="team_based">Team-Based City Development</option>
-                    <option value="competitive">Competitive Resource Management</option>
-                    <option value="collaborative">Collaborative Megacity Building</option>
-                </select>
-                <div id="game-mode-description" style="font-size: 12px; color: #ccc; margin-bottom: 8px;">
-                    Build your city independently, compete for resources and territory
+
+                <!-- Game Mode Selection -->
+                <div id="game-mode-selection" style="margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <h4 style="margin: 0 0 4px 0; font-size: 11px; color: #4CAF50;">Mode:</h4>
+                    <select id="game-mode-select" style="width: 100%; padding: 4px; border: 1px solid #555; border-radius: 3px; background: #333; color: white; font-size: 10px;">
+                        <option value="free_for_all">Free-for-All</option>
+                        <option value="team_based">Team-Based</option>
+                        <option value="competitive">Competitive</option>
+                        <option value="collaborative">Collaborative</option>
+                    </select>
                 </div>
-            </div>
-            <div id="room-controls" style="margin-bottom: 15px;">
-                <button id="create-game-btn" style="width: 100%; padding: 8px; margin-bottom: 8px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Create Game</button>
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="room-code-input" placeholder="Room Code" style="flex: 1; padding: 8px; border: none; border-radius: 5px;">
-                    <button id="join-game-btn" style="padding: 8px 15px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">Join</button>
-                </div>
-            </div>
-            <div id="room-info" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <div><strong>Room:</strong> <span id="room-code-display"></span></div>
-                <div><strong>Players:</strong> <span id="player-count">1</span></div>
-                <div><strong>Your Turn:</strong> <span id="turn-indicator">No</span></div>
-                <div><strong>Time Left:</strong> <span id="turn-timer">--</span></div>
-                <div><strong>Actions:</strong> <span id="actions-left">3/3</span></div>
-                <div id="pending-actions" style="display: none; margin-top: 8px; padding: 5px; background: rgba(255,193,7,0.2); border-radius: 3px; font-size: 12px;">
-                    <span id="pending-count">0</span> actions pending...
-                </div>
-            </div>
-            <div id="players-list" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Players:</h4>
-                <div id="players-container"></div>
-            </div>
-            <div id="victory-conditions" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Victory Conditions:</h4>
-                <div id="victory-list"></div>
-            </div>
-            <div id="trading-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Trading:</h4>
-                <button id="initiate-trade-btn" style="width: 100%; padding: 6px; margin-bottom: 8px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Initiate Trade</button>
-                <div id="trade-offers" style="max-height: 100px; overflow-y: auto;"></div>
-            </div>
-            <div id="team-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Team:</h4>
-                <div id="team-info" style="font-size: 12px; margin-bottom: 8px;">
-                    <div>Status: <span id="team-status">No Team</span></div>
-                    <div>Members: <span id="team-members">0</span></div>
-                    <div id="team-id-display" style="display: none; margin-top: 5px; padding: 5px; background: rgba(0,0,0,0.2); border-radius: 3px;">
-                        <div><strong>Team ID:</strong> <span id="team-id-text"></span></div>
-                        <div style="font-size: 10px; color: #ccc;">Share this with friends to join</div>
+
+                <!-- Room Controls -->
+                <div id="room-controls" style="margin-bottom: 8px;">
+                    <button id="create-game-btn" style="width: 100%; padding: 6px; margin-bottom: 6px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Create Game</button>
+                    <div style="display: flex; gap: 4px;">
+                        <input type="text" id="room-code-input" placeholder="Room Code" style="flex: 1; padding: 4px; border: 1px solid #555; border-radius: 3px; background: #333; color: white; font-size: 10px;">
+                        <button id="join-game-btn" style="padding: 4px 8px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">Join</button>
                     </div>
                 </div>
-                <button id="create-team-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Create Team</button>
-                <button id="join-team-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Join Team</button>
-                <button id="leave-team-btn" style="display: none; width: 100%; padding: 6px; margin-bottom: 4px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Leave Team</button>
-            </div>
-            <div id="shared-resources-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Shared Resources:</h4>
-                <div id="shared-resources-display" style="font-size: 12px; margin-bottom: 8px;">
-                    <div>Wood: <span id="shared-wood">0</span></div>
-                    <div>Ore: <span id="shared-ore">0</span></div>
-                    <div>Power: <span id="shared-power">0</span></div>
-                    <div>Goods: <span id="shared-goods">0</span></div>
+
+                <!-- Game Info (Compact Grid) -->
+                <div id="room-info" style="display: none; margin-bottom: 8px; padding: 6px; background: rgba(76, 175, 80, 0.1); border-radius: 4px; border: 1px solid #4CAF50;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px; margin-bottom: 4px;">
+                        <div><strong>Room:</strong> <span id="room-code-display" style="color: #4CAF50;"></span></div>
+                        <div><strong>Players:</strong> <span id="player-count" style="color: #4CAF50;">1</span></div>
+                        <div><strong>Turn:</strong> <span id="turn-indicator" style="color: #f44336;">No</span></div>
+                        <div><strong>Time:</strong> <span id="turn-timer" style="color: #4CAF50;">--</span></div>
+                    </div>
+                    <div style="text-align: center; font-size: 10px; color: #4CAF50; padding: 2px; background: rgba(0,0,0,0.2); border-radius: 3px;">
+                        <strong>Actions:</strong> <span id="actions-left">3/3</span>
+                    </div>
+                    <div id="pending-actions" style="display: none; margin-top: 4px; padding: 3px; background: rgba(255,193,7,0.2); border-radius: 3px; font-size: 9px; text-align: center;">
+                        <span id="pending-count">0</span> actions pending...
+                    </div>
                 </div>
-                <button id="contribute-resources-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Contribute Resources</button>
-            </div>
-            <div id="joint-projects-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Joint Projects:</h4>
-                <div id="projects-list" style="max-height: 100px; overflow-y: auto; font-size: 12px;"></div>
-                <button id="create-project-btn" style="width: 100%; padding: 6px; margin-top: 8px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Create Project</button>
-            </div>
-            <div id="team-chat-panel" style="display: none; margin-bottom: 15px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                <h4 style="margin: 0 0 10px 0;">Team Chat:</h4>
-                <div id="team-chat-messages" style="height: 100px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 3px; margin-bottom: 8px; font-size: 12px;"></div>
-                <input type="text" id="team-chat-input" placeholder="Type team message..." style="width: 100%; padding: 4px; border: none; border-radius: 3px; font-size: 12px;">
-            </div>
-            <button id="next-turn-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Next Turn</button>
-            <button id="sync-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">Sync Map</button>
-            <button id="refresh-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh Map</button>
-            <button id="leave-game-btn" style="display: none; width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Leave Game</button>
+
+                <!-- Players List (Compact) -->
+                <div id="players-list" style="display: none; margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <h4 style="margin: 0 0 4px 0; font-size: 11px; color: #4CAF50;">Players:</h4>
+                    <div id="players-container" style="font-size: 9px;"></div>
+                </div>
+
+                <!-- Action Buttons (2x2 Grid) -->
+                <div id="action-buttons" style="display: none; margin-bottom: 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px;">
+                        <button id="next-turn-btn" style="padding: 4px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">Next Turn</button>
+                        <button id="sync-map-btn" style="padding: 4px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">Sync Map</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                        <button id="refresh-map-btn" style="padding: 4px; background: #FF5722; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">Refresh</button>
+                        <button id="leave-game-btn" style="padding: 4px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">Leave</button>
+                    </div>
+                </div>
+
+                <!-- Team Panel (Compact) -->
+                <div id="team-panel" style="display: none; margin-bottom: 8px; padding: 6px; background: rgba(156, 39, 176, 0.1); border-radius: 4px; border: 1px solid #9C27B0;">
+                    <h4 style="margin: 0 0 4px 0; font-size: 11px; color: #9C27B0;">Team:</h4>
+                    <div id="team-info" style="font-size: 9px; margin-bottom: 4px;">
+                        <div>Status: <span id="team-status" style="color: #9C27B0;">No Team</span></div>
+                        <div>Members: <span id="team-members" style="color: #9C27B0;">0</span></div>
+                        <div id="team-id-display" style="display: none; margin-top: 3px; padding: 3px; background: rgba(0,0,0,0.2); border-radius: 3px;">
+                            <div><strong>ID:</strong> <span id="team-id-text" style="color: #9C27B0;"></span></div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-bottom: 3px;">
+                        <button id="create-team-btn" style="padding: 3px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 8px;">Create</button>
+                        <button id="join-team-btn" style="padding: 3px; background: #673AB7; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 8px;">Join</button>
+                    </div>
+                    <button id="leave-team-btn" style="display: none; width: 100%; padding: 3px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 8px;">Leave Team</button>
+                </div>
+
+                <!-- Victory Conditions (Compact) -->
+                <div id="victory-conditions" style="display: none; margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <h4 style="margin: 0 0 4px 0; font-size: 11px; color: #4CAF50;">Victory:</h4>
+                    <div id="victory-list" style="font-size: 9px;"></div>
+                </div>
             </div>
         `;
 
@@ -470,14 +470,14 @@ class SimpleMultiplayerIntegration {
                 isCollapsed = !isCollapsed;
                 if (isCollapsed) {
                     content.style.maxHeight = '0';
-                    content.style.padding = '0 15px';
+                    content.style.padding = '0 8px';
                     toggleBtn.textContent = '▶';
-                    this.multiplayerPanel.style.width = '150px';
+                    this.multiplayerPanel.style.width = '120px';
                 } else {
-                    content.style.maxHeight = 'calc(100vh - 200px)';
-                    content.style.padding = '15px';
+                    content.style.maxHeight = 'calc(100vh - 120px)';
+                    content.style.padding = '8px';
                     toggleBtn.textContent = '▼';
-                    this.multiplayerPanel.style.width = '300px';
+                    this.multiplayerPanel.style.width = '240px';
                 }
             };
             
