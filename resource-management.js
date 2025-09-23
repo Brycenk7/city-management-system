@@ -10,6 +10,7 @@ class ResourceManagement {
             commercialGoods: 0,
             power: 0
         };
+        this.currentPlayerId = null; // Track current player for multiplayer
         
         this.maxResources = {
             wood: 1000,
@@ -125,24 +126,29 @@ class ResourceManagement {
                 const cell = this.mapSystem.cells[row][col];
                 const key = `${row},${col}`;
                 
-                // Wood from lumber yards
-                if (cell.attribute === 'lumberYard' || cell.class === 'lumberYard') {
-                    this.resourceSources.wood.add(key);
-                }
+                // Only count buildings owned by the current player in multiplayer
+                const isOwnedByCurrentPlayer = !this.currentPlayerId || !cell.playerId || cell.playerId === this.currentPlayerId;
                 
-                // Ore from mining outposts
-                if (cell.attribute === 'miningOutpost' || cell.class === 'miningOutpost') {
-                    this.resourceSources.ore.add(key);
-                }
-                
-                // Commercial goods from industrial zones
-                if (cell.attribute === 'industrial' || cell.class === 'industrial') {
-                    this.resourceSources.commercialGoods.add(key);
-                }
-                
-                // Power from power plants
-                if (cell.attribute === 'powerPlant' || cell.class === 'powerPlant') {
-                    this.resourceSources.power.add(key);
+                if (isOwnedByCurrentPlayer) {
+                    // Wood from lumber yards
+                    if (cell.attribute === 'lumberYard' || cell.class === 'lumberYard') {
+                        this.resourceSources.wood.add(key);
+                    }
+                    
+                    // Ore from mining outposts
+                    if (cell.attribute === 'miningOutpost' || cell.class === 'miningOutpost') {
+                        this.resourceSources.ore.add(key);
+                    }
+                    
+                    // Commercial goods from industrial zones
+                    if (cell.attribute === 'industrial' || cell.class === 'industrial') {
+                        this.resourceSources.commercialGoods.add(key);
+                    }
+                    
+                    // Power from power plants
+                    if (cell.attribute === 'powerPlant' || cell.class === 'powerPlant') {
+                        this.resourceSources.power.add(key);
+                    }
                 }
             }
         }
@@ -348,6 +354,12 @@ class ResourceManagement {
         this.updateResourceDisplay();
     }
     
+    // Set current player ID for multiplayer resource tracking
+    setCurrentPlayerId(playerId) {
+        this.currentPlayerId = playerId;
+        console.log('Resource management player ID set to:', playerId);
+    }
+
     // Reset resources to starting values (for new world generation)
     resetToStartingResources() {
         console.log('=== COMPLETE RESOURCE RESET ===');

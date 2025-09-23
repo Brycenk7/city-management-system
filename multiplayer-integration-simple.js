@@ -42,6 +42,11 @@ class SimpleMultiplayerIntegration {
             this.updatePlayersList(data.game.players);
             this.updateUI();
             
+            // Set player ID in resource management
+            if (this.mapSystem && this.mapSystem.resourceManagement) {
+                this.mapSystem.resourceManagement.setCurrentPlayerId(this.playerId);
+            }
+            
             // Start resource updates
             this.startResourceUpdates();
             
@@ -68,6 +73,11 @@ class SimpleMultiplayerIntegration {
             this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
             this.updateUI();
+            
+            // Set player ID in resource management
+            if (this.mapSystem && this.mapSystem.resourceManagement) {
+                this.mapSystem.resourceManagement.setCurrentPlayerId(this.playerId);
+            }
             
             // Start resource updates
             this.startResourceUpdates();
@@ -383,7 +393,6 @@ class SimpleMultiplayerIntegration {
                 <input type="text" id="team-chat-input" placeholder="Type team message..." style="width: 100%; padding: 4px; border: none; border-radius: 3px; font-size: 12px;">
             </div>
             <button id="next-turn-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Next Turn</button>
-            <button id="sync-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">Sync Map</button>
             <button id="refresh-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh Map</button>
             <button id="leave-game-btn" style="display: none; width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Leave Game</button>
             </div>
@@ -460,18 +469,6 @@ class SimpleMultiplayerIntegration {
             nextTurnBtn.addEventListener('click', () => this.advanceTurn());
         }
 
-        const syncMapBtn = document.getElementById('sync-map-btn');
-        if (syncMapBtn) {
-            syncMapBtn.addEventListener('click', () => {
-                console.log('Manual map sync requested');
-                if (this.isInMultiplayer) {
-                    this.sendMapState();
-                    this.showNotification('Map state sent to other players', 'info');
-                } else {
-                    this.showNotification('Not in multiplayer mode', 'error');
-                }
-            });
-        }
 
         const refreshMapBtn = document.getElementById('refresh-map-btn');
         if (refreshMapBtn) {
@@ -627,11 +624,6 @@ class SimpleMultiplayerIntegration {
                 nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
             }
 
-            // Show sync map button
-            const syncMapBtn = document.getElementById('sync-map-btn');
-            if (syncMapBtn) {
-                syncMapBtn.style.display = 'block';
-            }
             
             // Show refresh map button
             const refreshMapBtn = document.getElementById('refresh-map-btn');
@@ -780,6 +772,11 @@ class SimpleMultiplayerIntegration {
             if (this.mapSystem && this.mapSystem.cells && this.mapSystem.cells[data.row]) {
                 this.mapSystem.cells[data.row][data.col].attribute = data.attribute;
                 this.mapSystem.cells[data.row][data.col].class = data.className;
+                
+                // Preserve player ownership
+                if (data.playerId) {
+                    this.mapSystem.cells[data.row][data.col].playerId = data.playerId;
+                }
                 
                 // Update visual representation
                 if (this.mapSystem.updateCellVisual) {

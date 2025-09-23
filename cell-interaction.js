@@ -152,6 +152,11 @@ class CellInteraction {
         this.mapSystem.cells[row][col].attribute = this.mapSystem.selectedAttribute;
         this.mapSystem.cells[row][col].class = this.mapSystem.selectedClass;
         
+        // Tag with player ownership in multiplayer
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            this.mapSystem.cells[row][col].playerId = window.multiplayerIntegration.playerId;
+        }
+        
         // Send multiplayer update if in multiplayer mode
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
             window.multiplayerIntegration.sendGameAction('place', row, col, this.mapSystem.selectedAttribute, this.mapSystem.selectedClass);
