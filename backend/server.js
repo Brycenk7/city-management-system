@@ -45,6 +45,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root endpoint for Render health checks
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'City Builder Pro Backend Server',
+    status: 'running',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Simple game storage (in production, use a database)
 const games = new Map();
 const players = new Map();
@@ -1421,10 +1430,11 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 CORS enabled for: http://localhost:3000`);
+  console.log(`🔗 CORS enabled for all origins`);
+  console.log(`📡 Socket.io server ready`);
 });
 
 // Graceful shutdown
