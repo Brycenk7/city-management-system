@@ -90,6 +90,14 @@ class CellInteraction {
             
             // Only erase if it's player-placed infrastructure/zoning
             if (this.mapSystem.isPlayerPlaced(row, col)) {
+                // In multiplayer, only allow erasing your own buildings
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    const cell = this.mapSystem.cells[row][col];
+                    if (cell.playerId && cell.playerId !== window.multiplayerIntegration.playerId) {
+                        this.showEraseError(cell, 'Cannot erase other player\'s buildings');
+                        return;
+                    }
+                }
                 // Get the cost of the item being erased for refund calculation
                 const erasedAttribute = currentCell.attribute;
                 const refundAmounts = this.calculateRefundAmounts(erasedAttribute);
@@ -99,13 +107,12 @@ class CellInteraction {
                 
                 // Send multiplayer update if in multiplayer mode
                 if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
-                    // Check if this building was placed in the current turn
-                    const cell = this.mapSystem.cells[row][col];
-                    const wasPlacedThisTurn = cell && cell.placedThisTurn === true;
+                    // Check if this building was placed in the current turn (before erasing)
+                    const wasPlacedThisTurn = currentCell && currentCell.placedThisTurn === true;
                     
                     window.multiplayerIntegration.sendGameAction('remove', row, col, erasedAttribute, null);
                     
-                    // Only count action if it's our turn AND the building wasn't placed this turn
+                    // Handle action counting for erasing
                     if (window.multiplayerIntegration.isMyTurn()) {
                         if (wasPlacedThisTurn) {
                             // Refund the action since we're erasing something we placed this turn
@@ -113,10 +120,9 @@ class CellInteraction {
                             console.log(`Action refunded for erasing current turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
                             window.multiplayerIntegration.showNotification('Action refunded - erased building from current turn!', 'success');
                         } else {
-                            // Count action for erasing buildings from previous turns
-                            window.multiplayerIntegration.actionsThisTurn++;
-                            console.log(`Action used for erasing previous turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
-                            window.multiplayerIntegration.showNotification('Action used - erased building from previous turn', 'info');
+                            // No action cost for erasing buildings from previous turns
+                            console.log(`No action cost for erasing previous turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+                            window.multiplayerIntegration.showNotification('Building erased from previous turn - no action cost', 'info');
                         }
                     }
                 }
@@ -132,6 +138,11 @@ class CellInteraction {
                 // Update resource management after erasing
                 if (this.mapSystem.resourceManagement) {
                     this.mapSystem.resourceManagement.recalculate();
+                }
+                
+                // Update UI to show action changes
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    window.multiplayerIntegration.updateUI();
                 }
             }
             this.mapSystem.lastPaintedCell = cell;
