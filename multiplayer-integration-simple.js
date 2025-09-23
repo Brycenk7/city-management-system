@@ -18,6 +18,7 @@ class SimpleMultiplayerIntegration {
             '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
             '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
         ];
+        this.hasSyncedBefore = false;
     }
 
     async initializeMultiplayer() {
@@ -74,9 +75,10 @@ class SimpleMultiplayerIntegration {
             // Start game state updates
             this.startGameStateUpdates();
             
-            // Sync the map if it exists
+            // Sync the map if it exists - force sync when joining
             if (data.game.gameState && data.game.gameState.cells) {
-                this.syncMap(data.game.gameState.cells);
+                console.log('Forcing map sync on game join...');
+                this.forceMapSync(data.game.gameState.cells);
             }
             
             console.log('Successfully joined game:', data.roomCode, 'as', this.playerName);
@@ -1277,15 +1279,22 @@ class SimpleMultiplayerIntegration {
         // Only sync if we don't have any player modifications yet
         // This prevents overwriting the current player's work
         let hasPlayerModifications = false;
-        for (let row = 0; row < this.mapSystem.cells.length; row++) {
-            for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
-                const cell = this.mapSystem.cells[row][col];
-                if (cell && this.mapSystem.isPlayerPlaced && this.mapSystem.isPlayerPlaced(row, col)) {
-                    hasPlayerModifications = true;
-                    break;
+        
+        // Check if this is the first sync (when joining a game)
+        const isFirstSync = !this.hasSyncedBefore;
+        this.hasSyncedBefore = true;
+        
+        if (!isFirstSync) {
+            for (let row = 0; row < this.mapSystem.cells.length; row++) {
+                for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                    const cell = this.mapSystem.cells[row][col];
+                    if (cell && this.mapSystem.isPlayerPlaced && this.mapSystem.isPlayerPlaced(row, col)) {
+                        hasPlayerModifications = true;
+                        break;
+                    }
                 }
+                if (hasPlayerModifications) break;
             }
-            if (hasPlayerModifications) break;
         }
 
         if (hasPlayerModifications) {
@@ -1421,6 +1430,84 @@ class SimpleMultiplayerIntegration {
         }
         
         console.log('Complete map refresh finished');
+    }
+
+    // Force map sync - bypasses modification checks
+    forceMapSync(cellData) {
+        console.log('Force syncing map with server data...', cellData);
+        
+        if (!this.mapSystem || !this.mapSystem.cells) {
+            console.error('MapSystem not available for force sync');
+            return;
+        }
+
+        if (!cellData || !Array.isArray(cellData)) {
+            console.error('Invalid cell data received for force sync:', cellData);
+            return;
+        }
+
+        console.log('Force applying map sync...');
+        let cellsUpdated = 0;
+
+        // Update each cell with the server data
+        for (let row = 0; row < cellData.length; row++) {
+            for (let col = 0; col < cellData[row].length; col++) {
+                if (cellData[row][col]) {
+                    // Preserve the existing element reference
+                    const existingElement = this.mapSystem.cells[row][col]?.element;
+                    this.mapSystem.cells[row][col] = { 
+                        ...cellData[row][col],
+                        element: existingElement // Keep the existing DOM element
+                    };
+                    cellsUpdated++;
+                }
+            }
+        }
+
+        console.log(`Force updated ${cellsUpdated} cells`);
+
+        // Update the visual representation
+        this.mapSystem.updateStats();
+        
+        // Force a complete visual refresh
+        console.log('Forcing complete visual refresh...');
+        for (let row = 0; row < this.mapSystem.cells.length; row++) {
+            for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell && cell.element) {
+                    // Clear the cell first
+                    cell.element.className = 'cell';
+                    cell.element.style.background = '';
+                    cell.element.style.border = '';
+                    
+                    // Update the visual
+                    this.mapSystem.updateCellVisual(row, col);
+                }
+            }
+        }
+
+        // Additional refresh to ensure everything is visible
+        setTimeout(() => {
+            console.log('Performing additional visual refresh...');
+            for (let row = 0; row < this.mapSystem.cells.length; row++) {
+                for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                    const cell = this.mapSystem.cells[row][col];
+                    if (cell && cell.element) {
+                        this.mapSystem.updateCellVisual(row, col);
+                    }
+                }
+            }
+        }, 100);
+
+        console.log('Force map sync completed successfully');
+        
+        // Force a complete map re-render as a final step
+        this.forceMapRerender();
+        
+        // Additional aggressive refresh
+        setTimeout(() => {
+            this.forceCompleteMapRefresh();
+        }, 200);
     }
 
     // Send current map state to server
