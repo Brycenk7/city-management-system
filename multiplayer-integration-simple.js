@@ -36,6 +36,8 @@ class SimpleMultiplayerIntegration {
             this.playerId = data.playerId;
             this.playerName = data.game.players[0].username;
             this.isInMultiplayer = true;
+            this.turnOrder = data.game.gameState.turnOrder;
+            this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
             this.updateUI();
             
@@ -45,9 +47,12 @@ class SimpleMultiplayerIntegration {
             // Send current map state to server
             setTimeout(() => {
                 this.sendMapState();
-            }, 1000); // Wait a bit for the game to be fully set up
+                console.log('Sent initial map state to server');
+            }, 2000); // Wait a bit longer for the game to be fully set up
             
             console.log('Game created:', data.roomCode, 'as', this.playerName);
+            console.log('Turn order:', this.turnOrder);
+            console.log('Current turn:', this.currentTurn);
         });
 
         this.wsManager.on('game_joined', (data) => {
@@ -55,6 +60,8 @@ class SimpleMultiplayerIntegration {
             this.playerId = data.playerId;
             this.playerName = data.game.players.find(p => p.id === data.playerId)?.username || 'Player';
             this.isInMultiplayer = true;
+            this.turnOrder = data.game.gameState.turnOrder;
+            this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
             this.updateUI();
             
@@ -67,6 +74,8 @@ class SimpleMultiplayerIntegration {
             }
             
             console.log('Successfully joined game:', data.roomCode, 'as', this.playerName);
+            console.log('Turn order:', this.turnOrder);
+            console.log('Current turn:', this.currentTurn);
         });
 
         this.wsManager.on('player_joined', (data) => {
@@ -78,6 +87,7 @@ class SimpleMultiplayerIntegration {
 
         this.wsManager.on('player_left', (data) => {
             console.log('Player left:', data.playerId);
+            console.log('Remaining players:', data.game.players);
             this.updatePlayersList(data.game.players);
             this.turnOrder = data.game.gameState.turnOrder;
             this.updateUI();
@@ -115,6 +125,7 @@ class SimpleMultiplayerIntegration {
         });
 
         this.wsManager.on('game_state_update', (data) => {
+            console.log('Game state updated:', data);
             this.handleGameStateUpdate(data);
         });
 
@@ -355,6 +366,7 @@ class SimpleMultiplayerIntegration {
                 <input type="text" id="team-chat-input" placeholder="Type team message..." style="width: 100%; padding: 4px; border: none; border-radius: 3px; font-size: 12px;">
             </div>
             <button id="next-turn-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Next Turn</button>
+            <button id="sync-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">Sync Map</button>
             <button id="leave-game-btn" style="display: none; width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Leave Game</button>
             </div>
         `;
@@ -428,6 +440,14 @@ class SimpleMultiplayerIntegration {
         const nextTurnBtn = document.getElementById('next-turn-btn');
         if (nextTurnBtn) {
             nextTurnBtn.addEventListener('click', () => this.advanceTurn());
+        }
+
+        const syncMapBtn = document.getElementById('sync-map-btn');
+        if (syncMapBtn) {
+            syncMapBtn.addEventListener('click', () => {
+                console.log('Manual map sync requested');
+                this.sendMapState();
+            });
         }
 
         const initiateTradeBtn = document.getElementById('initiate-trade-btn');
@@ -574,6 +594,12 @@ class SimpleMultiplayerIntegration {
             if (nextTurnBtn) {
                 nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
             }
+
+            // Show sync map button
+            const syncMapBtn = document.getElementById('sync-map-btn');
+            if (syncMapBtn) {
+                syncMapBtn.style.display = 'block';
+            }
             
             this.updatePlayersDisplay();
             this.updateVictoryConditions();
@@ -592,6 +618,11 @@ class SimpleMultiplayerIntegration {
             const nextTurnBtn = document.getElementById('next-turn-btn');
             if (nextTurnBtn) {
                 nextTurnBtn.style.display = 'none';
+            }
+
+            const syncMapBtn = document.getElementById('sync-map-btn');
+            if (syncMapBtn) {
+                syncMapBtn.style.display = 'none';
             }
         }
     }
@@ -804,7 +835,17 @@ class SimpleMultiplayerIntegration {
     }
 
     canPlaceBuilding() {
-        return this.isInMultiplayer ? this.isMyTurn() : true;
+        if (!this.isInMultiplayer) return true;
+        
+        // If turn order is not set up yet, allow placement
+        if (!this.turnOrder || this.turnOrder.length === 0) {
+            console.log('Turn order not set up yet, allowing placement');
+            return true;
+        }
+        
+        const isMyTurn = this.isMyTurn();
+        console.log('Can place building?', isMyTurn, 'Current turn:', this.currentTurn, 'My turn:', this.turnOrder[this.currentTurn], 'My ID:', this.playerId);
+        return isMyTurn;
     }
 
     // Victory conditions
