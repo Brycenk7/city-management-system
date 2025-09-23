@@ -38,6 +38,15 @@ class SimpleMultiplayerIntegration {
             this.isInMultiplayer = true;
             this.updatePlayersList(data.game.players);
             this.updateUI();
+            
+            // Start resource updates
+            this.startResourceUpdates();
+            
+            // Send current map state to server
+            setTimeout(() => {
+                this.sendMapState();
+            }, 1000); // Wait a bit for the game to be fully set up
+            
             console.log('Game created:', data.roomCode, 'as', this.playerName);
         });
 
@@ -48,11 +57,27 @@ class SimpleMultiplayerIntegration {
             this.isInMultiplayer = true;
             this.updatePlayersList(data.game.players);
             this.updateUI();
+            
+            // Start resource updates
+            this.startResourceUpdates();
+            
+            // Sync the map if it exists
+            if (data.game.gameState && data.game.gameState.cells) {
+                this.syncMap(data.game.gameState.cells);
+            }
+            
             console.log('Successfully joined game:', data.roomCode, 'as', this.playerName);
         });
 
         this.wsManager.on('player_joined', (data) => {
             console.log('Player joined:', data.player.username);
+            this.updatePlayersList(data.game.players);
+            this.turnOrder = data.game.gameState.turnOrder;
+            this.updateUI();
+        });
+
+        this.wsManager.on('player_left', (data) => {
+            console.log('Player left:', data.playerId);
             this.updatePlayersList(data.game.players);
             this.turnOrder = data.game.gameState.turnOrder;
             this.updateUI();
@@ -91,6 +116,12 @@ class SimpleMultiplayerIntegration {
 
         this.wsManager.on('game_state_update', (data) => {
             this.handleGameStateUpdate(data);
+        });
+
+        this.wsManager.on('player_resources_updated', (data) => {
+            console.log('Player resources updated:', data);
+            this.updatePlayersList(data.game.players);
+            this.updateUI();
         });
 
         // Team management events
@@ -162,6 +193,12 @@ class SimpleMultiplayerIntegration {
 
         this.wsManager.on('game_creation_failed', (data) => {
             this.handleGameCreationFailed(data);
+        });
+
+        // Map state updates
+        this.wsManager.on('map_state_updated', (data) => {
+            console.log('Map state updated from another player');
+            this.syncMap(data.cells);
         });
     }
 
@@ -288,6 +325,10 @@ class SimpleMultiplayerIntegration {
                 <div id="team-info" style="font-size: 12px; margin-bottom: 8px;">
                     <div>Status: <span id="team-status">No Team</span></div>
                     <div>Members: <span id="team-members">0</span></div>
+                    <div id="team-id-display" style="display: none; margin-top: 5px; padding: 5px; background: rgba(0,0,0,0.2); border-radius: 3px;">
+                        <div><strong>Team ID:</strong> <span id="team-id-text"></span></div>
+                        <div style="font-size: 10px; color: #ccc;">Share this with friends to join</div>
+                    </div>
                 </div>
                 <button id="create-team-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Create Team</button>
                 <button id="join-team-btn" style="width: 100%; padding: 6px; margin-bottom: 4px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Join Team</button>
@@ -460,12 +501,15 @@ class SimpleMultiplayerIntegration {
             const isCurrentPlayer = playerId === this.playerId;
             const isCurrentTurn = this.turnOrder[this.currentTurn] === playerId;
             
+            // Ensure resources exist and have default values
+            const resources = player.resources || { wood: 0, ore: 0, power: 0, commercialGoods: 0 };
+            
             playerDiv.innerHTML = `
                 <div style="width: 12px; height: 12px; border-radius: 50%; background: ${player.color}; margin-right: 8px; ${isCurrentTurn ? 'box-shadow: 0 0 8px #fff;' : ''}"></div>
                 <div style="flex: 1;">
                     <div style="font-weight: ${isCurrentPlayer ? 'bold' : 'normal'}; color: ${isCurrentPlayer ? '#FFD700' : 'white'};">${player.username} ${isCurrentPlayer ? '(You)' : ''}</div>
                     <div style="font-size: 12px; opacity: 0.8;">
-                        Wood: ${player.resources.wood} | Ore: ${player.resources.ore} | Power: ${player.resources.power}
+                        Wood: ${resources.wood || 0} | Ore: ${resources.ore || 0} | Power: ${resources.power || 0}
                     </div>
                 </div>
                 ${isCurrentTurn ? '<div style="color: #4CAF50; font-weight: bold;">TURN</div>' : ''}
@@ -580,11 +624,22 @@ class SimpleMultiplayerIntegration {
         this.currentRoom = null;
         this.playerId = null;
         this.players.clear();
+        
+        // Stop resource updates
+        this.stopResourceUpdates();
+        
         this.updateUI();
     }
 
     sendGameAction(action, row, col, attribute, className) {
-        if (!this.isInMultiplayer) return;
+        if (!this.isInMultiplayer) {
+            console.log('Not in multiplayer mode, skipping action');
+            return;
+        }
+        
+        console.log(`Sending game action: ${action} at (${row}, ${col}) with attribute: ${attribute}`);
+        console.log('Player ID:', this.playerId);
+        console.log('Is connected:', this.wsManager.isConnected);
         
         const actionId = `${this.playerId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
@@ -600,7 +655,7 @@ class SimpleMultiplayerIntegration {
         
         this.updatePendingActionsDisplay();
         
-        this.wsManager.send('game_action', {
+        const actionData = {
             action: action,
             row: row,
             col: col,
@@ -608,7 +663,10 @@ class SimpleMultiplayerIntegration {
             className: className,
             playerId: this.playerId,
             timestamp: Date.now()
-        });
+        };
+        
+        console.log('Sending action data:', actionData);
+        this.wsManager.send('game_action', actionData);
     }
 
     updatePendingActionsDisplay() {
@@ -628,6 +686,9 @@ class SimpleMultiplayerIntegration {
 
     handleActionExecuted(data) {
         console.log('Action executed:', data);
+        console.log('Player ID from action:', data.playerId);
+        console.log('Current player ID:', this.playerId);
+        console.log('Is this my action?', data.playerId === this.playerId);
         
         // Remove from pending actions if it was ours
         this.pendingActions.forEach((action, actionId) => {
@@ -639,29 +700,48 @@ class SimpleMultiplayerIntegration {
         
         this.updatePendingActionsDisplay();
         
+        // Process action regardless of who sent it
         if (data.type === 'place') {
+            console.log(`Processing place action: ${data.attribute} at (${data.row}, ${data.col})`);
+            
             // Update the cell data
-            this.mapSystem.cells[data.row][data.col].attribute = data.attribute;
-            this.mapSystem.cells[data.row][data.col].class = data.className;
-            
-            // Update visual representation
-            this.mapSystem.updateCellVisual(data.row, data.col);
-            
-            // Update stats
-            this.mapSystem.updateStats();
-            
-            console.log(`Placed ${data.attribute} at (${data.row}, ${data.col})`);
+            if (this.mapSystem && this.mapSystem.cells && this.mapSystem.cells[data.row]) {
+                this.mapSystem.cells[data.row][data.col].attribute = data.attribute;
+                this.mapSystem.cells[data.row][data.col].class = data.className;
+                
+                // Update visual representation
+                if (this.mapSystem.updateCellVisual) {
+                    this.mapSystem.updateCellVisual(data.row, data.col);
+                }
+                
+                // Update stats
+                if (this.mapSystem.updateStats) {
+                    this.mapSystem.updateStats();
+                }
+                
+                console.log(`Successfully placed ${data.attribute} at (${data.row}, ${data.col})`);
+            } else {
+                console.error('MapSystem not available or cell not found');
+            }
         } else if (data.type === 'remove') {
+            console.log(`Processing remove action at (${data.row}, ${data.col})`);
+            
             // Erase the cell
-            this.mapSystem.erasePlayerModifications(data.row, data.col);
+            if (this.mapSystem && this.mapSystem.erasePlayerModifications) {
+                this.mapSystem.erasePlayerModifications(data.row, data.col);
+            }
             
             // Update visual representation
-            this.mapSystem.updateCellVisual(data.row, data.col);
+            if (this.mapSystem && this.mapSystem.updateCellVisual) {
+                this.mapSystem.updateCellVisual(data.row, data.col);
+            }
             
             // Update stats
-            this.mapSystem.updateStats();
+            if (this.mapSystem && this.mapSystem.updateStats) {
+                this.mapSystem.updateStats();
+            }
             
-            console.log(`Removed building at (${data.row}, ${data.col})`);
+            console.log(`Successfully removed building at (${data.row}, ${data.col})`);
         }
     }
 
@@ -849,6 +929,9 @@ class SimpleMultiplayerIntegration {
     showCreateTeamDialog() {
         const teamName = prompt('Enter team name:');
         if (teamName) {
+            console.log('Creating team with name:', teamName);
+            console.log('Is connected:', this.wsManager.isConnected);
+            console.log('Is in multiplayer:', this.isInMultiplayer);
             this.wsManager.send('create_team', { teamName: teamName });
         }
     }
@@ -903,7 +986,33 @@ class SimpleMultiplayerIntegration {
     handleTeamCreated(data) {
         this.currentTeam = data.team;
         this.updateTeamUI();
-        this.showNotification('Team created successfully!', 'success');
+        this.showNotification(`Team created successfully! Team ID: ${data.team.id}`, 'success');
+        
+        // Show team ID in a more prominent way
+        const teamIdDisplay = document.createElement('div');
+        teamIdDisplay.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            max-width: 400px;
+        `;
+        teamIdDisplay.innerHTML = `
+            <h3 style="margin: 0 0 15px 0;">🎉 Team Created!</h3>
+            <p style="margin: 0 0 10px 0;"><strong>Team Name:</strong> ${data.team.name}</p>
+            <p style="margin: 0 0 15px 0;"><strong>Team ID:</strong> <code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px;">${data.team.id}</code></p>
+            <p style="margin: 0 0 15px 0; font-size: 14px;">Share this Team ID with your friends so they can join!</p>
+            <button onclick="this.parentElement.remove()" style="background: rgba(0,0,0,0.2); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">Got it!</button>
+        `;
+        document.body.appendChild(teamIdDisplay);
     }
 
     handleTeamJoined(data) {
@@ -975,6 +1084,8 @@ class SimpleMultiplayerIntegration {
     updateTeamUI() {
         const teamStatus = document.getElementById('team-status');
         const teamMembers = document.getElementById('team-members');
+        const teamIdDisplay = document.getElementById('team-id-display');
+        const teamIdText = document.getElementById('team-id-text');
         const createTeamBtn = document.getElementById('create-team-btn');
         const joinTeamBtn = document.getElementById('join-team-btn');
         const leaveTeamBtn = document.getElementById('leave-team-btn');
@@ -982,12 +1093,15 @@ class SimpleMultiplayerIntegration {
         if (this.currentTeam) {
             if (teamStatus) teamStatus.textContent = this.currentTeam.name;
             if (teamMembers) teamMembers.textContent = this.currentTeam.members.length;
+            if (teamIdDisplay) teamIdDisplay.style.display = 'block';
+            if (teamIdText) teamIdText.textContent = this.currentTeam.id;
             if (createTeamBtn) createTeamBtn.style.display = 'none';
             if (joinTeamBtn) joinTeamBtn.style.display = 'none';
             if (leaveTeamBtn) leaveTeamBtn.style.display = 'block';
         } else {
             if (teamStatus) teamStatus.textContent = 'No Team';
             if (teamMembers) teamMembers.textContent = '0';
+            if (teamIdDisplay) teamIdDisplay.style.display = 'none';
             if (createTeamBtn) createTeamBtn.style.display = 'block';
             if (joinTeamBtn) joinTeamBtn.style.display = 'block';
             if (leaveTeamBtn) leaveTeamBtn.style.display = 'none';
@@ -1064,5 +1178,75 @@ class SimpleMultiplayerIntegration {
 
     handleGameCreationFailed(data) {
         this.showNotification(`Game creation failed: ${data.reason}`, 'error');
+    }
+
+    // Map synchronization methods
+    syncMap(cellData) {
+        console.log('Syncing map with server data...');
+        
+        if (!this.mapSystem || !this.mapSystem.cells) {
+            console.error('MapSystem not available for sync');
+            return;
+        }
+
+        // Update each cell with the server data
+        for (let row = 0; row < cellData.length; row++) {
+            for (let col = 0; col < cellData[row].length; col++) {
+                if (cellData[row][col]) {
+                    this.mapSystem.cells[row][col] = { ...cellData[row][col] };
+                }
+            }
+        }
+
+        // Update the visual representation
+        this.mapSystem.updateStats();
+        
+        // Force a complete visual refresh
+        for (let row = 0; row < this.mapSystem.cells.length; row++) {
+            for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                this.mapSystem.updateCellVisual(row, col);
+            }
+        }
+
+        console.log('Map sync completed');
+    }
+
+    // Send current map state to server
+    sendMapState() {
+        if (!this.isInMultiplayer || !this.mapSystem) return;
+
+        const mapData = {
+            cells: this.mapSystem.cells,
+            timestamp: Date.now()
+        };
+
+        this.wsManager.send('update_map_state', mapData);
+    }
+
+    // Periodically update player resources
+    startResourceUpdates() {
+        if (this.resourceUpdateInterval) {
+            clearInterval(this.resourceUpdateInterval);
+        }
+
+        this.resourceUpdateInterval = setInterval(() => {
+            if (this.isInMultiplayer && this.mapSystem && this.mapSystem.resourceManagement) {
+                // Get current resources
+                const currentResources = this.mapSystem.resourceManagement.getResources();
+                
+                // Send resource update to server
+                this.wsManager.send('update_player_resources', {
+                    playerId: this.playerId,
+                    resources: currentResources
+                });
+            }
+        }, 5000); // Update every 5 seconds
+    }
+
+    stopResourceUpdates() {
+        if (this.resourceUpdateInterval) {
+            clearInterval(this.resourceUpdateInterval);
+            this.resourceUpdateInterval = null;
+        }
     }
 }

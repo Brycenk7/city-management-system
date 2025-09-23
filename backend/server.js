@@ -1072,6 +1072,56 @@ io.on('connection', (socket) => {
       console.log('⚠️ Player not in a game room, action not queued');
     }
   });
+
+  // Handle map state updates
+  socket.on('update_map_state', (data) => {
+    console.log(`🗺️ Map state update from ${socket.id}`);
+    
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    if (roomCode) {
+      const game = games.get(roomCode);
+      if (game) {
+        // Update the game's map state
+        game.gameState.cells = data.cells;
+        
+        // Broadcast the updated map to all other players in the room
+        socket.to(`game_${roomCode}`).emit('map_state_updated', {
+          cells: data.cells,
+          updatedBy: socket.id
+        });
+        
+        console.log(`📡 Map state broadcasted to room ${roomCode}`);
+      }
+    }
+  });
+
+  // Handle player resource updates
+  socket.on('update_player_resources', (data) => {
+    console.log(`💰 Resource update from ${socket.id}:`, data.resources);
+    
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    if (roomCode) {
+      const game = games.get(roomCode);
+      if (game) {
+        // Update player resources in the game
+        const player = game.players.find(p => p.id === socket.id);
+        if (player) {
+          player.resources = data.resources;
+          
+          // Broadcast updated player list to all players in the room
+          io.to(`game_${roomCode}`).emit('player_resources_updated', {
+            game: game
+          });
+          
+          console.log(`📡 Player resources broadcasted to room ${roomCode}`);
+        }
+      }
+    }
+  });
   
   // Handle turn advancement
   socket.on('advance_turn', (data) => {
@@ -1412,6 +1462,43 @@ io.on('connection', (socket) => {
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`🔌 User disconnected: ${socket.id}`);
+    
+    // Handle player leaving game
+    const playerInfo = players.get(socket.id);
+    if (playerInfo) {
+      const roomCode = playerInfo.roomCode;
+      const game = games.get(roomCode);
+      
+      if (game) {
+        // Remove player from game
+        game.players = game.players.filter(p => p.id !== socket.id);
+        
+        // Update turn order
+        game.gameState.turnOrder = game.gameState.turnOrder.filter(id => id !== socket.id);
+        
+        // Adjust current turn if needed
+        if (game.gameState.currentTurn >= game.gameState.turnOrder.length) {
+          game.gameState.currentTurn = 0;
+        }
+        
+        // Notify remaining players
+        socket.to(`game_${roomCode}`).emit('player_left', {
+          playerId: socket.id,
+          game: game
+        });
+        
+        console.log(`👋 Player ${socket.id} left game ${roomCode}`);
+        
+        // Clean up empty games
+        if (game.players.length === 0) {
+          games.delete(roomCode);
+          console.log(`🗑️ Deleted empty game ${roomCode}`);
+        }
+      }
+      
+      // Remove player from players map
+      players.delete(socket.id);
+    }
   });
 });
 
