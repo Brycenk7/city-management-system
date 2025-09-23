@@ -100,6 +100,12 @@ class CellInteraction {
                 // Send multiplayer update if in multiplayer mode
                 if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
                     window.multiplayerIntegration.sendGameAction('remove', row, col, erasedAttribute, null);
+                    
+                    // Count action if it's our turn
+                    if (window.multiplayerIntegration.isMyTurn()) {
+                        window.multiplayerIntegration.actionsThisTurn++;
+                        console.log(`Action used: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+                    }
                 }
                 
                 // Add refund to resources
@@ -160,6 +166,12 @@ class CellInteraction {
         // Send multiplayer update if in multiplayer mode
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
             window.multiplayerIntegration.sendGameAction('place', row, col, this.mapSystem.selectedAttribute, this.mapSystem.selectedClass);
+            
+            // Count action if it's our turn
+            if (window.multiplayerIntegration.isMyTurn()) {
+                window.multiplayerIntegration.actionsThisTurn++;
+                console.log(`Action used: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+            }
         }
         
         // Update visual representation

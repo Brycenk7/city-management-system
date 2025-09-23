@@ -19,6 +19,11 @@ class SimpleMultiplayerIntegration {
             '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
         ];
         this.hasSyncedBefore = false;
+        this.actionsThisTurn = 0;
+        this.maxActionsPerTurn = 3; // Default actions limit
+        this.turnTimeLimit = 60; // 60 seconds per turn
+        this.turnStartTime = null;
+        this.turnTimer = null;
     }
 
     async initializeMultiplayer() {
@@ -122,6 +127,16 @@ class SimpleMultiplayerIntegration {
         this.wsManager.on('turn_changed', (data) => {
             this.currentTurn = data.currentTurn;
             this.turnOrder = data.turnOrder;
+            
+            // Reset actions for new turn
+            this.actionsThisTurn = 0;
+            
+            // Start turn timer if it's our turn
+            if (this.isMyTurn()) {
+                this.startTurnTimer();
+            } else {
+                this.stopTurnTimer();
+            }
             
             // Recalculate resources when turn changes to ensure proper ownership
             if (this.mapSystem && this.mapSystem.resourceManagement) {
@@ -348,6 +363,8 @@ class SimpleMultiplayerIntegration {
                 <div><strong>Room:</strong> <span id="room-code-display"></span></div>
                 <div><strong>Players:</strong> <span id="player-count">1</span></div>
                 <div><strong>Your Turn:</strong> <span id="turn-indicator">No</span></div>
+                <div><strong>Time Left:</strong> <span id="turn-timer">--</span></div>
+                <div><strong>Actions:</strong> <span id="actions-left">3/3</span></div>
                 <div id="pending-actions" style="display: none; margin-top: 8px; padding: 5px; background: rgba(255,193,7,0.2); border-radius: 3px; font-size: 12px;">
                     <span id="pending-count">0</span> actions pending...
                 </div>
@@ -400,6 +417,7 @@ class SimpleMultiplayerIntegration {
                 <input type="text" id="team-chat-input" placeholder="Type team message..." style="width: 100%; padding: 4px; border: none; border-radius: 3px; font-size: 12px;">
             </div>
             <button id="next-turn-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Next Turn</button>
+            <button id="sync-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">Sync Map</button>
             <button id="refresh-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh Map</button>
             <button id="leave-game-btn" style="display: none; width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Leave Game</button>
             </div>
@@ -476,6 +494,18 @@ class SimpleMultiplayerIntegration {
             nextTurnBtn.addEventListener('click', () => this.advanceTurn());
         }
 
+        const syncMapBtn = document.getElementById('sync-map-btn');
+        if (syncMapBtn) {
+            syncMapBtn.addEventListener('click', () => {
+                console.log('Manual map sync requested');
+                if (this.isInMultiplayer) {
+                    this.sendMapState();
+                    this.showNotification('Map state sent to other players', 'info');
+                } else {
+                    this.showNotification('Not in multiplayer mode', 'error');
+                }
+            });
+        }
 
         const refreshMapBtn = document.getElementById('refresh-map-btn');
         if (refreshMapBtn) {
@@ -625,12 +655,22 @@ class SimpleMultiplayerIntegration {
             document.getElementById('turn-indicator').textContent = isMyTurn ? 'Yes' : 'No';
             document.getElementById('turn-indicator').style.color = isMyTurn ? '#4CAF50' : '#f44336';
             
+            // Update actions left display
+            const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
+            document.getElementById('actions-left').textContent = `${actionsLeft}/${this.maxActionsPerTurn}`;
+            document.getElementById('actions-left').style.color = actionsLeft > 0 ? '#4CAF50' : '#f44336';
+            
             // Show/hide next turn button
             const nextTurnBtn = document.getElementById('next-turn-btn');
             if (nextTurnBtn) {
                 nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
             }
 
+            // Show sync map button
+            const syncMapBtn = document.getElementById('sync-map-btn');
+            if (syncMapBtn) {
+                syncMapBtn.style.display = 'block';
+            }
             
             // Show refresh map button
             const refreshMapBtn = document.getElementById('refresh-map-btn');
@@ -698,6 +738,12 @@ class SimpleMultiplayerIntegration {
         
         // Stop game state updates
         this.stopGameStateUpdates();
+        
+        // Stop turn timer
+        this.stopTurnTimer();
+        
+        // Reset actions
+        this.actionsThisTurn = 0;
         
         this.updateUI();
     }
@@ -901,8 +947,15 @@ class SimpleMultiplayerIntegration {
         }
         
         const isMyTurn = this.isMyTurn();
-        console.log('Can place building?', isMyTurn, 'Current turn:', this.currentTurn, 'My turn:', this.turnOrder[this.currentTurn], 'My ID:', this.playerId);
-        return isMyTurn;
+        const hasActionsLeft = this.actionsThisTurn < this.maxActionsPerTurn;
+        
+        console.log('Can place building?', isMyTurn && hasActionsLeft, 'My turn:', isMyTurn, 'Actions left:', this.maxActionsPerTurn - this.actionsThisTurn, 'Current turn:', this.currentTurn, 'My turn:', this.turnOrder[this.currentTurn], 'My ID:', this.playerId);
+        
+        if (isMyTurn && !hasActionsLeft) {
+            this.showNotification(`No actions left this turn! (${this.maxActionsPerTurn}/${this.maxActionsPerTurn} used)`, 'warning');
+        }
+        
+        return isMyTurn && hasActionsLeft;
     }
 
     // Victory conditions
@@ -1446,6 +1499,51 @@ class SimpleMultiplayerIntegration {
         }
         
         console.log('Complete map refresh finished');
+    }
+
+    // Turn timer methods
+    startTurnTimer() {
+        this.stopTurnTimer(); // Clear any existing timer
+        this.turnStartTime = Date.now();
+        
+        this.turnTimer = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.turnStartTime) / 1000);
+            const remaining = this.turnTimeLimit - elapsed;
+            
+            if (remaining <= 0) {
+                console.log('Turn time limit reached, auto-advancing turn');
+                this.advanceTurn();
+                this.showNotification('Turn time limit reached! Turn auto-advanced.', 'warning');
+            } else if (remaining <= 10) {
+                // Warning when 10 seconds left
+                this.showNotification(`${remaining} seconds left in turn!`, 'warning');
+            }
+            
+            this.updateTurnTimerDisplay(remaining);
+        }, 1000);
+        
+        console.log(`Turn timer started: ${this.turnTimeLimit} seconds`);
+    }
+
+    stopTurnTimer() {
+        if (this.turnTimer) {
+            clearInterval(this.turnTimer);
+            this.turnTimer = null;
+        }
+        this.updateTurnTimerDisplay(0);
+    }
+
+    updateTurnTimerDisplay(remaining) {
+        const timerElement = document.getElementById('turn-timer');
+        if (timerElement) {
+            if (remaining > 0) {
+                timerElement.textContent = `${remaining}s`;
+                timerElement.style.color = remaining <= 10 ? '#f44336' : '#4CAF50';
+            } else {
+                timerElement.textContent = '--';
+                timerElement.style.color = '#666';
+            }
+        }
     }
 
     // Force map sync - bypasses modification checks
