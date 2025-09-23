@@ -382,6 +382,7 @@ class SimpleMultiplayerIntegration {
             </div>
             <button id="next-turn-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Next Turn</button>
             <button id="sync-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">Sync Map</button>
+            <button id="refresh-map-btn" style="display: none; width: 100%; padding: 8px; margin-bottom: 8px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh Map</button>
             <button id="leave-game-btn" style="display: none; width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Leave Game</button>
             </div>
         `;
@@ -467,6 +468,15 @@ class SimpleMultiplayerIntegration {
                 } else {
                     this.showNotification('Not in multiplayer mode', 'error');
                 }
+            });
+        }
+
+        const refreshMapBtn = document.getElementById('refresh-map-btn');
+        if (refreshMapBtn) {
+            refreshMapBtn.addEventListener('click', () => {
+                console.log('Manual map refresh requested');
+                this.forceMapRerender();
+                this.showNotification('Map refreshed', 'info');
             });
         }
 
@@ -619,6 +629,12 @@ class SimpleMultiplayerIntegration {
             const syncMapBtn = document.getElementById('sync-map-btn');
             if (syncMapBtn) {
                 syncMapBtn.style.display = 'block';
+            }
+            
+            // Show refresh map button
+            const refreshMapBtn = document.getElementById('refresh-map-btn');
+            if (refreshMapBtn) {
+                refreshMapBtn.style.display = 'block';
             }
             
             this.updatePlayersDisplay();
@@ -1296,14 +1312,63 @@ class SimpleMultiplayerIntegration {
         // Update the visual representation
         this.mapSystem.updateStats();
         
-        // Force a complete visual refresh
+        // Force a complete visual refresh - this is the key fix
+        console.log('Forcing complete visual refresh...');
         for (let row = 0; row < this.mapSystem.cells.length; row++) {
             for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                // Clear the cell first
+                const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                if (cellElement) {
+                    cellElement.className = 'cell';
+                    cellElement.style.background = '';
+                    cellElement.style.border = '';
+                }
+                
+                // Then update the visual
                 this.mapSystem.updateCellVisual(row, col);
             }
         }
 
+        // Additional refresh to ensure everything is visible
+        setTimeout(() => {
+            console.log('Performing additional visual refresh...');
+            for (let row = 0; row < this.mapSystem.cells.length; row++) {
+                for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                    this.mapSystem.updateCellVisual(row, col);
+                }
+            }
+        }, 100);
+
         console.log('Map sync completed successfully');
+        
+        // Force a complete map re-render as a final step
+        this.forceMapRerender();
+    }
+
+    // Force complete map re-render
+    forceMapRerender() {
+        console.log('Forcing complete map re-render...');
+        
+        if (!this.mapSystem) return;
+        
+        // Get the map container
+        const mapContainer = document.getElementById('map-container');
+        if (!mapContainer) return;
+        
+        // Force a reflow by temporarily hiding and showing
+        mapContainer.style.display = 'none';
+        setTimeout(() => {
+            mapContainer.style.display = 'block';
+            
+            // Update all cells one more time
+            for (let row = 0; row < this.mapSystem.cells.length; row++) {
+                for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                    this.mapSystem.updateCellVisual(row, col);
+                }
+            }
+            
+            console.log('Map re-render completed');
+        }, 50);
     }
 
     // Send current map state to server
