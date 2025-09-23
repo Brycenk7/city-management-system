@@ -52,6 +52,12 @@ class SimpleMultiplayerIntegration {
                 this.mapSystem.resourceManagement.setCurrentPlayerId(this.playerId);
             }
             
+            // Start turn timer if it's our turn (game creator is always first)
+            if (this.isMyTurn()) {
+                this.startTurnTimer();
+                console.log('Turn timer started on game creation');
+            }
+            
             // Start resource updates
             this.startResourceUpdates();
             
@@ -82,6 +88,12 @@ class SimpleMultiplayerIntegration {
             // Set player ID in resource management
             if (this.mapSystem && this.mapSystem.resourceManagement) {
                 this.mapSystem.resourceManagement.setCurrentPlayerId(this.playerId);
+            }
+            
+            // Start turn timer if it's our turn
+            if (this.isMyTurn()) {
+                this.startTurnTimer();
+                console.log('Turn timer started on game join');
             }
             
             // Start resource updates
@@ -130,6 +142,9 @@ class SimpleMultiplayerIntegration {
             
             // Reset actions for new turn
             this.actionsThisTurn = 0;
+            
+            // Clear "placedThisTurn" flags for all cells
+            this.clearPlacedThisTurnFlags();
             
             // Start turn timer if it's our turn
             if (this.isMyTurn()) {
@@ -861,9 +876,11 @@ class SimpleMultiplayerIntegration {
                 this.mapSystem.cells[data.row][data.col].attribute = data.attribute;
                 this.mapSystem.cells[data.row][data.col].class = data.className;
                 
-                // Preserve player ownership
+                // Preserve player ownership and turn placement
                 if (data.playerId) {
                     this.mapSystem.cells[data.row][data.col].playerId = data.playerId;
+                    // Only mark as placed this turn if it's the current player's turn
+                    this.mapSystem.cells[data.row][data.col].placedThisTurn = (data.playerId === this.playerId);
                 }
                 
                 // Update visual representation
@@ -959,8 +976,20 @@ class SimpleMultiplayerIntegration {
     }
 
     isMyTurn() {
-        if (!this.isInMultiplayer || this.turnOrder.length === 0) return true;
-        return this.turnOrder[this.currentTurn] === this.playerId;
+        if (!this.isInMultiplayer || this.turnOrder.length === 0) {
+            console.log('isMyTurn: not in multiplayer or no turn order, returning true');
+            return true;
+        }
+        const isMyTurn = this.turnOrder[this.currentTurn] === this.playerId;
+        console.log('isMyTurn check:', {
+            isInMultiplayer: this.isInMultiplayer,
+            turnOrderLength: this.turnOrder.length,
+            currentTurn: this.currentTurn,
+            currentPlayerId: this.turnOrder[this.currentTurn],
+            myPlayerId: this.playerId,
+            isMyTurn: isMyTurn
+        });
+        return isMyTurn;
     }
 
     advanceTurn() {
@@ -1536,10 +1565,27 @@ class SimpleMultiplayerIntegration {
         console.log('Complete map refresh finished');
     }
 
+    // Clear "placedThisTurn" flags for all cells
+    clearPlacedThisTurnFlags() {
+        if (!this.mapSystem || !this.mapSystem.cells) return;
+        
+        console.log('Clearing placedThisTurn flags for all cells');
+        for (let row = 0; row < this.mapSystem.cells.length; row++) {
+            for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell) {
+                    cell.placedThisTurn = false;
+                }
+            }
+        }
+    }
+
     // Turn timer methods
     startTurnTimer() {
+        console.log('startTurnTimer called');
         this.stopTurnTimer(); // Clear any existing timer
         this.turnStartTime = Date.now();
+        console.log('Turn start time set:', this.turnStartTime);
         
         this.turnTimer = setInterval(() => {
             const elapsed = Math.floor((Date.now() - this.turnStartTime) / 1000);

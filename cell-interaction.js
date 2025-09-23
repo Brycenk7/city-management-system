@@ -99,12 +99,25 @@ class CellInteraction {
                 
                 // Send multiplayer update if in multiplayer mode
                 if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    // Check if this building was placed in the current turn
+                    const cell = this.mapSystem.cells[row][col];
+                    const wasPlacedThisTurn = cell && cell.placedThisTurn === true;
+                    
                     window.multiplayerIntegration.sendGameAction('remove', row, col, erasedAttribute, null);
                     
-                    // Count action if it's our turn
+                    // Only count action if it's our turn AND the building wasn't placed this turn
                     if (window.multiplayerIntegration.isMyTurn()) {
-                        window.multiplayerIntegration.actionsThisTurn++;
-                        console.log(`Action used: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+                        if (wasPlacedThisTurn) {
+                            // Refund the action since we're erasing something we placed this turn
+                            window.multiplayerIntegration.actionsThisTurn = Math.max(0, window.multiplayerIntegration.actionsThisTurn - 1);
+                            console.log(`Action refunded for erasing current turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+                            window.multiplayerIntegration.showNotification('Action refunded - erased building from current turn!', 'success');
+                        } else {
+                            // Count action for erasing buildings from previous turns
+                            window.multiplayerIntegration.actionsThisTurn++;
+                            console.log(`Action used for erasing previous turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+                            window.multiplayerIntegration.showNotification('Action used - erased building from previous turn', 'info');
+                        }
                     }
                 }
                 
@@ -161,6 +174,7 @@ class CellInteraction {
         // Tag with player ownership in multiplayer
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
             this.mapSystem.cells[row][col].playerId = window.multiplayerIntegration.playerId;
+            this.mapSystem.cells[row][col].placedThisTurn = true; // Mark as placed this turn
         }
         
         // Send multiplayer update if in multiplayer mode
