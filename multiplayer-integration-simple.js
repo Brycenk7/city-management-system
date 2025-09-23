@@ -606,12 +606,21 @@ class SimpleMultiplayerIntegration {
     }
 
     updateUI() {
+        console.log('updateUI called, isInMultiplayer:', this.isInMultiplayer);
         const statusText = document.getElementById('status-text');
         const headerStatusIndicator = document.getElementById('header-status-indicator');
         const roomControls = document.getElementById('room-controls');
         const roomInfo = document.getElementById('room-info');
         const playersList = document.getElementById('players-list');
         const leaveBtn = document.getElementById('leave-game-btn');
+        
+        console.log('UI elements found:', {
+            statusText: !!statusText,
+            roomControls: !!roomControls,
+            roomInfo: !!roomInfo,
+            playersList: !!playersList,
+            leaveBtn: !!leaveBtn
+        });
 
         if (this.wsManager.isConnected) {
             statusText.textContent = 'Connected';
@@ -658,8 +667,14 @@ class SimpleMultiplayerIntegration {
             
             // Update actions left display
             const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
-            document.getElementById('actions-left').textContent = `${actionsLeft}/${this.maxActionsPerTurn}`;
-            document.getElementById('actions-left').style.color = actionsLeft > 0 ? '#4CAF50' : '#f44336';
+            const actionsLeftElement = document.getElementById('actions-left');
+            if (actionsLeftElement) {
+                actionsLeftElement.textContent = `${actionsLeft}/${this.maxActionsPerTurn}`;
+                actionsLeftElement.style.color = actionsLeft > 0 ? '#4CAF50' : '#f44336';
+                console.log('Actions left updated:', `${actionsLeft}/${this.maxActionsPerTurn}`);
+            } else {
+                console.log('Actions left element not found!');
+            }
             
             // Show/hide next turn button
             const nextTurnBtn = document.getElementById('next-turn-btn');
@@ -1550,6 +1565,56 @@ class SimpleMultiplayerIntegration {
                 timerElement.textContent = '--';
                 timerElement.style.color = '#666';
             }
+            console.log('Turn timer updated:', remaining);
+        } else {
+            console.log('Turn timer element not found!');
+        }
+    }
+
+    // Debug method to force show UI elements
+    debugShowUI() {
+        console.log('=== DEBUG: Forcing UI elements to show ===');
+        
+        const roomInfo = document.getElementById('room-info');
+        const syncBtn = document.getElementById('sync-map-btn');
+        const refreshBtn = document.getElementById('refresh-map-btn');
+        const actionsLeft = document.getElementById('actions-left');
+        const turnTimer = document.getElementById('turn-timer');
+        
+        console.log('Elements found:', {
+            roomInfo: !!roomInfo,
+            syncBtn: !!syncBtn,
+            refreshBtn: !!refreshBtn,
+            actionsLeft: !!actionsLeft,
+            turnTimer: !!turnTimer
+        });
+        
+        if (roomInfo) {
+            roomInfo.style.display = 'block';
+            roomInfo.style.border = '2px solid red';
+            console.log('Room info forced to show');
+        }
+        
+        if (syncBtn) {
+            syncBtn.style.display = 'block';
+            console.log('Sync button forced to show');
+        }
+        
+        if (refreshBtn) {
+            refreshBtn.style.display = 'block';
+            console.log('Refresh button forced to show');
+        }
+        
+        if (actionsLeft) {
+            actionsLeft.textContent = '3/3';
+            actionsLeft.style.color = '#4CAF50';
+            console.log('Actions left forced to show');
+        }
+        
+        if (turnTimer) {
+            turnTimer.textContent = '60s';
+            turnTimer.style.color = '#4CAF50';
+            console.log('Turn timer forced to show');
         }
     }
 

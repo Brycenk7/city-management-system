@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             multiplayerIntegration = new SimpleMultiplayerIntegration(window.app.mapSystem);
             window.multiplayerIntegration = multiplayerIntegration; // Make it globally accessible
+            window.debugShowUI = () => multiplayerIntegration.debugShowUI(); // Make debug method accessible
             console.log('MultiplayerIntegration created');
             await multiplayerIntegration.initializeMultiplayer();
             console.log('Multiplayer initialized');
