@@ -264,7 +264,17 @@ class SimpleMultiplayerIntegration {
 
     showMultiplayerUI() {
         console.log('showMultiplayerUI called');
+        console.log('MapSystem available:', !!this.mapSystem);
         this.createMultiplayerPanel();
+        console.log('Multiplayer panel created, checking elements...');
+        
+        // Check if elements were created
+        const roomInfo = document.getElementById('room-info');
+        const syncBtn = document.getElementById('sync-map-btn');
+        console.log('Elements after creation:', {
+            roomInfo: !!roomInfo,
+            syncBtn: !!syncBtn
+        });
         this.setupTabListeners();
         this.updateUI();
         console.log('Multiplayer UI created and updated');
@@ -297,6 +307,7 @@ class SimpleMultiplayerIntegration {
     }
 
     createMultiplayerPanel() {
+        console.log('createMultiplayerPanel called');
         this.multiplayerPanel = document.createElement('div');
         this.multiplayerPanel.id = 'multiplayer-panel';
         this.multiplayerPanel.style.cssText = `
@@ -424,7 +435,9 @@ class SimpleMultiplayerIntegration {
         `;
 
         document.body.appendChild(this.multiplayerPanel);
+        console.log('Multiplayer panel appended to body');
         this.setupUIEventListeners();
+        console.log('Event listeners set up');
     }
 
     setupUIEventListeners() {

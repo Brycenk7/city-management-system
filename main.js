@@ -107,15 +107,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Initialize multiplayer
         console.log('Initializing multiplayer...');
+        console.log('MapSystem available:', !!window.app.mapSystem);
         try {
             multiplayerIntegration = new SimpleMultiplayerIntegration(window.app.mapSystem);
             window.multiplayerIntegration = multiplayerIntegration; // Make it globally accessible
             window.debugShowUI = () => multiplayerIntegration.debugShowUI(); // Make debug method accessible
-            console.log('MultiplayerIntegration created');
+            console.log('MultiplayerIntegration created:', !!multiplayerIntegration);
             await multiplayerIntegration.initializeMultiplayer();
             console.log('Multiplayer initialized');
             multiplayerIntegration.showMultiplayerUI();
             console.log('Multiplayer UI shown');
+            console.log('Multiplayer panel created:', !!document.getElementById('multiplayer-panel'));
         } catch (error) {
             console.error('Multiplayer initialization failed:', error);
         }
