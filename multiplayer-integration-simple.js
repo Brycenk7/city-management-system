@@ -277,6 +277,17 @@ class SimpleMultiplayerIntegration {
             this.syncMap(data.cells);
             this.showNotification('Map synchronized with other players', 'success');
         });
+
+        // Listen for connection status changes
+        this.wsManager.socket.on('connect', () => {
+            console.log('WebSocket connected, updating UI');
+            this.updateUI();
+        });
+
+        this.wsManager.socket.on('disconnect', () => {
+            console.log('WebSocket disconnected, updating UI');
+            this.updateUI();
+        });
     }
 
     showMultiplayerUI() {
@@ -588,9 +599,9 @@ class SimpleMultiplayerIntegration {
             });
         }
         
-        const createBtn = document.getElementById('create-game-btn');
-        const joinBtn = document.getElementById('join-game-btn');
-        const leaveBtn = document.getElementById('leave-game-btn');
+        const createBtn = document.getElementById('create-room-btn');
+        const joinBtn = document.getElementById('join-room-btn');
+        const leaveBtn = document.getElementById('leave-room-btn');
         
         if (createBtn) {
             console.log('Create game button found, adding listener');
@@ -767,12 +778,14 @@ class SimpleMultiplayerIntegration {
             
             console.log('Multiplayer UI shown - game stats visible, controls in dropdown');
             
-            document.getElementById('room-code-display').textContent = this.currentRoom;
-            document.getElementById('player-count').textContent = this.players.size;
+            const roomInfo = document.getElementById('room-info');
+            if (roomInfo) roomInfo.textContent = this.currentRoom;
             
-            const isMyTurn = this.turnOrder[this.currentTurn] === this.playerId;
-            document.getElementById('turn-indicator').textContent = isMyTurn ? 'Yes' : 'No';
-            document.getElementById('turn-indicator').style.color = isMyTurn ? '#4CAF50' : '#f44336';
+            const playersCount = document.getElementById('players-count');
+            if (playersCount) playersCount.textContent = this.players.size;
+            
+            const currentTurn = document.getElementById('current-turn');
+            if (currentTurn) currentTurn.textContent = this.currentTurn + 1;
             
             // Update actions left display
             const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
@@ -806,17 +819,22 @@ class SimpleMultiplayerIntegration {
     }
 
     createGame() {
+        console.log('createGame() called');
         const playerName = prompt('Enter your name:') || 'Player';
+        console.log('Player name entered:', playerName);
         const gameMode = document.getElementById('game-mode-select')?.value || 'free_for_all';
-        console.log('Creating game with player name:', playerName, 'in mode:', gameMode);
+        console.log('Game mode selected:', gameMode);
+        console.log('WebSocket connected:', this.wsManager.isConnected);
+        console.log('Sending create_game message...');
         this.wsManager.send('create_game', {
             playerName: playerName,
             gameMode: gameMode
         });
+        console.log('create_game message sent');
     }
 
     joinGame() {
-        const roomCode = document.getElementById('room-code-input').value.trim();
+        const roomCode = document.getElementById('room-id-input').value.trim();
         if (!roomCode) {
             alert('Please enter a room code');
             return;
