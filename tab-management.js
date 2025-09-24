@@ -48,7 +48,7 @@ class TabManagement {
             this.resetMapStyling();
             console.log('Builder tab content updated');
         } else if (tabType === 'player') {
-            // Show player tools and functionality
+            // Hide tools panel and show player tools and functionality
             document.querySelector('.tools-panel').style.display = 'none';
             document.querySelector('.info-panel').style.display = 'none';
             document.getElementById('playerControls').style.display = 'block';

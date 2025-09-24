@@ -246,13 +246,76 @@ body {
 }
 
 .player-stats {
-    background: #007bff;
+    background: #f8f9fa;
     border-radius: 8px;
     padding: 15px;
     font-size: 0.9rem;
     line-height: 1.6;
-    color: white;
+    color: #333;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Override for General Info tab */
+#general-info-tab .player-stats {
+    background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    box-shadow: none;
+    padding: 8px;
+    font-size: 0.8rem;
+}
+
+.player-stats .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    padding: 3px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.player-stats .stat-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.player-stats .stat-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.85rem;
+}
+
+.player-stats .stat-value {
+    font-weight: 700;
+    color: #007bff;
+    font-size: 0.9rem;
+    background: rgba(0, 123, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 123, 255, 0.2);
+}
+
+/* Override for General Info tab */
+#general-info-tab .player-stats .stat-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 2px;
+    padding: 2px 0;
+}
+
+#general-info-tab .player-stats .stat-label {
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    font-size: 0.75rem;
+}
+
+#general-info-tab .player-stats .stat-value {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    font-size: 0.75rem;
+    padding: 1px 6px;
 }
 
 .resource-display {
@@ -265,14 +328,34 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Override for General Info tab */
+#general-info-tab .resource-display {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 8px;
+    font-size: 0.8rem;
+}
+
 .resource-item {
     display: flex;
     flex-direction: column;
-    margin-bottom: 4px;
-    padding: 4px;
+    margin-bottom: 2px;
+    padding: 3px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+}
+
+/* Override for General Info tab */
+#general-info-tab .resource-item {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    margin-bottom: 1px;
+    padding: 2px;
+    font-size: 0.65rem;
 }
 
 .resource-item:last-child {
@@ -629,7 +712,10 @@ body {
     padding: 15px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.08);
-    height: fit-content;
+    height: calc(100vh - 100px); /* Constrain height to prevent clipping */
+    max-height: calc(100vh - 100px); /* Maximum height */
+    overflow-y: auto; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal scroll */
     display: none; /* Hidden by default */
 }
 
@@ -874,6 +960,8 @@ body {
         width: 280px;
         max-width: 280px;
         padding: 15px;
+        height: calc(100vh - 120px); /* Adjust for smaller screens */
+        max-height: calc(100vh - 120px);
     }
 }
 
@@ -960,4 +1048,441 @@ body {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+/* Sidebar Tab System */
+.sidebar-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+
+.sidebar-tab {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: #e9ecef;
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.sidebar-tab:hover {
+    background: #dee2e6;
+    color: #495057;
+}
+
+.sidebar-tab.active {
+    background: #007bff;
+    color: white;
+    border-bottom-color: #0056b3;
+}
+
+.sidebar-tab-content {
+    display: none;
+    padding: 12px;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    min-height: 200px;
+    max-height: calc(100vh - 200px); /* Constrain content height */
+    overflow-y: auto; /* Enable scrolling for long content */
+    overflow-x: hidden; /* Hide horizontal scroll */
+}
+
+.sidebar-tab-content.active {
+    display: block;
+}
+
+/* Multiplayer tab specific styling */
+#multiplayer-tab {
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+/* General Info tab specific styling */
+#general-info-tab {
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Left sidebar info sections (General Info tab) */
+#general-info-tab .info-section {
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#general-info-tab .info-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+#general-info-tab .info-section:last-child {
+    margin-bottom: 0;
+}
+
+#general-info-tab .info-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    padding-bottom: 6px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    z-index: 1;
+}
+
+#general-info-tab .info-section .player-stats {
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+#general-info-tab .info-section .resource-display {
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+/* Right sidebar info sections (City Builder Pro) */
+.info-panel .info-section {
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+}
+
+.info-panel .info-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.info-panel .info-section:last-child {
+    margin-bottom: 0;
+}
+
+.info-panel .info-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    padding-bottom: 8px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.info-panel .cell-info {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.9rem;
+    color: #ffffff;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.info-panel .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.info-panel .stat-item {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.info-panel .stat-item:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.02);
+}
+
+.info-panel .stat-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    display: block;
+    margin-bottom: 4px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.info-panel .stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: block;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.info-panel .instructions {
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.info-panel .instructions p {
+    margin: 0 0 8px 0;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.info-panel .instructions p:last-child {
+    margin-bottom: 0;
+}
+
+.info-panel .instructions strong {
+    color: #ffffff;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Multiplayer content styling */
+.multiplayer-content {
+    font-size: 0.9rem;
+}
+
+.multiplayer-stats {
+    margin-bottom: 12px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #007bff;
+}
+
+.multiplayer-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.multiplayer-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.multiplayer-btn.primary {
+    background: #007bff;
+    color: white;
+}
+
+.multiplayer-btn.primary:hover {
+    background: #0056b3;
+}
+
+.multiplayer-btn.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.multiplayer-btn.secondary:hover {
+    background: #5a6268;
+}
+
+.multiplayer-btn.dropdown {
+    background: #e9ecef;
+    color: #495057;
+    width: 100%;
+}
+
+.multiplayer-btn.dropdown:hover {
+    background: #dee2e6;
+}
+
+.dropdown-content {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #dee2e6;
+}
+
+.dropdown-section {
+    margin-bottom: 12px;
+}
+
+.dropdown-section h5 {
+    margin: 0 0 6px 0;
+    font-size: 0.85rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.room-controls, .team-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.multiplayer-input {
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.multiplayer-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: white;
+}
+
+.mode-description {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+.players-list {
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
+.no-players {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 8px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.multiplayer-btn.small {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    flex: 1;
+}
+
+.multiplayer-btn.danger {
+    background: #dc3545;
+    color: white;
+}
+
+.multiplayer-btn.danger:hover {
+    background: #c82333;
+}
+
+/* Custom scrollbar for tool panel */
+.tool-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tool-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.tool-panel::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.tool-panel::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Custom scrollbar for sidebar tab content */
+.sidebar-tab-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-tab-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.sidebar-tab-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.sidebar-tab-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Custom scrollbar for left sidebar info sections - blended design */
+#general-info-tab .info-section::-webkit-scrollbar {
+    width: 8px;
+}
+
+#general-info-tab .info-section::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+}
+
+#general-info-tab .info-section::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+#general-info-tab .info-section::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #2980b9 0%, #1f5f8b 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+#general-info-tab .info-section::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(135deg, #1f5f8b 0%, #154360 100%);
+}
+
+/* Firefox scrollbar styling for left sidebar */
+#general-info-tab .info-section {
+    scrollbar-width: thin;
+    scrollbar-color: #3498db transparent;
 }

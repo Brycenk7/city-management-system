@@ -71,43 +71,67 @@
             <main class="map-area">
                 <div class="tool-panel" id="toolPanel">
                     
+                    <!-- Left Sidebar Tab System -->
                     <div class="tool-section">
-                        <h4>📦 Resources</h4>
-                        <div class="resource-display" id="resourceDisplay">
-                            <div class="resource-item">
-                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                                    <span class="resource-icon">🪵</span>
-                                    <span class="resource-name">Wood: </span>
-                                    <span class="resource-amount">0</span>
+                        <div class="sidebar-tabs">
+                            <button class="sidebar-tab active" data-sidebar-tab="general-info">ℹ️ General Info</button>
+                            <button class="sidebar-tab" data-sidebar-tab="multiplayer">🌐 Multiplayer</button>
+                        </div>
+                        
+                        <!-- General Information Tab Content -->
+                        <div class="sidebar-tab-content active" id="general-info-tab">
+                            <!-- Resources Section -->
+                            <div class="info-section">
+                                <h4>📦 Resources</h4>
+                                <div class="resource-display" id="resourceDisplay">
+                                    <div class="resource-item">
+                                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                            <span class="resource-icon">🪵</span>
+                                            <span class="resource-name">Wood: </span>
+                                            <span class="resource-amount">0</span>
+                                        </div>
+                                        <span class="resource-rate">(+0.0/s)</span>
+                                    </div>
+                                    <div class="resource-item">
+                                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                            <span class="resource-icon">⛏️</span>
+                                            <span class="resource-name">Ore: </span>
+                                            <span class="resource-amount">0</span>
+                                        </div>
+                                        <span class="resource-rate">(+0.0/s)</span>
+                                    </div>
+                                    <div class="resource-item">
+                                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                            <span class="resource-icon">📦</span>
+                                            <span class="resource-name">Goods: </span>
+                                            <span class="resource-amount">0</span>
+                                        </div>
+                                        <span class="resource-rate">(+0.0/s)</span>
+                                    </div>
+                                    <div class="resource-item">
+                                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                            <span class="resource-icon">⚡</span>
+                                            <span class="resource-name">Power: </span>
+                                            <span class="resource-amount">0</span>
+                                        </div>
+                                        <span class="resource-rate">(+0.0/s)</span>
+                                    </div>
                                 </div>
-                                <span class="resource-rate">(+0.0/s)</span>
                             </div>
-                            <div class="resource-item">
-                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                                    <span class="resource-icon">⛏️</span>
-                                    <span class="resource-name">Ore: </span>
-                                    <span class="resource-amount">0</span>
-                                </div>
-                                <span class="resource-rate">(+0.0/s)</span>
-                            </div>
-                            <div class="resource-item">
-                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                                    <span class="resource-icon">📦</span>
-                                    <span class="resource-name">Goods: </span>
-                                    <span class="resource-amount">0</span>
-                                </div>
-                                <span class="resource-rate">(+0.0/s)</span>
-                            </div>
-                            <div class="resource-item">
-                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                                    <span class="resource-icon">⚡</span>
-                                    <span class="resource-name">Power: </span>
-                                    <span class="resource-amount">0</span>
-                                </div>
-                                <span class="resource-rate">(+0.0/s)</span>
+                            
+                            <!-- City Stats Section -->
+                            <div class="info-section">
+                                <h4>📊 City Statistics</h4>
+                                <div id="playerStats" class="player-stats"></div>
                             </div>
                         </div>
+                        
+                        <!-- Multiplayer Tab Content -->
+                        <div class="sidebar-tab-content" id="multiplayer-tab">
+                            <!-- Multiplayer content will be dynamically inserted here -->
+                        </div>
                     </div>
+
                 </div>
                 <div class="map-container">
                     <div id="map" class="map-grid"></div>
@@ -202,11 +226,6 @@
                             <div class="cost-display">36🪵 16⛏️</div>
                         </div>
                     </div>
-                </div>
-
-                <div class="player-section">
-                    <h4>📊 City Stats</h4>
-                    <div id="playerStats" class="player-stats"></div>
                 </div>
 
             </aside>
