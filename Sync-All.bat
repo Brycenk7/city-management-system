@@ -1,3 +1,0 @@
-@echo off
-echo Running PowerShell sync script...
-powershell -ExecutionPolicy Bypass -File "Sync-All.ps1"
