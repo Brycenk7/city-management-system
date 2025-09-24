@@ -55,11 +55,8 @@ class SimpleMultiplayerIntegration {
                 this.mapSystem.resourceManagement.setCurrentPlayerId(this.playerId);
             }
             
-            // Start turn timer if it's our turn (game creator is always first)
-            if (this.isMyTurn()) {
-                this.startTurnTimer();
-                console.log('Turn timer started on game creation');
-            }
+            // Don't start turn timer until game is started
+            // Timer will be started when "Start Game" is pressed
             
             // Start resource updates
             this.startResourceUpdates();
@@ -95,11 +92,8 @@ class SimpleMultiplayerIntegration {
                 this.mapSystem.resourceManagement.setCurrentPlayerId(this.playerId);
             }
             
-            // Start turn timer if it's our turn
-            if (this.isMyTurn()) {
-                this.startTurnTimer();
-                console.log('Turn timer started on game join');
-            }
+            // Don't start turn timer until game is started
+            // Timer will be started when "Start Game" is pressed
             
             // Start resource updates
             this.startResourceUpdates();
@@ -318,6 +312,37 @@ class SimpleMultiplayerIntegration {
         });
     }
 
+    updateGameStartedDependentElements() {
+        const gameStartedElements = document.querySelectorAll('.game-started-dependent');
+        gameStartedElements.forEach(element => {
+            element.style.display = this.gameStarted ? 'block' : 'none';
+        });
+    }
+
+    updateFixedNextTurnButton() {
+        const nextTurnFixedBtn = document.getElementById('next-turn-fixed-btn');
+        if (!nextTurnFixedBtn) return;
+
+        // Show button only when in multiplayer and game has started
+        if (this.isInMultiplayer && this.gameStarted) {
+            nextTurnFixedBtn.style.display = 'block';
+            
+            // Enable/disable based on turn
+            const isMyTurn = this.isMyTurn();
+            nextTurnFixedBtn.disabled = !isMyTurn;
+            
+            if (isMyTurn) {
+                nextTurnFixedBtn.textContent = 'Next Turn';
+                nextTurnFixedBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+            } else {
+                nextTurnFixedBtn.textContent = 'Not Your Turn';
+                nextTurnFixedBtn.style.background = '#ccc';
+            }
+        } else {
+            nextTurnFixedBtn.style.display = 'none';
+        }
+    }
+
     setupTabListeners() {
         // Listen for tab changes by monitoring the body data-tab attribute
         // This integrates with the existing TabManagement system
@@ -443,8 +468,8 @@ class SimpleMultiplayerIntegration {
                 </div>
             </div>
                 
-                <!-- Additional Status (Hidden until room created) -->
-                <div class="additional-status room-dependent" style="display: none;">
+                <!-- Additional Status (Hidden until game started) -->
+                <div class="additional-status game-started-dependent" style="display: none;">
                     <div class="stat-item">
                         <span class="stat-label">Players:</span>
                         <span class="stat-value" id="players-count">0</span>
@@ -463,8 +488,8 @@ class SimpleMultiplayerIntegration {
                     </div>
                 </div>
                 
-                <!-- Action Buttons (Hidden until room created) -->
-                <div class="multiplayer-actions room-dependent" style="display: none;">
+                <!-- Action Buttons (Hidden until game started) -->
+                <div class="multiplayer-actions game-started-dependent" style="display: none;">
                     <button id="next-turn-btn" class="multiplayer-btn primary">Next Turn</button>
                     <button id="sync-map-btn" class="multiplayer-btn secondary">Sync Map</button>
                 </div>
@@ -663,8 +688,8 @@ class SimpleMultiplayerIntegration {
             syncMapBtn.addEventListener('click', () => {
                 console.log('Manual map sync requested');
                 if (this.isInMultiplayer) {
-                    this.sendMapState();
-                    this.showNotification('Map state sent to other players', 'info');
+                    this.requestMapSyncFromHost();
+                    this.showNotification('Requesting map sync from host...', 'info');
                 } else {
                     this.showNotification('Not in multiplayer mode', 'error');
                 }
@@ -705,6 +730,12 @@ class SimpleMultiplayerIntegration {
         const startGameBtn = document.getElementById('start-game-btn');
         if (startGameBtn) {
             startGameBtn.addEventListener('click', () => this.startGame());
+        }
+
+        // Fixed Next Turn button
+        const nextTurnFixedBtn = document.getElementById('next-turn-fixed-btn');
+        if (nextTurnFixedBtn) {
+            nextTurnFixedBtn.addEventListener('click', () => this.advanceTurn());
         }
     }
 
@@ -817,6 +848,12 @@ class SimpleMultiplayerIntegration {
             // Update start game button
             this.updateStartGameButton();
             
+            // Update game started dependent elements
+            this.updateGameStartedDependentElements();
+            
+            // Update fixed Next Turn button
+            this.updateFixedNextTurnButton();
+            
             if (this.gameStarted) {
                 // Game has started - show game stats and hide players main section
                 if (playersMainSection) playersMainSection.style.display = 'none';
@@ -877,6 +914,9 @@ class SimpleMultiplayerIntegration {
             const quickActions = document.getElementById('quick-actions');
             if (quickActions) quickActions.style.display = 'none';
             
+            // Update fixed Next Turn button (will hide it)
+            this.updateFixedNextTurnButton();
+            
             console.log('Not in multiplayer - showing room controls only');
         }
     }
@@ -936,6 +976,13 @@ class SimpleMultiplayerIntegration {
     startGame() {
         console.log('Starting game...');
         this.gameStarted = true;
+        
+        // Start turn timer if it's our turn
+        if (this.isMyTurn()) {
+            this.startTurnTimer();
+            console.log('Turn timer started on game start');
+        }
+        
         this.updateUI();
         this.showNotification('Game started!', 'success');
     }
@@ -1150,7 +1197,18 @@ class SimpleMultiplayerIntegration {
             font-size: 14px;
             text-align: center;
         `;
-        notification.textContent = `Action Rejected: ${reason}`;
+        
+        // Check if the reason is related to no actions left
+        let displayReason = reason;
+        if (reason && reason.toLowerCase().includes('not your turn')) {
+            // Check if player has no actions left
+            const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
+            if (actionsLeft <= 0) {
+                displayReason = 'You are out of actions this turn!';
+            }
+        }
+        
+        notification.textContent = `Action Rejected: ${displayReason}`;
         
         document.body.appendChild(notification);
         
@@ -1863,6 +1921,20 @@ class SimpleMultiplayerIntegration {
 
         console.log('Sending map state to server:', mapData);
         this.wsManager.send('update_map_state', mapData);
+    }
+
+    // Request map sync from host instead of sending to all players
+    requestMapSyncFromHost() {
+        if (!this.isInMultiplayer) {
+            console.log('Cannot request map sync: not in multiplayer');
+            return;
+        }
+
+        console.log('Requesting map sync from host...');
+        this.wsManager.send('request_map_sync', {
+            roomCode: this.currentRoom,
+            playerId: this.playerId
+        });
     }
 
     // Periodically update player resources
