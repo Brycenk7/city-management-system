@@ -682,18 +682,22 @@ class SimpleMultiplayerIntegration {
     }
 
     updatePlayersList(players) {
+        console.log('updatePlayersList called with:', players);
         this.players.clear();
         players.forEach(player => {
             this.players.set(player.id, player);
         });
+        console.log('Players map updated, size:', this.players.size);
         this.updatePlayersDisplay();
     }
 
     updatePlayersDisplay() {
-        const playersContainer = document.getElementById('players-container');
+        const playersContainer = document.getElementById('players-list');
+        console.log('updatePlayersDisplay called, players container found:', !!playersContainer);
         if (!playersContainer) return;
 
         playersContainer.innerHTML = '';
+        console.log('Updating players display with', this.players.size, 'players');
         this.players.forEach((player, playerId) => {
             const playerDiv = document.createElement('div');
             playerDiv.style.cssText = `
