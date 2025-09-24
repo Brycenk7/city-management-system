@@ -91,11 +91,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('MultiplayerIntegration created:', !!multiplayerIntegration);
             await multiplayerIntegration.initializeMultiplayer();
             console.log('Multiplayer initialized');
+            
+            // Force show the UI
+            console.log('Calling showMultiplayerUI...');
             multiplayerIntegration.showMultiplayerUI();
             console.log('Multiplayer UI shown');
-            console.log('Multiplayer panel created:', !!document.getElementById('multiplayer-panel'));
+            
+            // Check if panel exists after creation
+            const panel = document.getElementById('multiplayer-panel');
+            console.log('Multiplayer panel created:', !!panel);
+            if (panel) {
+                console.log('Panel found in DOM:', panel);
+                console.log('Panel parent:', panel.parentElement);
+                console.log('Panel visible:', panel.offsetHeight > 0);
+            } else {
+                console.error('Panel not found in DOM!');
+            }
         } catch (error) {
             console.error('Multiplayer initialization failed:', error);
+            console.error('Error stack:', error.stack);
         }
     } catch (error) {
         console.error('Error initializing application:', error);

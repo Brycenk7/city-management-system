@@ -279,14 +279,17 @@ class SimpleMultiplayerIntegration {
 
     showMultiplayerUI() {
         console.log('showMultiplayerUI called');
-        console.log('MapSystem available:', !!this.mapSystem);
-        this.createMultiplayerPanel();
-        console.log('Multiplayer panel created, checking elements...');
         
-        // Force the panel to be visible
+        // Check if panel already exists
         if (this.multiplayerPanel) {
-            this.multiplayerPanel.style.display = 'block';
-            console.log('Multiplayer panel forced to be visible');
+            this.multiplayerPanel.remove();
+        }
+        
+        this.createMultiplayerPanel();
+        
+        // Panel will be shown/hidden by tab management
+        if (!this.multiplayerPanel) {
+            console.error('Multiplayer panel is null!');
         }
         
         // Check if elements were created
@@ -296,9 +299,27 @@ class SimpleMultiplayerIntegration {
             gameStats: !!gameStats,
             dropdown: !!dropdown
         });
+        
+        // Open the dropdown by default when showing multiplayer UI
+        if (dropdown) {
+            dropdown.style.display = 'block';
+            const toggleBtn = document.getElementById('multiplayer-toggle');
+            if (toggleBtn) {
+                toggleBtn.textContent = '▲';
+            }
+        }
+        
         this.setupTabListeners();
         this.updateUI();
         console.log('Multiplayer UI created and updated');
+        
+        // Check current tab and update visibility
+        const activeTab = document.querySelector('.tab.active');
+        if (activeTab) {
+            const tabType = activeTab.getAttribute('data-tab');
+            console.log('Checking initial tab after panel creation:', tabType);
+            this.handleTabChange(tabType);
+        }
     }
 
     setupTabListeners() {
@@ -313,151 +334,178 @@ class SimpleMultiplayerIntegration {
 
         // Check initial tab state
         const activeTab = document.querySelector('.tab.active');
+        console.log('Active tab found:', activeTab);
         if (activeTab) {
             const tabType = activeTab.getAttribute('data-tab');
+            console.log('Initial tab type:', tabType);
             this.handleTabChange(tabType);
+        } else {
+            console.log('No active tab found');
         }
     }
 
     handleTabChange(tabType) {
-        // Only show multiplayer panel in City Player Pro tab, just like resources
+        // Temporarily show multiplayer panel on all tabs for debugging
+        console.log('Tab changed to:', tabType);
         if (this.multiplayerPanel) {
-            if (tabType === 'player') {
-                this.multiplayerPanel.style.display = 'block';
-                console.log('Multiplayer panel shown for City Player Pro tab');
-            } else {
-                this.multiplayerPanel.style.display = 'none';
-                console.log('Multiplayer panel hidden for', tabType, 'tab');
-            }
+            console.log('Multiplayer panel exists, forcing visibility');
+            this.multiplayerPanel.style.display = 'block';
+            this.multiplayerPanel.style.visibility = 'visible';
+            this.multiplayerPanel.style.opacity = '1';
+            console.log('Multiplayer panel forced visible for', tabType, 'tab');
+        } else {
+            console.log('Multiplayer panel does not exist yet');
         }
     }
 
     createMultiplayerPanel() {
-        console.log('createMultiplayerPanel called');
         this.multiplayerPanel = document.createElement('div');
         this.multiplayerPanel.id = 'multiplayer-panel';
         this.multiplayerPanel.className = 'tool-section';
         this.multiplayerPanel.style.cssText = `
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 6px;
-            padding: 8px;
-            margin-bottom: 8px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border: 2px solid #000;
+            padding: 10px;
+            margin: 10px 0;
             display: block;
+            visibility: visible;
+            opacity: 1;
+            color: white;
+            border-radius: 8px;
         `;
         
         // No hover effects needed - integrated into tools panel
 
         this.multiplayerPanel.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h4 style="margin: 0;">🎮 Multiplayer</h4>
-                <button id="multiplayer-toggle" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 2px 6px; border-radius: 3px; color: #666;">▼</button>
-            </div>
+            <div class="tool-section">
+                <h4>🌐 Multiplayer</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span id="status-text" style="font-size: 0.8rem; color: #dc3545;">Disconnected</span>
+                    <button id="multiplayer-toggle" style="background: none; border: none; font-size: 1rem; cursor: pointer; padding: 2px 4px; border-radius: 3px; color: #666;">▼</button>
+                </div>
             
-            <!-- Important Stats (Always Visible) -->
-            <div id="multiplayer-stats">
-                <!-- Connection Status -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.7rem;">
-                    <span>Status:</span>
-                    <span id="status-text" style="color: #dc3545;">Disconnected</span>
-                </div>
-                
-                <!-- Game Info (when in game) -->
-                <div id="game-stats" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.7rem;">
-                        <span>Room:</span>
-                        <span id="room-code-display" style="color: #28a745; font-weight: bold;"></span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.7rem;">
-                        <span>Players:</span>
-                        <span id="player-count" style="color: #28a745; font-weight: bold;">1</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.7rem;">
-                        <span>Turn:</span>
-                        <span id="turn-indicator" style="color: #dc3545; font-weight: bold;">No</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.7rem;">
-                        <span>Time:</span>
-                        <span id="turn-timer" style="color: #28a745; font-weight: bold;">--</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.7rem;">
-                        <span>Actions:</span>
-                        <span id="actions-left" style="color: #28a745; font-weight: bold;">3/3</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Dropdown Content (Hidden by default) -->
-            <div id="multiplayer-dropdown" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.1);">
-                <!-- Room Controls -->
-                <div id="room-controls" style="margin-bottom: 8px;">
-                    <button id="create-game-btn" class="tool-btn" style="width: 100%; margin-bottom: 6px; background: linear-gradient(135deg, #28a745, #20c997); font-size: 0.7rem;">Create Game</button>
-                    <div style="display: flex; gap: 4px;">
-                        <input type="text" id="room-code-input" placeholder="Room Code" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.7rem;">
-                        <button id="join-game-btn" class="tool-btn" style="padding: 4px 8px; background: linear-gradient(135deg, #007bff, #0056b3); font-size: 0.7rem;">Join</button>
-                    </div>
-                </div>
-
-                <!-- Players List -->
-                <div id="players-list" style="display: none; margin-bottom: 8px;">
-                    <h5 style="margin: 0 0 4px 0; font-size: 0.8rem; color: #333;">Players:</h5>
-                    <div id="players-container" style="font-size: 0.7rem;"></div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div id="action-buttons" style="display: none; margin-bottom: 8px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px;">
-                        <button id="next-turn-btn" class="tool-btn" style="padding: 4px; background: linear-gradient(135deg, #fd7e14, #e55a00); font-size: 0.7rem;">Next Turn</button>
-                        <button id="sync-map-btn" class="tool-btn" style="padding: 4px; background: linear-gradient(135deg, #6f42c1, #5a32a3); font-size: 0.7rem;">Sync Map</button>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                        <button id="refresh-map-btn" class="tool-btn" style="padding: 4px; background: linear-gradient(135deg, #dc3545, #c82333); font-size: 0.7rem;">Refresh</button>
-                        <button id="leave-game-btn" class="tool-btn" style="padding: 4px; background: linear-gradient(135deg, #6c757d, #5a6268); font-size: 0.7rem;">Leave</button>
-                    </div>
-                </div>
-
-                <!-- Team Panel -->
-                <div id="team-panel" style="display: none; margin-bottom: 8px; padding: 6px; background: rgba(111, 66, 193, 0.1); border-radius: 4px; border: 1px solid rgba(111, 66, 193, 0.3);">
-                    <h5 style="margin: 0 0 4px 0; font-size: 0.8rem; color: #6f42c1;">Team:</h5>
-                    <div id="team-info" style="font-size: 0.7rem; margin-bottom: 4px;">
-                        <div>Status: <span id="team-status" style="color: #6f42c1;">No Team</span></div>
-                        <div>Members: <span id="team-members" style="color: #6f42c1;">0</span></div>
-                        <div id="team-id-display" style="display: none; margin-top: 3px; padding: 3px; background: rgba(0,0,0,0.1); border-radius: 3px;">
-                            <div><strong>ID:</strong> <span id="team-id-text" style="color: #6f42c1;"></span></div>
+                <!-- Important Stats (Always Visible) -->
+                <div id="multiplayer-stats">
+                    <!-- Game Info (when in game) -->
+                    <div id="game-stats" style="display: none;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px; font-size: 0.65rem;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Room:</span>
+                                <span id="room-code-display" style="color: #007bff; font-weight: bold;"></span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Players:</span>
+                                <span id="player-count" style="color: #007bff; font-weight: bold;">1</span>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px; font-size: 0.65rem;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Turn:</span>
+                                <span id="turn-indicator" style="color: #dc3545; font-weight: bold;">No</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Time:</span>
+                                <span id="turn-timer" style="color: #007bff; font-weight: bold;">--</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.65rem;">
+                            <span>Actions:</span>
+                            <span id="actions-left" style="color: #007bff; font-weight: bold;">3/3</span>
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-bottom: 3px;">
-                        <button id="create-team-btn" class="tool-btn" style="padding: 3px; background: linear-gradient(135deg, #6f42c1, #5a32a3); font-size: 0.6rem;">Create</button>
-                        <button id="join-team-btn" class="tool-btn" style="padding: 3px; background: linear-gradient(135deg, #007bff, #0056b3); font-size: 0.6rem;">Join</button>
+                    
+                    <!-- Quick Action Buttons (always visible when in game) -->
+                    <div id="quick-actions" style="display: none; margin-top: 4px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px;">
+                            <button id="next-turn-btn" class="tool-btn" style="padding: 3px; background: linear-gradient(135deg, #007bff, #0056b3); font-size: 0.6rem;">Next Turn</button>
+                            <button id="sync-map-btn" class="tool-btn" style="padding: 3px; background: linear-gradient(135deg, #6c757d, #5a6268); font-size: 0.6rem;">Sync Map</button>
+                        </div>
                     </div>
-                    <button id="leave-team-btn" style="display: none; width: 100%; padding: 3px; background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.6rem;">Leave Team</button>
+                </div>
+            
+                <!-- Dropdown Content (Hidden by default) -->
+                <div id="multiplayer-dropdown" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(0,0,0,0.1);">
+                    <!-- Room Controls -->
+                    <div id="room-controls" style="margin-bottom: 6px;">
+                        <button id="create-game-btn" class="tool-btn" style="width: 100%; margin-bottom: 4px; background: linear-gradient(135deg, #007bff, #0056b3); font-size: 0.6rem; padding: 3px;">Create Game</button>
+                        <div style="margin-bottom: 4px;">
+                            <select id="game-mode-select" style="width: 100%; padding: 3px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.6rem; background: white;">
+                                <option value="free_for_all">Free for All</option>
+                                <option value="teams">Teams</option>
+                                <option value="coop">Cooperative</option>
+                            </select>
+                            <div id="game-mode-description" style="font-size: 0.55rem; color: #666; margin-top: 1px;"></div>
+                        </div>
+                        <div style="display: flex; gap: 3px;">
+                            <input type="text" id="room-code-input" placeholder="Room Code" style="flex: 1; padding: 3px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.6rem;">
+                            <button id="join-game-btn" class="tool-btn" style="padding: 3px 6px; background: linear-gradient(135deg, #6c757d, #5a6268); font-size: 0.6rem;">Join</button>
+                        </div>
+                    </div>
+
+                    <!-- Players List -->
+                    <div id="players-list" style="display: none; margin-bottom: 6px;">
+                        <h5 style="margin: 0 0 3px 0; font-size: 0.7rem; color: #333;">Players:</h5>
+                        <div id="players-container" style="font-size: 0.6rem;"></div>
+                    </div>
+
+                    <!-- Additional Action Buttons -->
+                    <div id="additional-actions" style="display: none; margin-bottom: 6px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px;">
+                            <button id="refresh-map-btn" class="tool-btn" style="padding: 3px; background: linear-gradient(135deg, #dc3545, #c82333); font-size: 0.6rem;">Refresh</button>
+                            <button id="leave-game-btn" class="tool-btn" style="padding: 3px; background: linear-gradient(135deg, #6c757d, #5a6268); font-size: 0.6rem;">Leave</button>
+                        </div>
+                    </div>
+
+                    <!-- Team Panel -->
+                    <div id="team-panel" style="display: none; margin-bottom: 6px; padding: 4px; background: rgba(111, 66, 193, 0.1); border-radius: 3px; border: 1px solid rgba(111, 66, 193, 0.3);">
+                        <h5 style="margin: 0 0 3px 0; font-size: 0.7rem; color: #6f42c1;">Team:</h5>
+                        <div id="team-info" style="font-size: 0.6rem; margin-bottom: 3px;">
+                            <div>Status: <span id="team-status" style="color: #6f42c1;">No Team</span></div>
+                            <div>Members: <span id="team-members" style="color: #6f42c1;">0</span></div>
+                            <div id="team-id-display" style="display: none; margin-top: 2px; padding: 2px; background: rgba(0,0,0,0.1); border-radius: 2px;">
+                                <div><strong>ID:</strong> <span id="team-id-text" style="color: #6f42c1;"></span></div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 2px;">
+                            <button id="create-team-btn" class="tool-btn" style="padding: 2px; background: linear-gradient(135deg, #6f42c1, #5a32a3); font-size: 0.55rem;">Create</button>
+                            <button id="join-team-btn" class="tool-btn" style="padding: 2px; background: linear-gradient(135deg, #007bff, #0056b3); font-size: 0.55rem;">Join</button>
+                        </div>
+                        <button id="leave-team-btn" style="display: none; width: 100%; padding: 2px; background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none; border-radius: 2px; cursor: pointer; font-size: 0.55rem;">Leave Team</button>
+                    </div>
                 </div>
             </div>
         `;
 
-        // Insert the multiplayer panel into the center tool panel, after the resources section
-        const centerToolPanel = document.getElementById('toolPanel');
-        if (centerToolPanel) {
-            // Find the resources section by looking for the resource-display
-            const resourceDisplay = centerToolPanel.querySelector('.resource-display');
-            if (resourceDisplay) {
-                const resourcesSection = resourceDisplay.closest('.tool-section');
-                if (resourcesSection) {
-                    resourcesSection.insertAdjacentElement('afterend', this.multiplayerPanel);
-                    console.log('Multiplayer panel inserted into center tool panel after resources');
-                } else {
-                    centerToolPanel.appendChild(this.multiplayerPanel);
-                    console.log('Multiplayer panel appended to center tool panel');
-                }
-            } else {
-                centerToolPanel.appendChild(this.multiplayerPanel);
-                console.log('Multiplayer panel appended to center tool panel');
-            }
+        // Insert the multiplayer panel into the left sidebar (tools panel), after resources
+        const leftSidebar = document.querySelector('.tools-panel');
+        console.log('Left sidebar found:', leftSidebar);
+        
+        if (leftSidebar) {
+            leftSidebar.appendChild(this.multiplayerPanel);
+            console.log('Panel appended to left sidebar');
+            console.log('Panel parent after insertion:', this.multiplayerPanel.parentElement);
         } else {
-            // Fallback: append to body
-            document.body.appendChild(this.multiplayerPanel);
-            console.log('Multiplayer panel appended to body (fallback)');
+            // Fallback: try to find the center tool panel
+            console.log('Left sidebar not found, trying center tool panel');
+            const centerToolPanel = document.getElementById('toolPanel');
+            console.log('Center tool panel found:', centerToolPanel);
+            if (centerToolPanel) {
+                centerToolPanel.appendChild(this.multiplayerPanel);
+                console.log('Panel appended to center tool panel');
+            } else {
+                // Last resort: append to body
+                document.body.appendChild(this.multiplayerPanel);
+                console.log('Panel appended to body (last resort)');
+            }
         }
+        
+        // Add a visible test element to make sure we can see something
+        const testDiv = document.createElement('div');
+        testDiv.innerHTML = 'MULTIPLAYER PANEL TEST - Should be visible';
+        testDiv.style.cssText = 'background: red; color: white; padding: 10px; margin: 10px; border: 3px solid black; font-weight: bold; font-size: 16px;';
+        document.body.appendChild(testDiv);
+        console.log('Test element added to body');
+        
         
         // No scrollbar styling needed - using dropdown approach
         
@@ -518,6 +566,8 @@ class SimpleMultiplayerIntegration {
         const gameModeSelect = document.getElementById('game-mode-select');
         if (gameModeSelect) {
             gameModeSelect.addEventListener('change', () => this.updateGameModeDescription());
+            // Initialize the description
+            this.updateGameModeDescription();
         }
 
         const nextTurnBtn = document.getElementById('next-turn-btn');
@@ -568,27 +618,8 @@ class SimpleMultiplayerIntegration {
             leaveTeamBtn.addEventListener('click', () => this.leaveTeam());
         }
 
-        // Shared resources buttons
-        const contributeResourcesBtn = document.getElementById('contribute-resources-btn');
-        if (contributeResourcesBtn) {
-            contributeResourcesBtn.addEventListener('click', () => this.showContributeResourcesDialog());
-        }
 
-        // Joint projects buttons
-        const createProjectBtn = document.getElementById('create-project-btn');
-        if (createProjectBtn) {
-            createProjectBtn.addEventListener('click', () => this.showCreateProjectDialog());
-        }
 
-        // Team chat
-        const teamChatInput = document.getElementById('team-chat-input');
-        if (teamChatInput) {
-            teamChatInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.sendTeamChatMessage();
-                }
-            });
-        }
     }
 
     updatePlayersList(players) {
@@ -669,10 +700,21 @@ class SimpleMultiplayerIntegration {
         if (this.isInMultiplayer) {
             if (roomControls) roomControls.style.display = 'none';
             if (gameStats) gameStats.style.display = 'block';
-            // playersList and actionButtons are now inside the dropdown, controlled by the dropdown toggle
-            console.log('Multiplayer UI shown - game stats visible, controls in dropdown');
             
-            // All controls are now in the dropdown, no need to show old panels
+            // Show quick actions when in multiplayer
+            const quickActions = document.getElementById('quick-actions');
+            if (quickActions) quickActions.style.display = 'block';
+            
+            // Show the dropdown content when in multiplayer
+            const playersList = document.getElementById('players-list');
+            const additionalActions = document.getElementById('additional-actions');
+            const teamPanel = document.getElementById('team-panel');
+            
+            if (playersList) playersList.style.display = 'block';
+            if (additionalActions) additionalActions.style.display = 'block';
+            if (teamPanel) teamPanel.style.display = 'block';
+            
+            console.log('Multiplayer UI shown - game stats visible, controls in dropdown');
             
             document.getElementById('room-code-display').textContent = this.currentRoom;
             document.getElementById('player-count').textContent = this.players.size;
@@ -702,6 +744,11 @@ class SimpleMultiplayerIntegration {
         } else {
             if (roomControls) roomControls.style.display = 'block';
             if (gameStats) gameStats.style.display = 'none';
+            
+            // Hide quick actions when not in multiplayer
+            const quickActions = document.getElementById('quick-actions');
+            if (quickActions) quickActions.style.display = 'none';
+            
             // All other elements are in dropdown, which is hidden by default
             console.log('Not in multiplayer - showing room controls only');
         }
@@ -1103,40 +1150,6 @@ class SimpleMultiplayerIntegration {
         this.wsManager.send('leave_team', {});
     }
 
-    // Shared resources methods
-    showContributeResourcesDialog() {
-        const resources = prompt('Resources to contribute (format: wood:10,ore:5):');
-        if (resources) {
-            this.wsManager.send('contribute_resources', {
-                resources: this.parseResourceString(resources)
-            });
-        }
-    }
-
-    // Joint projects methods
-    showCreateProjectDialog() {
-        const projectType = prompt('Project type (mega_power_plant, trade_network, mega_city):');
-        const location = prompt('Location (x,y):');
-        const cost = prompt('Cost (format: wood:100,ore:50):');
-        
-        if (projectType && location && cost) {
-            const [x, y] = location.split(',').map(Number);
-            this.wsManager.send('create_joint_project', {
-                projectType: projectType,
-                location: { x: x, y: y },
-                cost: this.parseResourceString(cost)
-            });
-        }
-    }
-
-    // Team chat methods
-    sendTeamChatMessage() {
-        const input = document.getElementById('team-chat-input');
-        if (input && input.value.trim()) {
-            this.wsManager.send('team_chat_message', { message: input.value });
-            input.value = '';
-        }
-    }
 
     // Event handlers for cooperative features
     handleTeamCreated(data) {
@@ -1293,17 +1306,6 @@ class SimpleMultiplayerIntegration {
         console.log('Objectives updated');
     }
 
-    addTeamChatMessage(data) {
-        const chatMessages = document.getElementById('team-chat-messages');
-        if (!chatMessages) return;
-
-        const messageDiv = document.createElement('div');
-        messageDiv.style.marginBottom = '3px';
-        messageDiv.innerHTML = `<strong>${data.playerName}:</strong> ${data.message}`;
-        
-        chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
 
     addMapMarker(data) {
         // This would add a visual marker to the map
