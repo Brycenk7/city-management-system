@@ -290,11 +290,11 @@ class SimpleMultiplayerIntegration {
         }
         
         // Check if elements were created
-        const roomInfo = document.getElementById('room-info');
-        const syncBtn = document.getElementById('sync-map-btn');
+        const gameStats = document.getElementById('game-stats');
+        const dropdown = document.getElementById('multiplayer-dropdown');
         console.log('Elements after creation:', {
-            roomInfo: !!roomInfo,
-            syncBtn: !!syncBtn
+            gameStats: !!gameStats,
+            dropdown: !!dropdown
         });
         this.setupTabListeners();
         this.updateUI();
@@ -669,24 +669,10 @@ class SimpleMultiplayerIntegration {
         if (this.isInMultiplayer) {
             if (roomControls) roomControls.style.display = 'none';
             if (gameStats) gameStats.style.display = 'block';
-            if (playersList) playersList.style.display = 'block';
-            if (actionButtons) actionButtons.style.display = 'block';
-            console.log('Multiplayer UI shown - game stats, players list, action buttons visible');
+            // playersList and actionButtons are now inside the dropdown, controlled by the dropdown toggle
+            console.log('Multiplayer UI shown - game stats visible, controls in dropdown');
             
-            // Show new panels
-            const victoryConditions = document.getElementById('victory-conditions');
-            const tradingPanel = document.getElementById('trading-panel');
-            const teamPanel = document.getElementById('team-panel');
-            const sharedResourcesPanel = document.getElementById('shared-resources-panel');
-            const jointProjectsPanel = document.getElementById('joint-projects-panel');
-            const teamChatPanel = document.getElementById('team-chat-panel');
-            
-            if (victoryConditions) victoryConditions.style.display = 'block';
-            if (tradingPanel) tradingPanel.style.display = 'block';
-            if (teamPanel) teamPanel.style.display = 'block';
-            if (sharedResourcesPanel) sharedResourcesPanel.style.display = 'block';
-            if (jointProjectsPanel) jointProjectsPanel.style.display = 'block';
-            if (teamChatPanel) teamChatPanel.style.display = 'block';
+            // All controls are now in the dropdown, no need to show old panels
             
             document.getElementById('room-code-display').textContent = this.currentRoom;
             document.getElementById('player-count').textContent = this.players.size;
@@ -706,49 +692,18 @@ class SimpleMultiplayerIntegration {
                 console.log('Actions left element not found!');
             }
             
-            // Show/hide next turn button
+            // Update button visibility within the dropdown
             const nextTurnBtn = document.getElementById('next-turn-btn');
             if (nextTurnBtn) {
                 nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
             }
-
-            // Show sync map button
-            const syncMapBtn = document.getElementById('sync-map-btn');
-            if (syncMapBtn) {
-                syncMapBtn.style.display = 'block';
-                console.log('Sync map button shown');
-            } else {
-                console.log('Sync map button not found!');
-            }
-            
-            // Show refresh map button
-            const refreshMapBtn = document.getElementById('refresh-map-btn');
-            if (refreshMapBtn) {
-                refreshMapBtn.style.display = 'block';
-                console.log('Refresh map button shown');
-            } else {
-                console.log('Refresh map button not found!');
-            }
             
             this.updatePlayersDisplay();
-            this.updateVictoryConditions();
         } else {
             if (roomControls) roomControls.style.display = 'block';
             if (gameStats) gameStats.style.display = 'none';
-            if (playersList) playersList.style.display = 'none';
-            if (actionButtons) actionButtons.style.display = 'none';
-            if (teamPanel) teamPanel.style.display = 'none';
+            // All other elements are in dropdown, which is hidden by default
             console.log('Not in multiplayer - showing room controls only');
-            
-            const nextTurnBtn = document.getElementById('next-turn-btn');
-            if (nextTurnBtn) {
-                nextTurnBtn.style.display = 'none';
-            }
-
-            const syncMapBtn = document.getElementById('sync-map-btn');
-            if (syncMapBtn) {
-                syncMapBtn.style.display = 'none';
-            }
         }
     }
 
@@ -1021,18 +976,6 @@ class SimpleMultiplayerIntegration {
     }
 
     // Victory conditions
-    updateVictoryConditions() {
-        const victoryList = document.getElementById('victory-list');
-        if (!victoryList) return;
-
-        victoryList.innerHTML = `
-            <div style="font-size: 12px; margin-bottom: 5px;">
-                <div>🏙️ Population: <span id="population-progress">0/1000</span></div>
-                <div>⚡ Efficiency: <span id="efficiency-progress">0/80%</span></div>
-                <div>💰 Resources: <span id="resources-progress">0/5000</span></div>
-            </div>
-        `;
-    }
 
     // Trading system
     showTradeDialog() {
@@ -1628,68 +1571,6 @@ class SimpleMultiplayerIntegration {
         }
     }
 
-    // Debug method to force show UI elements
-    debugShowUI() {
-        console.log('=== DEBUG: Forcing UI elements to show ===');
-        
-        const roomInfo = document.getElementById('room-info');
-        const syncBtn = document.getElementById('sync-map-btn');
-        const refreshBtn = document.getElementById('refresh-map-btn');
-        const actionsLeft = document.getElementById('actions-left');
-        const turnTimer = document.getElementById('turn-timer');
-        
-        console.log('Elements found:', {
-            roomInfo: !!roomInfo,
-            syncBtn: !!syncBtn,
-            refreshBtn: !!refreshBtn,
-            actionsLeft: !!actionsLeft,
-            turnTimer: !!turnTimer
-        });
-        
-        if (roomInfo) {
-            roomInfo.style.display = 'block';
-            roomInfo.style.border = '2px solid red';
-            console.log('Room info forced to show');
-        }
-        
-        if (syncBtn) {
-            syncBtn.style.display = 'block';
-            console.log('Sync button forced to show');
-        }
-        
-        if (refreshBtn) {
-            refreshBtn.style.display = 'block';
-            console.log('Refresh button forced to show');
-        }
-        
-        if (actionsLeft) {
-            actionsLeft.textContent = '3/3';
-            actionsLeft.style.color = '#4CAF50';
-            console.log('Actions left forced to show');
-        }
-        
-        if (turnTimer) {
-            turnTimer.textContent = '60s';
-            turnTimer.style.color = '#4CAF50';
-            console.log('Turn timer forced to show');
-        }
-        
-        // Force show the multiplayer panel
-        if (this.multiplayerPanel) {
-            this.multiplayerPanel.style.display = 'block';
-            this.multiplayerPanel.style.opacity = '1';
-            this.multiplayerPanel.style.visibility = 'visible';
-            console.log('Multiplayer panel forced visible');
-        }
-        
-        // Force show the main content
-        const content = document.getElementById('multiplayer-content');
-        if (content) {
-            content.style.display = 'block';
-            content.style.maxHeight = 'calc(100vh - 120px)';
-            console.log('Multiplayer content forced visible');
-        }
-    }
 
     // Force map sync - bypasses modification checks
     forceMapSync(cellData) {

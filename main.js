@@ -41,8 +41,6 @@ class MainApplication {
         this.resourceManagement = new ResourceManagement(this.mapSystem);
         console.log('ResourceManagement created:', this.resourceManagement);
         
-        // Tool system removed
-        
         // Connect modules to map system
         this.mapSystem.tabManagement = this.tabManagement;
         this.mapSystem.waveAnimation = this.waveAnimation;
@@ -53,7 +51,6 @@ class MainApplication {
         this.mapSystem.proceduralGeneration = this.proceduralGeneration;
         this.mapSystem.utilityFunctions = this.utilityFunctions;
         this.mapSystem.resourceManagement = this.resourceManagement;
-        // Tool system removed
         
         console.log('Modules connected to map system:');
         console.log('  - tabManagement:', !!this.mapSystem.tabManagement);
@@ -66,34 +63,14 @@ class MainApplication {
         console.log('  - utilityFunctions:', !!this.mapSystem.utilityFunctions);
         
         console.log('Setting up event listeners...');
-        this.setupGlobalEventListeners();
         this.mapSystem.setupEventListeners();
         console.log('Event listeners set up');
         
         console.log('Initializing resource management...');
         this.resourceManagement.init();
         console.log('Resource management initialized');
-        
-        // Tool system removed
     }
     
-    setupGlobalEventListeners() {
-        // Note: Keyboard shortcuts are now handled by MapSystem.setupEventListeners()
-        
-        // Note: File loading is now handled by MapSystem.setupEventListeners()
-        
-        // Note: Map controls are now handled by MapSystem.setupEventListeners()
-        
-        // Note: Viewer controls are now handled by MapSystem.setupEventListeners()
-        
-        // Note: Art mode toggles are now handled by MapSystem.setupEventListeners()
-        
-        // Note: Player mode buttons are now handled by MapSystem.setupEventListeners()
-        
-        // Note: Tab switching is now handled by MapSystem.setupEventListeners()
-        
-        // Note: Tool selection, global mouse events, and window resize are now handled by MapSystem.setupEventListeners()
-    }
 }
 
 // Initialize the application when the DOM is loaded
@@ -111,7 +88,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             multiplayerIntegration = new SimpleMultiplayerIntegration(window.app.mapSystem);
             window.multiplayerIntegration = multiplayerIntegration; // Make it globally accessible
-            window.debugShowUI = () => multiplayerIntegration.debugShowUI(); // Make debug method accessible
             console.log('MultiplayerIntegration created:', !!multiplayerIntegration);
             await multiplayerIntegration.initializeMultiplayer();
             console.log('Multiplayer initialized');
