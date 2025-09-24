@@ -1315,6 +1315,89 @@ body {
     font-size: 0.9rem;
 }
 
+/* Players main section styling */
+.players-main-section {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.players-main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.players-main-header h5 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.players-main-list {
+    margin-bottom: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.players-main-list .player-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.players-main-list .player-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.players-main-list .player-info {
+    flex: 1;
+}
+
+.players-main-list .player-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 2px;
+}
+
+.players-main-list .player-resources {
+    font-size: 11px;
+    color: #666;
+}
+
+.room-info-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    margin-bottom: 10px;
+}
+
+.start-game-section {
+    text-align: center;
+}
+
+.start-game-section button {
+    margin-bottom: 8px;
+}
+
+.start-game-info {
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
+}
+
 .room-controls-section {
     margin-bottom: 15px;
     padding: 10px;

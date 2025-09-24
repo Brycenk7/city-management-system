@@ -6,6 +6,7 @@ class SimpleMultiplayerIntegration {
         this.mapSystem = mapSystem;
         this.wsManager = new WebSocketManager();
         this.isInMultiplayer = false;
+        this.gameStarted = false;
         this.currentRoom = null;
         this.playerId = null;
         this.playerName = null;
@@ -42,6 +43,7 @@ class SimpleMultiplayerIntegration {
             this.playerId = data.playerId;
             this.playerName = data.game.players[0].username;
             this.isInMultiplayer = true;
+            this.gameStarted = false; // Game not started yet
             this.turnOrder = data.game.gameState.turnOrder;
             this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
@@ -81,6 +83,7 @@ class SimpleMultiplayerIntegration {
             this.playerId = data.playerId;
             this.playerName = data.game.players.find(p => p.id === data.playerId)?.username || 'Player';
             this.isInMultiplayer = true;
+            this.gameStarted = false; // Game not started yet
             this.turnOrder = data.game.gameState.turnOrder;
             this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
@@ -400,24 +403,45 @@ class SimpleMultiplayerIntegration {
         // Create the multiplayer content
         multiplayerTab.innerHTML = `
             <div class="multiplayer-content">
-                <!-- Room Controls with Status in Gap -->
-                <div class="room-controls-section">
-                    <div class="room-controls-header">
-                        <h5>Room Controls</h5>
-                        <div class="status-inline">
-                            <span class="status-value" id="connection-status">Disconnected</span>
-                        </div>
-                    </div>
-                    <div class="room-controls">
-                        <input type="text" id="room-id-input" placeholder="Enter Room ID" class="multiplayer-input">
-                        <button id="join-room-btn" class="multiplayer-btn small">Join Room</button>
-                        <button id="create-room-btn" class="multiplayer-btn small">Create Room</button>
-                    </div>
-                    <div class="room-info-inline">
-                        <span class="room-label">Room:</span>
-                        <span class="room-value" id="room-info">None</span>
+            <!-- Room Controls with Status in Gap (shown when not in room) -->
+            <div class="room-controls-section" id="room-controls-section">
+                <div class="room-controls-header">
+                    <h5>Room Controls</h5>
+                    <div class="status-inline">
+                        <span class="status-value" id="connection-status">Disconnected</span>
                     </div>
                 </div>
+                <div class="room-controls">
+                    <input type="text" id="room-id-input" placeholder="Enter Room ID" class="multiplayer-input">
+                    <button id="join-room-btn" class="multiplayer-btn small">Join Room</button>
+                    <button id="create-room-btn" class="multiplayer-btn small">Create Room</button>
+                </div>
+                <div class="room-info-inline">
+                    <span class="room-label">Room:</span>
+                    <span class="room-value" id="room-info">None</span>
+                </div>
+            </div>
+
+            <!-- Players List (shown when in room, before game starts) -->
+            <div class="players-main-section" id="players-main-section" style="display: none;">
+                <div class="players-main-header">
+                    <h5>Players in Room</h5>
+                    <div class="status-inline">
+                        <span class="status-value" id="connection-status-main">Disconnected</span>
+                    </div>
+                </div>
+                <div class="players-main-list" id="players-main-list">
+                    <div class="no-players">No players connected</div>
+                </div>
+                <div class="room-info-main">
+                    <span class="room-label">Room:</span>
+                    <span class="room-value" id="room-info-main">None</span>
+                </div>
+                <div class="start-game-section">
+                    <button id="start-game-btn" class="multiplayer-btn primary" disabled>Start Game</button>
+                    <div class="start-game-info">Waiting for players to join...</div>
+                </div>
+            </div>
                 
                 <!-- Additional Status (Hidden until room created) -->
                 <div class="additional-status room-dependent" style="display: none;">
@@ -677,8 +701,11 @@ class SimpleMultiplayerIntegration {
             leaveTeamBtn.addEventListener('click', () => this.leaveTeam());
         }
 
-
-
+        // Start game button
+        const startGameBtn = document.getElementById('start-game-btn');
+        if (startGameBtn) {
+            startGameBtn.addEventListener('click', () => this.startGame());
+        }
     }
 
     updatePlayersList(players) {
@@ -718,8 +745,8 @@ class SimpleMultiplayerIntegration {
             playerDiv.innerHTML = `
                 <div style="width: 12px; height: 12px; border-radius: 50%; background: ${player.color}; margin-right: 8px; ${isCurrentTurn ? 'box-shadow: 0 0 8px #fff;' : ''}"></div>
                 <div style="flex: 1;">
-                    <div style="font-weight: ${isCurrentPlayer ? 'bold' : 'normal'}; color: ${isCurrentPlayer ? '#FFD700' : 'white'};">${player.username} ${isCurrentPlayer ? '(You)' : ''}</div>
-                    <div style="font-size: 12px; opacity: 0.8;">
+                    <div style="font-weight: ${isCurrentPlayer ? 'bold' : 'normal'}; color: ${isCurrentPlayer ? '#FFD700' : '#2c3e50'};">${player.username} ${isCurrentPlayer ? '(You)' : ''}</div>
+                    <div style="font-size: 12px; opacity: 0.8; color: #2c3e50;">
                         Wood: ${resources.wood || 0} | Ore: ${resources.ore || 0} | Power: ${resources.power || 0}
                     </div>
                 </div>
@@ -731,18 +758,22 @@ class SimpleMultiplayerIntegration {
     }
 
     updateUI() {
-        console.log('updateUI called, isInMultiplayer:', this.isInMultiplayer);
-        const statusText = document.getElementById('status-text');
+        console.log('updateUI called, isInMultiplayer:', this.isInMultiplayer, 'gameStarted:', this.gameStarted);
+        const statusText = document.getElementById('connection-status');
+        const statusTextMain = document.getElementById('connection-status-main');
+        const roomControlsSection = document.getElementById('room-controls-section');
+        const playersMainSection = document.getElementById('players-main-section');
         const gameStats = document.getElementById('game-stats');
-        const roomControls = document.getElementById('room-controls');
         const playersList = document.getElementById('players-list');
         const actionButtons = document.getElementById('action-buttons');
         const teamPanel = document.getElementById('team-panel');
         
         console.log('UI elements found:', {
             statusText: !!statusText,
+            statusTextMain: !!statusTextMain,
+            roomControlsSection: !!roomControlsSection,
+            playersMainSection: !!playersMainSection,
             gameStats: !!gameStats,
-            roomControls: !!roomControls,
             playersList: !!playersList,
             actionButtons: !!actionButtons,
             teamPanel: !!teamPanel
@@ -753,73 +784,160 @@ class SimpleMultiplayerIntegration {
             if (statusText) {
                 statusText.textContent = 'Connected';
                 statusText.style.color = '#28a745';
-                console.log('Status updated to: Connected');
             }
+            if (statusTextMain) {
+                statusTextMain.textContent = 'Connected';
+                statusTextMain.style.color = '#28a745';
+            }
+            console.log('Status updated to: Connected');
         } else {
             if (statusText) {
                 statusText.textContent = 'Disconnected';
                 statusText.style.color = '#dc3545';
-                console.log('Status updated to: Disconnected');
             }
+            if (statusTextMain) {
+                statusTextMain.textContent = 'Disconnected';
+                statusTextMain.style.color = '#dc3545';
+            }
+            console.log('Status updated to: Disconnected');
         }
 
         if (this.isInMultiplayer) {
-            if (roomControls) roomControls.style.display = 'none';
-            if (gameStats) gameStats.style.display = 'block';
+            // Hide room controls, show players main section
+            if (roomControlsSection) roomControlsSection.style.display = 'none';
+            if (playersMainSection) playersMainSection.style.display = 'block';
             
-            // Show quick actions when in multiplayer
-            const quickActions = document.getElementById('quick-actions');
-            if (quickActions) quickActions.style.display = 'block';
+            // Update room info in main section
+            const roomInfoMain = document.getElementById('room-info-main');
+            if (roomInfoMain) roomInfoMain.textContent = this.currentRoom;
             
-            // Show the dropdown content when in multiplayer
-            const playersList = document.getElementById('players-list');
-            const additionalActions = document.getElementById('additional-actions');
-            const teamPanel = document.getElementById('team-panel');
+            // Update players list in main section
+            this.updatePlayersMainDisplay();
             
-            if (playersList) playersList.style.display = 'block';
-            if (additionalActions) additionalActions.style.display = 'block';
-            if (teamPanel) teamPanel.style.display = 'block';
+            // Update start game button
+            this.updateStartGameButton();
             
-            console.log('Multiplayer UI shown - game stats visible, controls in dropdown');
-            
-            const roomInfo = document.getElementById('room-info');
-            if (roomInfo) roomInfo.textContent = this.currentRoom;
-            
-            const playersCount = document.getElementById('players-count');
-            if (playersCount) playersCount.textContent = this.players.size;
-            
-            const currentTurn = document.getElementById('current-turn');
-            if (currentTurn) currentTurn.textContent = this.currentTurn + 1;
-            
-            // Update actions left display
-            const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
-            const actionsLeftElement = document.getElementById('actions-left');
-            if (actionsLeftElement) {
-                actionsLeftElement.textContent = `${actionsLeft}/${this.maxActionsPerTurn}`;
-                actionsLeftElement.style.color = actionsLeft > 0 ? '#4CAF50' : '#f44336';
-                console.log('Actions left updated:', `${actionsLeft}/${this.maxActionsPerTurn}`);
+            if (this.gameStarted) {
+                // Game has started - show game stats and hide players main section
+                if (playersMainSection) playersMainSection.style.display = 'none';
+                if (gameStats) gameStats.style.display = 'block';
+                
+                // Show quick actions when game is started
+                const quickActions = document.getElementById('quick-actions');
+                if (quickActions) quickActions.style.display = 'block';
+                
+                // Show the dropdown content when game is started
+                if (playersList) playersList.style.display = 'block';
+                const additionalActions = document.getElementById('additional-actions');
+                if (additionalActions) additionalActions.style.display = 'block';
+                if (teamPanel) teamPanel.style.display = 'block';
+                
+                console.log('Game UI shown - game stats visible, controls in dropdown');
+                
+                const roomInfo = document.getElementById('room-info');
+                if (roomInfo) roomInfo.textContent = this.currentRoom;
+                
+                const playersCount = document.getElementById('players-count');
+                if (playersCount) playersCount.textContent = this.players.size;
+                
+                const currentTurn = document.getElementById('current-turn');
+                if (currentTurn) currentTurn.textContent = this.currentTurn + 1;
+                
+                // Update actions left display
+                const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
+                const actionsLeftElement = document.getElementById('actions-left');
+                if (actionsLeftElement) {
+                    actionsLeftElement.textContent = `${actionsLeft}/${this.maxActionsPerTurn}`;
+                    actionsLeftElement.style.color = actionsLeft > 0 ? '#4CAF50' : '#f44336';
+                    console.log('Actions left updated:', `${actionsLeft}/${this.maxActionsPerTurn}`);
+                } else {
+                    console.log('Actions left element not found!');
+                }
+                
+                // Update button visibility within the dropdown
+                const nextTurnBtn = document.getElementById('next-turn-btn');
+                if (nextTurnBtn) {
+                    const isMyTurn = this.turnOrder[this.currentTurn] === this.playerId;
+                    nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
+                }
+                
+                this.updatePlayersDisplay();
             } else {
-                console.log('Actions left element not found!');
+                // In room but game not started - hide game stats
+                if (gameStats) gameStats.style.display = 'none';
+                console.log('In room but game not started - showing players list');
             }
-            
-            // Update button visibility within the dropdown
-            const nextTurnBtn = document.getElementById('next-turn-btn');
-            if (nextTurnBtn) {
-                nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
-            }
-            
-            this.updatePlayersDisplay();
         } else {
-            if (roomControls) roomControls.style.display = 'block';
+            // Not in multiplayer - show room controls only
+            if (roomControlsSection) roomControlsSection.style.display = 'block';
+            if (playersMainSection) playersMainSection.style.display = 'none';
             if (gameStats) gameStats.style.display = 'none';
             
             // Hide quick actions when not in multiplayer
             const quickActions = document.getElementById('quick-actions');
             if (quickActions) quickActions.style.display = 'none';
             
-            // All other elements are in dropdown, which is hidden by default
             console.log('Not in multiplayer - showing room controls only');
         }
+    }
+
+    updatePlayersMainDisplay() {
+        const playersMainList = document.getElementById('players-main-list');
+        if (!playersMainList) return;
+
+        playersMainList.innerHTML = '';
+        
+        if (this.players.size === 0) {
+            playersMainList.innerHTML = '<div class="no-players">No players connected</div>';
+            return;
+        }
+
+        this.players.forEach((player, playerId) => {
+            const playerDiv = document.createElement('div');
+            playerDiv.className = 'player-item';
+            
+            const isCurrentPlayer = playerId === this.playerId;
+            const resources = player.resources || { wood: 0, ore: 0, power: 0, commercialGoods: 0 };
+            
+            playerDiv.innerHTML = `
+                <div class="player-color" style="background: ${player.color};"></div>
+                <div class="player-info">
+                    <div class="player-name">${player.username} ${isCurrentPlayer ? '(You)' : ''}</div>
+                    <div class="player-resources">Wood: ${resources.wood || 0} | Ore: ${resources.ore || 0} | Power: ${resources.power || 0}</div>
+                </div>
+            `;
+            
+            playersMainList.appendChild(playerDiv);
+        });
+    }
+
+    updateStartGameButton() {
+        const startGameBtn = document.getElementById('start-game-btn');
+        const startGameInfo = document.querySelector('.start-game-info');
+        
+        if (!startGameBtn) return;
+        
+        // Enable button if there are at least 2 players
+        if (this.players.size >= 2) {
+            startGameBtn.disabled = false;
+            startGameBtn.textContent = 'Start Game';
+            if (startGameInfo) {
+                startGameInfo.textContent = `Ready to start! (${this.players.size} players)`;
+            }
+        } else {
+            startGameBtn.disabled = true;
+            startGameBtn.textContent = 'Start Game';
+            if (startGameInfo) {
+                startGameInfo.textContent = `Waiting for players to join... (${this.players.size}/2)`;
+            }
+        }
+    }
+
+    startGame() {
+        console.log('Starting game...');
+        this.gameStarted = true;
+        this.updateUI();
+        this.showNotification('Game started!', 'success');
     }
 
     createGame() {
@@ -1076,6 +1194,12 @@ class SimpleMultiplayerIntegration {
 
     canPlaceBuilding() {
         if (!this.isInMultiplayer) return true;
+        
+        // If game hasn't started yet, don't allow placement
+        if (!this.gameStarted) {
+            console.log('Game not started yet, cannot place buildings');
+            return false;
+        }
         
         // If turn order is not set up yet, allow placement
         if (!this.turnOrder || this.turnOrder.length === 0) {
