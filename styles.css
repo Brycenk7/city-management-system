@@ -356,6 +356,9 @@ body {
     margin-bottom: 1px;
     padding: 2px;
     font-size: 0.65rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .resource-item:last-child {
@@ -1312,8 +1315,110 @@ body {
     font-size: 0.9rem;
 }
 
-.multiplayer-stats {
-    margin-bottom: 12px;
+.room-controls-section {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.room-controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.room-controls-header h5 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.status-inline {
+    display: flex;
+    align-items: center;
+}
+
+.status-value {
+    font-size: 0.8rem;
+    color: #3498db;
+    font-weight: 700;
+    background: rgba(52, 152, 219, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.room-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.room-info-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.room-label {
+    font-size: 0.8rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.room-value {
+    font-size: 0.8rem;
+    color: #3498db;
+    font-weight: 700;
+    background: rgba(52, 152, 219, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.additional-status {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.room-dependent {
+    transition: all 0.3s ease;
+}
+
+.additional-status .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.additional-status .stat-label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.8rem;
+}
+
+.additional-status .stat-value {
+    font-weight: 700;
+    color: #3498db;
+    font-size: 0.8rem;
+    background: rgba(52, 152, 219, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 152, 219, 0.3);
 }
 
 .stat-item {

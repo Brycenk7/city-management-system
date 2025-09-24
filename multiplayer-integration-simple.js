@@ -46,6 +46,7 @@ class SimpleMultiplayerIntegration {
             this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
             this.updateUI();
+            this.updateRoomDependentElements();
             
             // Set player ID in resource management
             if (this.mapSystem && this.mapSystem.resourceManagement) {
@@ -84,6 +85,7 @@ class SimpleMultiplayerIntegration {
             this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
             this.updateUI();
+            this.updateRoomDependentElements();
             
             // Set player ID in resource management
             if (this.mapSystem && this.mapSystem.resourceManagement) {
@@ -285,7 +287,21 @@ class SimpleMultiplayerIntegration {
         
         this.setupTabListeners();
         this.updateUI();
+        this.updateRoomDependentElements();
         console.log('Multiplayer UI setup complete');
+    }
+
+    updateRoomDependentElements() {
+        const roomDependentElements = document.querySelectorAll('.room-dependent');
+        const hasRoom = this.currentRoom && this.currentRoom !== 'None';
+        
+        roomDependentElements.forEach(element => {
+            if (hasRoom) {
+                element.style.display = element.classList.contains('stat-item') ? 'flex' : 'block';
+            } else {
+                element.style.display = 'none';
+            }
+        });
     }
 
     setupTabListeners() {
@@ -373,16 +389,27 @@ class SimpleMultiplayerIntegration {
         // Create the multiplayer content
         multiplayerTab.innerHTML = `
             <div class="multiplayer-content">
-                <!-- Always Visible Stats -->
-                <div class="multiplayer-stats">
-                    <div class="stat-item">
-                        <span class="stat-label">Status:</span>
-                        <span class="stat-value" id="connection-status">Disconnected</span>
+                <!-- Room Controls with Status in Gap -->
+                <div class="room-controls-section">
+                    <div class="room-controls-header">
+                        <h5>Room Controls</h5>
+                        <div class="status-inline">
+                            <span class="status-value" id="connection-status">Disconnected</span>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Room:</span>
-                        <span class="stat-value" id="room-info">None</span>
+                    <div class="room-controls">
+                        <input type="text" id="room-id-input" placeholder="Enter Room ID" class="multiplayer-input">
+                        <button id="join-room-btn" class="multiplayer-btn small">Join Room</button>
+                        <button id="create-room-btn" class="multiplayer-btn small">Create Room</button>
                     </div>
+                    <div class="room-info-inline">
+                        <span class="room-label">Room:</span>
+                        <span class="room-value" id="room-info">None</span>
+                    </div>
+                </div>
+                
+                <!-- Additional Status (Hidden until room created) -->
+                <div class="additional-status room-dependent" style="display: none;">
                     <div class="stat-item">
                         <span class="stat-label">Players:</span>
                         <span class="stat-value" id="players-count">0</span>
@@ -401,8 +428,8 @@ class SimpleMultiplayerIntegration {
                     </div>
                 </div>
                 
-                <!-- Action Buttons -->
-                <div class="multiplayer-actions">
+                <!-- Action Buttons (Hidden until room created) -->
+                <div class="multiplayer-actions room-dependent" style="display: none;">
                     <button id="next-turn-btn" class="multiplayer-btn primary">Next Turn</button>
                     <button id="sync-map-btn" class="multiplayer-btn secondary">Sync Map</button>
                 </div>
@@ -414,15 +441,6 @@ class SimpleMultiplayerIntegration {
                 
                 <!-- Dropdown Content -->
                 <div class="dropdown-content" id="multiplayer-dropdown" style="display: none;">
-                    <!-- Room Controls -->
-                    <div class="dropdown-section">
-                        <h5>Room Controls</h5>
-                        <div class="room-controls">
-                            <input type="text" id="room-id-input" placeholder="Enter Room ID" class="multiplayer-input">
-                            <button id="join-room-btn" class="multiplayer-btn small">Join Room</button>
-                            <button id="create-room-btn" class="multiplayer-btn small">Create Room</button>
-                        </div>
-                    </div>
                     
                     <!-- Game Mode -->
                     <div class="dropdown-section">
@@ -715,15 +733,18 @@ class SimpleMultiplayerIntegration {
             teamPanel: !!teamPanel
         });
 
+        console.log('Updating connection status. isConnected:', this.wsManager.isConnected);
         if (this.wsManager.isConnected) {
             if (statusText) {
                 statusText.textContent = 'Connected';
                 statusText.style.color = '#28a745';
+                console.log('Status updated to: Connected');
             }
         } else {
             if (statusText) {
                 statusText.textContent = 'Disconnected';
                 statusText.style.color = '#dc3545';
+                console.log('Status updated to: Disconnected');
             }
         }
 
