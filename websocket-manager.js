@@ -21,7 +21,7 @@ class WebSocketManager {
                         serverUrl = 'http://localhost:3000';
                     } else {
                         // Use your Render server URL for production
-                        serverUrl = 'https://city-builder-pro-backend.onrender.com';
+                        serverUrl = 'https://city-builder-backend.onrender.com';
                     }
                 }
                 
