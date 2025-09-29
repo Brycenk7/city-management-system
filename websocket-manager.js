@@ -12,9 +12,20 @@ class WebSocketManager {
         this.eventHandlers = new Map();
     }
 
-    connect(serverUrl = 'http://localhost:3000') {
+    connect(serverUrl = null) {
         return new Promise((resolve, reject) => {
             try {
+                // Auto-detect server URL based on environment
+                if (!serverUrl) {
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        serverUrl = 'http://localhost:3000';
+                    } else {
+                        // Use your Render server URL for production
+                        serverUrl = 'https://city-builder-pro-backend.onrender.com';
+                    }
+                }
+                
+                console.log('Connecting to server:', serverUrl);
                 this.socket = io(serverUrl);
                 
                 this.socket.on('connect', () => {
