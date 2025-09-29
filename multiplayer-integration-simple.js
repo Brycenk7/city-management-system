@@ -7,7 +7,10 @@ class SimpleMultiplayerIntegration {
         this.wsManager = new WebSocketManager();
         this.isInMultiplayer = false;
         this.gameStarted = false;
+        this.gamePaused = false;
         this.currentRoom = null;
+        this.isHost = false; // Track if current player is the host
+        this.isCreatingGame = false; // Prevent duplicate create game calls
         this.playerId = null;
         this.playerName = null;
         this.players = new Map();
@@ -25,6 +28,8 @@ class SimpleMultiplayerIntegration {
         this.turnTimeLimit = 60; // 60 seconds per turn
         this.turnStartTime = null;
         this.turnTimer = null;
+        this.turnTimeRemaining = null; // Track remaining time when paused
+        this.turnTimerPaused = false;
     }
 
     async initializeMultiplayer() {
@@ -44,6 +49,7 @@ class SimpleMultiplayerIntegration {
             this.playerName = data.game.players[0].username;
             this.isInMultiplayer = true;
             this.gameStarted = false; // Game not started yet
+            this.isHost = true; // Creator is the host
             this.turnOrder = data.game.gameState.turnOrder;
             this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
@@ -81,6 +87,7 @@ class SimpleMultiplayerIntegration {
             this.playerName = data.game.players.find(p => p.id === data.playerId)?.username || 'Player';
             this.isInMultiplayer = true;
             this.gameStarted = false; // Game not started yet
+            this.isHost = false; // Only creator is host
             this.turnOrder = data.game.gameState.turnOrder;
             this.currentTurn = data.game.gameState.currentTurn;
             this.updatePlayersList(data.game.players);
@@ -270,10 +277,108 @@ class SimpleMultiplayerIntegration {
 
         // Map state updates
         this.wsManager.on('map_state_updated', (data) => {
-            console.log('Map state updated from another player');
-            this.syncMap(data.cells);
-            this.showNotification('Map synchronized with other players', 'success');
+            console.log('🗺️ Map state updated event received:', data);
+            console.log('🗺️ Cells data:', data.cells);
+            console.log('🗺️ Cells length:', data.cells ? data.cells.length : 'undefined');
+            console.log('🗺️ First few cells:', data.cells ? data.cells.slice(0, 3) : 'none');
+            
+            if (data.cells && data.cells.length > 0) {
+                console.log('🗺️ Cell data structure:', typeof data.cells[0], data.cells[0]);
+                this.syncMap(data.cells);
+                this.showNotification('Map synchronized with host', 'success');
+            } else {
+                console.error('🗺️ No cell data received');
+                this.showNotification('No map data received from host', 'error');
+            }
         });
+
+        // Handle request for current map (host only)
+        this.wsManager.on('request_current_map', (data) => {
+            console.log('🗺️ Server requesting current map from host');
+            if (this.isHost && this.isInMultiplayer) {
+                const mapData = this.getCurrentMapData();
+                if (mapData && mapData.length > 0) {
+                    console.log('🗺️ Host sending current map data:', mapData.length, 'cells');
+                    this.wsManager.send('send_current_map', {
+                        roomCode: this.currentRoom,
+                        requestingPlayer: data.requestingPlayer,
+                        cells: mapData
+                    });
+                } else {
+                    console.error('🗺️ Host has no map data to send');
+                }
+            }
+        });
+
+        // Game control events
+        this.wsManager.on('game_started', (data) => {
+            console.log('🎮 GAME STARTED EVENT RECEIVED!');
+            console.log('🎮 Game started by', data.startedBy);
+            console.log('🎮 Map data length:', data.mapData ? data.mapData.length : 'none');
+            console.log('🎮 Current gameStarted state:', this.gameStarted);
+            
+            this.gameStarted = true;
+            this.gamePaused = false; // Reset pause state when game starts
+            
+            // Note: Map sync is now handled by the dedicated map_state_updated event
+            console.log('🎮 Game started - map sync will be handled separately if needed');
+            
+            // Start turn timer if it's our turn
+            if (this.isMyTurn()) {
+                this.startTurnTimer();
+                console.log('Turn timer started on game start');
+            }
+            
+            console.log('🎮 Updating UI after game started...');
+            this.updateUI();
+            this.showNotification(`Game started by ${data.startedBy}!`, 'success');
+            console.log('🎮 Game started event processing complete');
+        });
+
+        this.wsManager.on('game_paused', (data) => {
+            console.log('Game paused by', data.playerName);
+            this.gamePaused = true;
+            
+            // Pause the turn timer
+            if (this.turnTimer) {
+                this.turnTimeRemaining = Math.max(0, Math.floor(this.turnTimeLimit - (Date.now() - this.turnStartTime) / 1000));
+                this.stopTurnTimer();
+                this.turnTimerPaused = true;
+                console.log('Turn timer paused, remaining time:', this.turnTimeRemaining);
+            }
+            
+            this.updateUI();
+            this.showNotification(`Game paused by ${data.playerName}`, 'warning');
+        });
+
+        this.wsManager.on('game_unpaused', (data) => {
+            console.log('Game unpaused by', data.playerName);
+            this.gamePaused = false;
+            
+            // Resume the turn timer if it was paused and it's our turn
+            if (this.turnTimerPaused && this.turnTimeRemaining > 0 && this.isMyTurn()) {
+                this.turnTimeLimit = this.turnTimeRemaining;
+                this.startTurnTimer();
+                this.turnTimerPaused = false;
+                console.log('Turn timer resumed, remaining time:', this.turnTimeRemaining);
+            }
+            
+            this.updateUI();
+            this.showNotification(`Game unpaused by ${data.playerName}`, 'success');
+        });
+
+        // Handle server errors
+        this.wsManager.on('error', (data) => {
+            console.error('Server error:', data.message);
+            this.showNotification(data.message, 'error');
+        });
+
+        // Handle pong response to test server communication
+        this.wsManager.on('pong', (data) => {
+            console.log('Server responded to ping:', data);
+        });
+
+        // Debug: Log specific events only (removed onAny to prevent flooding)
 
         // Listen for connection status changes
         this.wsManager.socket.on('connect', () => {
@@ -315,23 +420,34 @@ class SimpleMultiplayerIntegration {
     updateGameStartedDependentElements() {
         const gameStartedElements = document.querySelectorAll('.game-started-dependent');
         gameStartedElements.forEach(element => {
-            element.style.display = this.gameStarted ? 'block' : 'none';
+            if (element.id === 'sync-map-btn') {
+                // Sync map button only visible to non-hosts when game started
+                element.style.display = (this.gameStarted && !this.isHost) ? 'block' : 'none';
+            } else {
+                // Other game started elements visible to all players when game started
+                element.style.display = this.gameStarted ? 'block' : 'none';
+            }
         });
     }
 
     updateFixedNextTurnButton() {
+        const nextTurnContainer = document.querySelector('.next-turn-container');
         const nextTurnFixedBtn = document.getElementById('next-turn-fixed-btn');
-        if (!nextTurnFixedBtn) return;
+        if (!nextTurnContainer || !nextTurnFixedBtn) return;
 
-        // Show button only when in multiplayer and game has started
+        // Show container only when in multiplayer and game has started
         if (this.isInMultiplayer && this.gameStarted) {
-            nextTurnFixedBtn.style.display = 'block';
+            nextTurnContainer.style.display = 'flex';
             
-            // Enable/disable based on turn
+            // Enable/disable based on turn and pause state
             const isMyTurn = this.isMyTurn();
-            nextTurnFixedBtn.disabled = !isMyTurn;
+            const isDisabled = !isMyTurn || this.gamePaused;
+            nextTurnFixedBtn.disabled = isDisabled;
             
-            if (isMyTurn) {
+            if (this.gamePaused) {
+                nextTurnFixedBtn.textContent = 'Game Paused';
+                nextTurnFixedBtn.style.background = '#ff9800';
+            } else if (isMyTurn) {
                 nextTurnFixedBtn.textContent = 'Next Turn';
                 nextTurnFixedBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
             } else {
@@ -339,7 +455,7 @@ class SimpleMultiplayerIntegration {
                 nextTurnFixedBtn.style.background = '#ccc';
             }
         } else {
-            nextTurnFixedBtn.style.display = 'none';
+            nextTurnContainer.style.display = 'none';
         }
     }
 
@@ -478,10 +594,7 @@ class SimpleMultiplayerIntegration {
                         <span class="stat-label">Turn:</span>
                         <span class="stat-value" id="current-turn">1</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Time:</span>
-                        <span class="stat-value" id="turn-timer">--:--</span>
-                    </div>
+                    <!-- Timer moved to next to green Next Turn button -->
                     <div class="stat-item">
                         <span class="stat-label">Actions:</span>
                         <span class="stat-value" id="actions-left">3/3</span>
@@ -490,8 +603,8 @@ class SimpleMultiplayerIntegration {
                 
                 <!-- Action Buttons (Hidden until game started) -->
                 <div class="multiplayer-actions game-started-dependent" style="display: none;">
-                    <button id="next-turn-btn" class="multiplayer-btn primary">Next Turn</button>
                     <button id="sync-map-btn" class="multiplayer-btn secondary">Sync Map</button>
+                    <button id="pause-game-btn" class="multiplayer-btn warning">Pause Game</button>
                 </div>
                 
                 <!-- Dropdown Toggle -->
@@ -654,7 +767,11 @@ class SimpleMultiplayerIntegration {
         
         if (createBtn) {
             console.log('Create game button found, adding listener');
-            createBtn.addEventListener('click', () => {
+            // Remove any existing listeners to prevent duplicates
+            createBtn.removeEventListener('click', this.createGame);
+            createBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('Create game button clicked!');
                 this.createGame();
             });
@@ -678,18 +795,16 @@ class SimpleMultiplayerIntegration {
             this.updateGameModeDescription();
         }
 
-        const nextTurnBtn = document.getElementById('next-turn-btn');
-        if (nextTurnBtn) {
-            nextTurnBtn.addEventListener('click', () => this.advanceTurn());
-        }
+        // Blue Next Turn button removed - using only the fixed green button
 
         const syncMapBtn = document.getElementById('sync-map-btn');
         if (syncMapBtn) {
             syncMapBtn.addEventListener('click', () => {
                 console.log('Manual map sync requested');
                 if (this.isInMultiplayer) {
-                    this.requestMapSyncFromHost();
-                    this.showNotification('Requesting map sync from host...', 'info');
+                    // Everyone can sync, but it always gets the host's map
+                    this.requestHostMapSync();
+                    this.showNotification('Syncing with host\'s map...', 'info');
                 } else {
                     this.showNotification('Not in multiplayer mode', 'error');
                 }
@@ -726,16 +841,34 @@ class SimpleMultiplayerIntegration {
             leaveTeamBtn.addEventListener('click', () => this.leaveTeam());
         }
 
-        // Start game button
+        // Start game button - simplified approach
         const startGameBtn = document.getElementById('start-game-btn');
         if (startGameBtn) {
-            startGameBtn.addEventListener('click', () => this.startGame());
+            // Remove any existing listeners first
+            startGameBtn.onclick = null;
+            
+            // Use simple onclick for reliability
+            startGameBtn.onclick = (e) => {
+                console.log('🚀 BUTTON CLICKED!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.startGame();
+            };
+            
+        } else {
+            console.error('❌ Start game button not found!');
         }
 
         // Fixed Next Turn button
         const nextTurnFixedBtn = document.getElementById('next-turn-fixed-btn');
         if (nextTurnFixedBtn) {
             nextTurnFixedBtn.addEventListener('click', () => this.advanceTurn());
+        }
+
+        // Pause Game button
+        const pauseGameBtn = document.getElementById('pause-game-btn');
+        if (pauseGameBtn) {
+            pauseGameBtn.addEventListener('click', () => this.toggleGamePause());
         }
     }
 
@@ -855,21 +988,10 @@ class SimpleMultiplayerIntegration {
             this.updateFixedNextTurnButton();
             
             if (this.gameStarted) {
-                // Game has started - show game stats and hide players main section
+                // Game has started - hide players main section, show game controls
                 if (playersMainSection) playersMainSection.style.display = 'none';
-                if (gameStats) gameStats.style.display = 'block';
                 
-                // Show quick actions when game is started
-                const quickActions = document.getElementById('quick-actions');
-                if (quickActions) quickActions.style.display = 'block';
-                
-                // Show the dropdown content when game is started
-                if (playersList) playersList.style.display = 'block';
-                const additionalActions = document.getElementById('additional-actions');
-                if (additionalActions) additionalActions.style.display = 'block';
-                if (teamPanel) teamPanel.style.display = 'block';
-                
-                console.log('Game UI shown - game stats visible, controls in dropdown');
+                console.log('🎮 Game started - showing game controls and stats');
                 
                 const roomInfo = document.getElementById('room-info');
                 if (roomInfo) roomInfo.textContent = this.currentRoom;
@@ -891,24 +1013,24 @@ class SimpleMultiplayerIntegration {
                     console.log('Actions left element not found!');
                 }
                 
-                // Update button visibility within the dropdown
-                const nextTurnBtn = document.getElementById('next-turn-btn');
-                if (nextTurnBtn) {
-                    const isMyTurn = this.turnOrder[this.currentTurn] === this.playerId;
-                    nextTurnBtn.style.display = isMyTurn ? 'block' : 'none';
+                // Blue Next Turn button removed - using only the fixed green button
+
+                // Update pause button
+                const pauseBtn = document.getElementById('pause-game-btn');
+                if (pauseBtn) {
+                    pauseBtn.textContent = this.gamePaused ? 'Unpause Game' : 'Pause Game';
+                    pauseBtn.className = this.gamePaused ? 'multiplayer-btn success' : 'multiplayer-btn warning';
                 }
                 
                 this.updatePlayersDisplay();
             } else {
-                // In room but game not started - hide game stats
-                if (gameStats) gameStats.style.display = 'none';
-                console.log('In room but game not started - showing players list');
+                // In room but game not started - show players list
+                console.log('🎮 In room but game not started - showing players list');
             }
         } else {
             // Not in multiplayer - show room controls only
             if (roomControlsSection) roomControlsSection.style.display = 'block';
             if (playersMainSection) playersMainSection.style.display = 'none';
-            if (gameStats) gameStats.style.display = 'none';
             
             // Hide quick actions when not in multiplayer
             const quickActions = document.getElementById('quick-actions');
@@ -955,51 +1077,285 @@ class SimpleMultiplayerIntegration {
         const startGameBtn = document.getElementById('start-game-btn');
         const startGameInfo = document.querySelector('.start-game-info');
         
-        if (!startGameBtn) return;
+        if (!startGameBtn) {
+            console.error('❌ Start game button not found!');
+            return;
+        }
         
-        // Enable button if there are at least 2 players
-        if (this.players.size >= 2) {
-            startGameBtn.disabled = false;
-            startGameBtn.textContent = 'Start Game';
-            if (startGameInfo) {
-                startGameInfo.textContent = `Ready to start! (${this.players.size} players)`;
+        // Only show start game button to the host (room creator)
+        if (this.isHost) {
+            console.log('Host detected, showing start game button');
+            startGameBtn.style.display = 'block';
+            
+            // Enable button if there are at least 2 players
+            if (this.players.size >= 2) {
+                startGameBtn.disabled = false;
+                startGameBtn.textContent = 'Start Game';
+                if (startGameInfo) {
+                    startGameInfo.textContent = `Ready to start! (${this.players.size} players)`;
+                }
+            } else {
+                startGameBtn.disabled = true;
+                startGameBtn.textContent = 'Start Game';
+                if (startGameInfo) {
+                    startGameInfo.textContent = `Waiting for players to join... (${this.players.size}/2)`;
+                }
             }
         } else {
-            startGameBtn.disabled = true;
-            startGameBtn.textContent = 'Start Game';
+            // Hide button for non-hosts
+            console.log('Non-host detected, hiding start game button');
+            startGameBtn.style.display = 'none';
             if (startGameInfo) {
-                startGameInfo.textContent = `Waiting for players to join... (${this.players.size}/2)`;
+                startGameInfo.textContent = `Waiting for host to start game... (${this.players.size} players)`;
             }
         }
     }
 
     startGame() {
-        console.log('Starting game...');
-        this.gameStarted = true;
+        console.log('🎮 START GAME FUNCTION CALLED');
         
-        // Start turn timer if it's our turn
-        if (this.isMyTurn()) {
-            this.startTurnTimer();
-            console.log('Turn timer started on game start');
+        // Show immediate feedback
+        this.showNotification('Starting game...', 'info');
+        
+        if (!this.isHost) {
+            console.log('❌ Only host can start the game');
+            this.showNotification('Only the host can start the game', 'error');
+            return;
         }
         
-        this.updateUI();
-        this.showNotification('Game started!', 'success');
+        if (!this.currentRoom) {
+            console.log('❌ No room');
+            this.showNotification('No room to start game in', 'error');
+            return;
+        }
+
+        if (this.players.size < 2) {
+            console.log('❌ Not enough players:', this.players.size);
+            this.showNotification('Need at least 2 players to start the game', 'error');
+            return;
+        }
+
+        console.log('✅ Generating terrain and starting game...');
+        
+        // Generate terrain first
+        this.generateTerrainForGame();
+        
+        // Wait a moment for terrain generation to complete
+        setTimeout(() => {
+            // Get map data after generation
+            const mapData = this.getCurrentMapData();
+            console.log('🗺️ Map data ready:', mapData ? mapData.length : 'null', 'cells');
+            
+            // Check WebSocket connection
+            console.log('🔌 WebSocket connected:', this.wsManager.isConnected);
+            console.log('🔌 WebSocket socket exists:', !!this.wsManager.socket);
+            
+            // Send start game message to server with map data
+            this.wsManager.send('start_game', {
+                roomCode: this.currentRoom,
+                playerId: this.playerId,
+                mapData: mapData
+            });
+            
+            console.log('📤 Start game message with map data sent!');
+        }, 500); // Wait 500ms for terrain generation
+        
+        // Add a fallback - if server doesn't respond in 5 seconds, start locally
+        setTimeout(() => {
+            if (!this.gameStarted) {
+                console.log('⚠️ Server did not respond after 5 seconds, starting game locally...');
+                console.log('⚠️ This means other players will NOT see the game start');
+                this.gameStarted = true;
+                this.gamePaused = false;
+                this.updateUI();
+                this.showNotification('Game started locally (server may be offline)', 'warning');
+                
+                // Start turn timer if it's our turn
+                if (this.isMyTurn()) {
+                    this.startTurnTimer();
+                }
+            }
+        }, 5000);
+    }
+
+    generateTerrainForGame() {
+        console.log('🌍 Generating terrain for multiplayer game...');
+        
+        // Try different ways to generate terrain
+        let terrainGenerated = false;
+        
+        // Method 1: this.mapSystem.mapGenerator
+        if (this.mapSystem && this.mapSystem.mapGenerator && this.mapSystem.mapGenerator.generateMap) {
+            try {
+                this.mapSystem.mapGenerator.generateMap();
+                console.log('✅ Terrain generated via mapSystem.mapGenerator');
+                terrainGenerated = true;
+            } catch (e) {
+                console.log('❌ mapSystem.mapGenerator failed:', e);
+            }
+        }
+        
+        // Method 2: this.mapSystem.generateMap
+        if (!terrainGenerated && this.mapSystem && this.mapSystem.generateMap) {
+            try {
+                this.mapSystem.generateMap();
+                console.log('✅ Terrain generated via mapSystem.generateMap');
+                terrainGenerated = true;
+            } catch (e) {
+                console.log('❌ mapSystem.generateMap failed:', e);
+            }
+        }
+        
+        // Method 3: window.mapSystem
+        if (!terrainGenerated && window.mapSystem) {
+            try {
+                if (window.mapSystem.mapGenerator && window.mapSystem.mapGenerator.generateMap) {
+                    window.mapSystem.mapGenerator.generateMap();
+                    console.log('✅ Terrain generated via window.mapSystem.mapGenerator');
+                    terrainGenerated = true;
+                } else if (window.mapSystem.generateMap) {
+                    window.mapSystem.generateMap();
+                    console.log('✅ Terrain generated via window.mapSystem.generateMap');
+                    terrainGenerated = true;
+                }
+            } catch (e) {
+                console.log('❌ window.mapSystem failed:', e);
+            }
+        }
+        
+        // Method 4: Direct function call
+        if (!terrainGenerated && typeof window.generateMap === 'function') {
+            try {
+                window.generateMap();
+                console.log('✅ Terrain generated via window.generateMap');
+                terrainGenerated = true;
+            } catch (e) {
+                console.log('❌ window.generateMap failed:', e);
+            }
+        }
+        
+        if (!terrainGenerated) {
+            console.log('❌ No terrain generation method found');
+            return;
+        }
+        
+        // Force a map refresh to ensure it's displayed
+        setTimeout(() => {
+            if (this.mapSystem && this.mapSystem.forceMapRerender) {
+                this.mapSystem.forceMapRerender();
+            } else if (window.mapSystem && window.mapSystem.forceMapRerender) {
+                window.mapSystem.forceMapRerender();
+            } else if (typeof window.forceMapRerender === 'function') {
+                window.forceMapRerender();
+            }
+        }, 100);
+    }
+
+    getCurrentMapData() {
+        console.log('🗺️ Getting current map data...');
+        
+        let cells = null;
+        
+        // Try different ways to get map data
+        if (this.mapSystem && this.mapSystem.cells) {
+            cells = this.mapSystem.cells;
+            console.log('✅ Using mapSystem.cells');
+        } else if (window.mapSystem && window.mapSystem.cells) {
+            cells = window.mapSystem.cells;
+            console.log('✅ Using window.mapSystem.cells');
+        } else {
+            console.log('❌ No map cells found');
+            return null;
+        }
+        
+        // Get the current map cells - convert 2D array to 1D array with coordinates
+        const mapData = [];
+        for (let row = 0; row < cells.length; row++) {
+            for (let col = 0; col < cells[row].length; col++) {
+                const cell = cells[row][col];
+                mapData.push({
+                    x: col,
+                    y: row,
+                    attribute: cell.attribute,
+                    class: cell.class,
+                    building: cell.building,
+                    playerId: cell.playerId || null
+                });
+            }
+        }
+        
+        console.log('✅ Map data retrieved:', mapData.length, 'cells');
+        return mapData;
+    }
+
+    toggleGamePause() {
+        if (this.gamePaused) {
+            this.unpauseGame();
+        } else {
+            this.pauseGame();
+        }
+    }
+
+    pauseGame() {
+        console.log('Pausing game...');
+        
+        // Send pause game message to server
+        this.wsManager.send('pause_game', {
+            roomCode: this.currentRoom,
+            playerId: this.playerId
+        });
+    }
+
+    unpauseGame() {
+        console.log('Unpausing game...');
+        
+        // Send unpause game message to server
+        this.wsManager.send('unpause_game', {
+            roomCode: this.currentRoom,
+            playerId: this.playerId
+        });
     }
 
     createGame() {
         console.log('createGame() called');
+        
+        // Prevent multiple calls
+        if (this.isCreatingGame) {
+            console.log('Already creating game, ignoring duplicate call');
+            return;
+        }
+        this.isCreatingGame = true;
+        
         const playerName = prompt('Enter your name:') || 'Player';
         console.log('Player name entered:', playerName);
+        
+        if (!playerName || playerName.trim() === '') {
+            console.log('No player name entered, aborting');
+            this.isCreatingGame = false;
+            return;
+        }
+        
         const gameMode = document.getElementById('game-mode-select')?.value || 'free_for_all';
         console.log('Game mode selected:', gameMode);
         console.log('WebSocket connected:', this.wsManager.isConnected);
+        
+        if (!this.wsManager.isConnected) {
+            console.error('WebSocket not connected, cannot create game');
+            this.isCreatingGame = false;
+            return;
+        }
+        
         console.log('Sending create_game message...');
         this.wsManager.send('create_game', {
             playerName: playerName,
             gameMode: gameMode
         });
         console.log('create_game message sent');
+        
+        // Reset flag after a delay
+        setTimeout(() => {
+            this.isCreatingGame = false;
+        }, 1000);
     }
 
     joinGame() {
@@ -1244,6 +1600,13 @@ class SimpleMultiplayerIntegration {
     advanceTurn() {
         if (!this.isInMultiplayer) return;
         
+        // Don't allow advancing turn when game is paused
+        if (this.gamePaused) {
+            console.log('Cannot advance turn - game is paused');
+            this.showNotification('Cannot advance turn - game is paused', 'warning');
+            return;
+        }
+        
         this.wsManager.send('advance_turn', {
             roomCode: this.currentRoom,
             playerId: this.playerId
@@ -1256,6 +1619,13 @@ class SimpleMultiplayerIntegration {
         // If game hasn't started yet, don't allow placement
         if (!this.gameStarted) {
             console.log('Game not started yet, cannot place buildings');
+            return false;
+        }
+        
+        // If game is paused, don't allow placement
+        if (this.gamePaused) {
+            console.log('Game is paused, cannot place buildings');
+            this.showNotification('Game is paused - no actions allowed', 'warning');
             return false;
         }
         
@@ -1595,67 +1965,109 @@ class SimpleMultiplayerIntegration {
 
     // Map synchronization methods
     syncMap(cellData) {
-        console.log('Syncing map with server data...', cellData);
+        console.log('🗺️ SYNC MAP CALLED');
+        console.log('🗺️ Cell data type:', typeof cellData);
+        console.log('🗺️ Cell data is array:', Array.isArray(cellData));
+        console.log('🗺️ Cell data length:', cellData ? cellData.length : 'undefined');
+        console.log('🗺️ First cell:', cellData && cellData.length > 0 ? cellData[0] : 'none');
         
         if (!this.mapSystem || !this.mapSystem.cells) {
-            console.error('MapSystem not available for sync');
+            console.error('❌ MapSystem not available for sync');
             return;
         }
 
         if (!cellData || !Array.isArray(cellData)) {
-            console.error('Invalid cell data received:', cellData);
+            console.error('❌ Invalid cell data received:', cellData);
             return;
         }
 
-        // Only sync if we don't have any player modifications yet
-        // This prevents overwriting the current player's work
-        let hasPlayerModifications = false;
-        
-        // Check if this is the first sync (when joining a game)
-        const isFirstSync = !this.hasSyncedBefore;
-        this.hasSyncedBefore = true;
-        
-        if (!isFirstSync) {
-            for (let row = 0; row < this.mapSystem.cells.length; row++) {
-                for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
-                    const cell = this.mapSystem.cells[row][col];
-                    if (cell && this.mapSystem.isPlayerPlaced && this.mapSystem.isPlayerPlaced(row, col)) {
-                        hasPlayerModifications = true;
-                        break;
-                    }
-                }
-                if (hasPlayerModifications) break;
-            }
-        }
-
-        if (hasPlayerModifications) {
-            console.log('Player has modifications, skipping map sync to prevent overwrite');
-            this.showNotification('Map sync skipped - you have modifications', 'warning');
-            return;
-        }
+        console.log('✅ Proceeding with map sync...');
 
         console.log('Applying map sync...');
         let cellsUpdated = 0;
 
-        // Update each cell with the server data
-        for (let row = 0; row < cellData.length; row++) {
-            for (let col = 0; col < cellData[row].length; col++) {
-                if (cellData[row][col]) {
-                    // Preserve the existing element reference
-                    const existingElement = this.mapSystem.cells[row][col]?.element;
-                    this.mapSystem.cells[row][col] = { 
-                        ...cellData[row][col],
-                        element: existingElement // Keep the existing DOM element
-                    };
-                    cellsUpdated++;
+        // Handle 1D array format from server
+        if (Array.isArray(cellData) && cellData.length > 0 && (cellData[0].x !== undefined || cellData[0].playerId !== undefined)) {
+            // This is a 1D array of cell objects with x, y coordinates
+            console.log('🗺️ Processing 1D cell data format...');
+            console.log('🗺️ Map dimensions:', this.mapSystem.cells.length, 'x', this.mapSystem.cells[0]?.length);
+            
+            for (const cellInfo of cellData) {
+                if (cellInfo && cellInfo.x !== undefined && cellInfo.y !== undefined) {
+                    const row = cellInfo.y;
+                    const col = cellInfo.x;
+                    
+                    console.log('🗺️ Processing cell at', row, col, ':', cellInfo);
+                    
+                    if (row >= 0 && row < this.mapSystem.cells.length && 
+                        col >= 0 && col < this.mapSystem.cells[row].length) {
+                        
+                        // Preserve the existing element reference
+                        const existingElement = this.mapSystem.cells[row][col]?.element;
+                        
+                        // Update cell with new data, preserving existing element
+                        this.mapSystem.cells[row][col] = { 
+                            ...this.mapSystem.cells[row][col], // Keep existing cell data
+                            ...cellInfo, // Apply new data
+                            element: existingElement // Keep the existing DOM element
+                        };
+                        cellsUpdated++;
+                        console.log('🗺️ Updated cell at', row, col);
+                    } else {
+                        console.log('🗺️ Cell out of bounds:', row, col);
+                    }
+                }
+            }
+        } else {
+            // Handle 2D array format (legacy)
+            console.log('🗺️ Processing 2D cell data format...');
+            for (let row = 0; row < cellData.length; row++) {
+                for (let col = 0; col < cellData[row].length; col++) {
+                    if (cellData[row][col]) {
+                        // Preserve the existing element reference
+                        const existingElement = this.mapSystem.cells[row][col]?.element;
+                        this.mapSystem.cells[row][col] = { 
+                            ...cellData[row][col],
+                            element: existingElement // Keep the existing DOM element
+                        };
+                        cellsUpdated++;
+                    }
                 }
             }
         }
 
         console.log(`Updated ${cellsUpdated} cells`);
 
+        // Debug: Check a few cells to see what they look like after sync
+        console.log('🗺️ Sample cells after sync:');
+        for (let i = 0; i < Math.min(5, this.mapSystem.cells.length); i++) {
+            for (let j = 0; j < Math.min(5, this.mapSystem.cells[i].length); j++) {
+                const cell = this.mapSystem.cells[i][j];
+                console.log(`Cell [${i}][${j}]:`, {
+                    attribute: cell.attribute,
+                    class: cell.class,
+                    building: cell.building,
+                    playerId: cell.playerId
+                });
+            }
+        }
+
         // Update the visual representation
         this.mapSystem.updateStats();
+        
+        // Force visual update of all cells
+        console.log('🗺️ Forcing visual update of all cells...');
+        for (let row = 0; row < this.mapSystem.cells.length; row++) {
+            for (let col = 0; col < this.mapSystem.cells[row].length; col++) {
+                this.mapSystem.updateCellVisual(row, col);
+            }
+        }
+        
+        // Also try to force a complete map refresh
+        if (this.mapSystem && typeof this.mapSystem.refreshMap === 'function') {
+            console.log('🗺️ Calling refreshMap...');
+            this.mapSystem.refreshMap();
+        }
         
         // Force a complete visual refresh - this is the key fix
         console.log('Forcing complete visual refresh...');
@@ -1787,7 +2199,7 @@ class SimpleMultiplayerIntegration {
         
         this.turnTimer = setInterval(() => {
             const elapsed = Math.floor((Date.now() - this.turnStartTime) / 1000);
-            const remaining = this.turnTimeLimit - elapsed;
+            const remaining = Math.max(0, this.turnTimeLimit - elapsed);
             
             if (remaining <= 0) {
                 console.log('Turn time limit reached, auto-advancing turn');
@@ -1813,16 +2225,33 @@ class SimpleMultiplayerIntegration {
     }
 
     updateTurnTimerDisplay(remaining) {
-        const timerElement = document.getElementById('turn-timer');
+        // Update the fixed timer next to the Next Turn button
+        const timerElement = document.getElementById('turn-timer-fixed');
         if (timerElement) {
-            if (remaining > 0) {
-                timerElement.textContent = `${remaining}s`;
-                timerElement.style.color = remaining <= 10 ? '#f44336' : '#4CAF50';
+            // Ensure remaining is always a whole number
+            const roundedRemaining = Math.max(0, Math.floor(remaining));
+            
+            if (this.gamePaused && this.turnTimeRemaining !== null) {
+                // Show paused time with orange background
+                timerElement.textContent = `PAUSED ${Math.floor(this.turnTimeRemaining)}s`;
+                timerElement.style.color = 'white';
+                timerElement.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
+            } else if (roundedRemaining > 0) {
+                timerElement.textContent = `${roundedRemaining}s`;
+                timerElement.style.color = 'white';
+                if (roundedRemaining <= 10) {
+                    // Red background for warning
+                    timerElement.style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
+                } else {
+                    // Green background for normal
+                    timerElement.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+                }
             } else {
                 timerElement.textContent = '--';
-                timerElement.style.color = '#666';
+                timerElement.style.color = 'white';
+                timerElement.style.background = 'linear-gradient(135deg, #666, #555)';
             }
-            console.log('Turn timer updated:', remaining);
+            console.log('Turn timer updated:', roundedRemaining, 'paused:', this.gamePaused);
         } else {
             console.log('Turn timer element not found!');
         }
@@ -1923,7 +2352,43 @@ class SimpleMultiplayerIntegration {
         this.wsManager.send('update_map_state', mapData);
     }
 
-    // Request map sync from host instead of sending to all players
+    // Request host's map data (works for everyone)
+    requestHostMapSync() {
+        if (!this.isInMultiplayer) {
+            console.log('Cannot request map sync: not in multiplayer');
+            return;
+        }
+
+        console.log('Requesting host map data...');
+        
+        if (this.isHost) {
+            // Host sends their current map data to update the stored host map and broadcast to all
+            const mapData = this.getCurrentMapData();
+            if (!mapData || mapData.length === 0) {
+                console.error('No map data available to sync');
+                this.showNotification('No map data to sync', 'error');
+                return;
+            }
+
+            console.log('🗺️ Host syncing current map to all players:', mapData.length, 'cells');
+            
+            // Send map data to server for broadcasting to other players
+            this.wsManager.send('request_map_sync', {
+                roomCode: this.currentRoom,
+                playerId: this.playerId,
+                cells: mapData
+            });
+        } else {
+            // Non-host requests the host's current map (not stored map)
+            console.log('🗺️ Non-host requesting current map from host');
+            this.wsManager.send('request_map_sync', {
+                roomCode: this.currentRoom,
+                playerId: this.playerId
+            });
+        }
+    }
+
+    // Request map sync from host instead of sending to all players (legacy function)
     requestMapSyncFromHost() {
         if (!this.isInMultiplayer) {
             console.log('Cannot request map sync: not in multiplayer');

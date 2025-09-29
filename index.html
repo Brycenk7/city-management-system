@@ -302,9 +302,14 @@
     <script src="multiplayer-integration-simple.js?v=20241220-dropdown"></script>
     <script src="main.js"></script>
 
-    <!-- Next Turn Button (Fixed Position) -->
-    <button id="next-turn-fixed-btn" class="next-turn-fixed" style="display: none;">
-        Next Turn
-    </button>
+    <!-- Next Turn Button with Timer (Fixed Position) -->
+    <div class="next-turn-container" style="display: none;">
+        <button id="next-turn-fixed-btn" class="next-turn-fixed">
+            Next Turn
+        </button>
+        <div id="turn-timer-fixed" class="turn-timer-fixed">
+            --:--
+        </div>
+    </div>
 </body>
 </html>

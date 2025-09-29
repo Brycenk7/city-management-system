@@ -1073,6 +1073,91 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle start game
+  socket.on('start_game', (data) => {
+    console.log(`🎮 Start game request from ${socket.id}:`, data);
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    console.log(`Player info:`, playerInfo);
+    console.log(`Room code:`, roomCode);
+    
+    if (roomCode) {
+      const game = games.get(roomCode);
+      console.log(`Game found:`, game ? 'yes' : 'no');
+      if (game) {
+        console.log(`Game players:`, game.players.map(p => ({ id: p.id, username: p.username })));
+        console.log(`First player ID:`, game.players[0].id);
+        console.log(`Socket ID:`, socket.id);
+        console.log(`Is host:`, game.players[0].id === socket.id);
+      }
+      
+      if (game && game.players.length >= 2) { // Allow any player to start if 2+ players
+        console.log(`🎮 Game started by ${playerInfo.username} in room ${roomCode}`);
+        
+        // Store map data if provided
+        if (data.mapData) {
+          game.gameState.cells = data.mapData;
+          console.log(`🗺️ Map data stored for room ${roomCode}: ${data.mapData.length} cells`);
+        }
+        
+        // Broadcast game started to all players in the room with map data
+        io.to(`game_${roomCode}`).emit('game_started', {
+          roomCode: roomCode,
+          startedBy: playerInfo.playerName || playerInfo.username || 'Unknown',
+          mapData: data.mapData || game.gameState.cells
+        });
+        console.log(`✅ game_started event with map data broadcasted to room game_${roomCode}`);
+      } else if (game && game.players.length < 2) {
+        console.log(`⚠️ Not enough players to start game in room ${roomCode} (${game.players.length}/2)`);
+        socket.emit('error', { message: 'Need at least 2 players to start the game' });
+      } else {
+        console.log(`⚠️ Game not found for room ${roomCode}`);
+        socket.emit('error', { message: 'Game not found' });
+      }
+    } else {
+      console.log('⚠️ Player not in a game room, cannot start game');
+    }
+  });
+
+  // Handle pause game
+  socket.on('pause_game', (data) => {
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    if (roomCode) {
+      console.log(`⏸️ Game paused by ${playerInfo.username} in room ${roomCode}`);
+      
+      // Broadcast game paused to all players in the room
+      io.to(`game_${roomCode}`).emit('game_paused', {
+        roomCode: roomCode,
+        playerName: playerInfo.username,
+        pausedBy: socket.id
+      });
+    } else {
+      console.log('⚠️ Player not in a game room, cannot pause game');
+    }
+  });
+
+  // Handle unpause game
+  socket.on('unpause_game', (data) => {
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    if (roomCode) {
+      console.log(`▶️ Game unpaused by ${playerInfo.username} in room ${roomCode}`);
+      
+      // Broadcast game unpaused to all players in the room
+      io.to(`game_${roomCode}`).emit('game_unpaused', {
+        roomCode: roomCode,
+        playerName: playerInfo.username,
+        unpausedBy: socket.id
+      });
+    } else {
+      console.log('⚠️ Player not in a game room, cannot unpause game');
+    }
+  });
+
   // Handle map state updates
   socket.on('update_map_state', (data) => {
     console.log(`🗺️ Map state update from ${socket.id}`);
@@ -1094,6 +1179,52 @@ io.on('connection', (socket) => {
         
         console.log(`📡 Map state broadcasted to room ${roomCode}`);
       }
+    }
+  });
+
+  // Handle map sync requests (everyone gets host's map)
+  socket.on('request_map_sync', (data) => {
+    console.log(`🗺️ Map sync request from ${socket.id}`);
+    
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    if (roomCode) {
+      const game = games.get(roomCode);
+      if (game && game.players.length > 0) {
+        // Check if the requesting player is the host (first player)
+        const isHost = game.players[0].id === socket.id;
+        
+        if (isHost && data.cells && data.cells.length > 0) {
+          // Host is updating their map and syncing to everyone
+          game.gameState.cells = data.cells;
+          
+          // Broadcast the host's map to all other players in the room
+          socket.to(`game_${roomCode}`).emit('map_state_updated', {
+            roomCode: roomCode,
+            cells: data.cells,
+            syncedBy: playerInfo.playerName || 'Host'
+          });
+          
+          console.log(`✅ Host map synced to all players in room ${roomCode}`);
+        } else {
+          // Non-host requests current host map - ask host to send their current map
+          const hostSocket = game.players[0].id;
+          console.log(`🔄 Requesting current map from host ${hostSocket}`);
+          
+          // Ask the host to send their current map data
+          io.to(hostSocket).emit('request_current_map', {
+            roomCode: roomCode,
+            requestingPlayer: socket.id
+          });
+        }
+      } else {
+        console.log(`⚠️ No game found for room ${roomCode}`);
+        socket.emit('error', { message: 'Game not found' });
+      }
+    } else {
+      console.log(`⚠️ Player ${socket.id} not in any room`);
+      socket.emit('error', { message: 'Not in any room' });
     }
   });
 
@@ -1120,6 +1251,33 @@ io.on('connection', (socket) => {
           console.log(`📡 Player resources broadcasted to room ${roomCode}`);
         }
       }
+    }
+  });
+
+  // Handle host current map requests
+  socket.on('send_current_map', (data) => {
+    console.log(`🗺️ Host sending current map to player ${data.requestingPlayer}`);
+    
+    const playerInfo = players.get(socket.id);
+    const roomCode = playerInfo ? playerInfo.roomCode : null;
+    
+    if (roomCode && data.cells && data.cells.length > 0) {
+      // Update the stored host map
+      const game = games.get(roomCode);
+      if (game) {
+        game.gameState.cells = data.cells;
+      }
+      
+      // Send the current map to the requesting player
+      io.to(data.requestingPlayer).emit('map_state_updated', {
+        roomCode: roomCode,
+        cells: data.cells,
+        syncedBy: playerInfo.playerName || 'Host'
+      });
+      
+      console.log(`✅ Current host map sent to requesting player in room ${roomCode}`);
+    } else {
+      console.log(`⚠️ Invalid current map data from host`);
     }
   });
 

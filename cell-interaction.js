@@ -12,6 +12,13 @@ class CellInteraction {
             return;
         }
         
+        // Check if game is paused in multiplayer mode
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode() && window.multiplayerIntegration.gamePaused) {
+            console.log('Game is paused - blocking mouse interaction');
+            window.multiplayerIntegration.showNotification('Game is paused - no actions allowed', 'warning');
+            return;
+        }
+        
         e.preventDefault(); // Prevent text selection
         this.mapSystem.clearAllErrorStyling(); // Clear any existing error states
         
@@ -71,6 +78,13 @@ class CellInteraction {
     paintCell(cell) {
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
+        
+        // Check if game is paused in multiplayer mode
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode() && window.multiplayerIntegration.gamePaused) {
+            console.log('Game is paused - blocking all actions');
+            window.multiplayerIntegration.showNotification('Game is paused - no actions allowed', 'warning');
+            return;
+        }
         
         // Store the previous attribute to check if we're removing water
         const previousAttribute = this.mapSystem.cells[row][col].attribute;

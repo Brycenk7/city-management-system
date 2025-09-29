@@ -12,7 +12,7 @@ class WebSocketManager {
         this.eventHandlers = new Map();
     }
 
-    connect(serverUrl = 'https://city-builder-backend.onrender.com') {
+    connect(serverUrl = 'http://localhost:3000') {
         return new Promise((resolve, reject) => {
             try {
                 this.socket = io(serverUrl);
