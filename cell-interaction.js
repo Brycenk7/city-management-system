@@ -133,6 +133,8 @@ class CellInteraction {
                             window.multiplayerIntegration.actionsThisTurn = Math.max(0, window.multiplayerIntegration.actionsThisTurn - 1);
                             console.log(`Action refunded for erasing current turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
                             window.multiplayerIntegration.showNotification('Action refunded - erased building from current turn!', 'success');
+                            // Update action counter display
+                            window.multiplayerIntegration.updateActionCounter();
                         } else {
                             // No action cost for erasing buildings from previous turns
                             console.log(`No action cost for erasing previous turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
@@ -210,6 +212,8 @@ class CellInteraction {
             if (window.multiplayerIntegration.isMyTurn()) {
                 window.multiplayerIntegration.actionsThisTurn++;
                 console.log(`Action used: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+                // Update action counter display
+                window.multiplayerIntegration.updateActionCounter();
             }
         }
         
@@ -261,6 +265,9 @@ class CellInteraction {
         
         // Update info panel
         this.updateCellInfo();
+        
+        // Update road connections after any placement or erasure
+        this.updateRoadConnections();
     }
     
     handleCellHover(e) {
@@ -509,42 +516,47 @@ class CellInteraction {
             let errorMessage = '';
             
             if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
-                errorMessage = `Cannot place ${attribute} on ${currentCell.attribute || currentCell.class} terrain`;
+                errorMessage = `❌ Cannot place ${attribute} on ${currentCell.attribute || currentCell.class} terrain!\nNatural terrain cannot be built on.`;
             } else {
                 // Check if trying to replace existing infrastructure
                 const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
                 const zoning = ['residential', 'commercial', 'industrial', 'mixed'];
                 
                 if (infrastructure.includes(currentCell.attribute) || zoning.includes(currentCell.attribute)) {
-                    errorMessage = `Cannot place ${attribute} on existing ${currentCell.attribute}. Use erase button to remove first.`;
+                    errorMessage = `❌ Cannot place ${attribute} on existing ${currentCell.attribute}!\nUse the erase tool to remove it first.`;
                 } else if (attribute === 'powerPlant') {
-                    errorMessage = 'Power plant requires water within 1 tile or to be adjacent to another power plant';
+                    errorMessage = '❌ Power plant requires water within 1 tile or to be adjacent to another power plant!';
                 } else if (attribute === 'powerLines') {
                 if (currentCell.attribute === 'powerPlant') {
-                    errorMessage = 'Cannot place power lines on power plants';
+                    errorMessage = '❌ Cannot place power lines on power plants!';
                 } else {
-                    errorMessage = 'Power lines must be within 5 tiles of a power plant or adjacent to other power lines';
+                    errorMessage = '❌ Power lines must be within 5 tiles of a power plant or adjacent to other power lines!';
                 }
             } else if (attribute === 'lumberYard') {
                 if (this.mapSystem.resourceManagement && this.mapSystem.resourceManagement.resources.wood < 10) {
-                    errorMessage = 'Lumber yard requires 10 wood to build';
+                    errorMessage = '❌ Lumber yard requires 10 wood to build! Check your resources.';
                 } else {
-                    errorMessage = 'Lumber yard must be placed within 3 tiles of forests';
+                    errorMessage = '❌ Lumber yard must be placed within 3 tiles of forests!';
                 }
-            } else if (attribute === 'miningOutpost') {
+                } else if (attribute === 'miningOutpost') {
                 if (this.mapSystem.resourceManagement) {
                     if (this.mapSystem.resourceManagement.resources.wood < 20) {
-                        errorMessage = 'Mining outpost requires 20 wood to build';
+                        errorMessage = '❌ Mining outpost requires 20 wood to build! Check your resources.';
                     } else if (this.mapSystem.resourceManagement.resources.ore < 10) {
-                        errorMessage = 'Mining outpost requires 10 ore to build';
+                        errorMessage = '❌ Mining outpost requires 10 ore to build! Check your resources.';
                     } else {
-                        errorMessage = 'Mining outpost must be placed within 1 tile of a mountain';
+                        errorMessage = '❌ Mining outpost must be placed within 1 tile of a mountain!';
                     }
                 } else {
-                    errorMessage = 'Mining outpost must be placed within 1 tile of a mountain';
+                    errorMessage = '❌ Mining outpost must be placed within 1 tile of a mountain!';
+                }
+            } else if (attribute === 'road') {
+                // Road placement validation
+                if (!this.isValidRoadPlacement(row, col)) {
+                    errorMessage = '❌ Roads must be placed next to industrial zones or other roads!';
                 }
                 } else {
-                    errorMessage = `Cannot place ${attribute} here`;
+                    errorMessage = `❌ Cannot place ${attribute} here! Check building requirements.`;
                 }
             }
             
@@ -563,8 +575,12 @@ class CellInteraction {
         cell.style.border = '2px solid #FF9800';
         cell.style.backgroundColor = '#fff3cd';
         
-        // Show error message
-        const errorMsg = 'Not your turn! Wait for your turn to place buildings.';
+        // Show error message with more context
+        const actionsLeft = window.multiplayerIntegration ? 
+            (window.multiplayerIntegration.maxActionsPerTurn - window.multiplayerIntegration.actionsThisTurn) : 0;
+        const errorMsg = actionsLeft <= 0 ? 
+            `You are out of actions this turn! (${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn} used)` :
+            'Not your turn! Wait for your turn to place buildings.';
         this.showErrorTooltip(cell, errorMsg);
         
         // Remove error styling after a delay
@@ -694,6 +710,83 @@ class CellInteraction {
         return refundAmounts;
     }
     
+    isValidRoadPlacement(row, col) {
+        // Check if there's an industrial zone or road adjacent to this position
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+        
+        for (const [dRow, dCol] of directions) {
+            const newRow = row + dRow;
+            const newCol = col + dCol;
+            
+            // Check bounds
+            if (newRow >= 0 && newRow < this.mapSystem.rows && 
+                newCol >= 0 && newCol < this.mapSystem.cols) {
+                
+                const adjacentCell = this.mapSystem.cells[newRow][newCol];
+                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road') {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    isRoadConnected(row, col) {
+        // Check if a road is connected to an industrial zone or other roads
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+        
+        for (const [dRow, dCol] of directions) {
+            const newRow = row + dRow;
+            const newCol = col + dCol;
+            
+            // Check bounds
+            if (newRow >= 0 && newRow < this.mapSystem.rows && 
+                newCol >= 0 && newCol < this.mapSystem.cols) {
+                
+                const adjacentCell = this.mapSystem.cells[newRow][newCol];
+                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road') {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    updateRoadConnections() {
+        // Check all roads and update their appearance based on connection status
+        for (let row = 0; row < this.mapSystem.rows; row++) {
+            for (let col = 0; col < this.mapSystem.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell.attribute === 'road') {
+                    const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    if (cellElement) {
+                        if (this.isRoadConnected(row, col)) {
+                            // Road is connected - normal appearance
+                            cellElement.classList.remove('disconnected-road');
+                            cellElement.style.backgroundColor = '';
+                            cellElement.style.border = '';
+                        } else {
+                            // Road is disconnected - red tint
+                            cellElement.classList.add('disconnected-road');
+                            cellElement.style.backgroundColor = '#ffcccc';
+                            cellElement.style.border = '2px solid #ff4444';
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     showInsufficientResourcesError(cell, attribute, costs) {
         const missingResources = [];
         for (const [resource, amount] of Object.entries(costs)) {
@@ -703,7 +796,7 @@ class CellInteraction {
             }
         }
         
-        const errorMessage = `Insufficient resources for ${attribute}: ${missingResources.join(', ')}`;
+        const errorMessage = `❌ Insufficient resources for ${attribute}!\nMissing: ${missingResources.join(', ')}\nCheck your resource count in the General Info tab.`;
         console.log(errorMessage);
         
         // Visual feedback

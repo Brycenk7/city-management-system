@@ -99,10 +99,10 @@ class ResourceManagement {
         let netCommercialGoods = -this.consumptionRates.commercialGoods; // Start with consumption
         
         // Only produce commercial goods if we have enough wood, ore, AND power
-        // If there's no power, industrial zones stop producing
+        // If there's no power (0 or less), industrial zones stop producing
         if (this.resources.wood >= this.consumptionRates.wood && 
             this.resources.ore >= this.consumptionRates.ore &&
-            this.resources.power >= this.consumptionRates.power) {
+            this.resources.power > 0) { // Changed: require power > 0, not just >= consumption
             // We have enough resources and power, so industrial zones can produce
             netCommercialGoods += this.generationRates.commercialGoods;
         }
@@ -112,6 +112,7 @@ class ResourceManagement {
         this.resources.commercialGoods = Math.max(0, Math.min(this.maxResources.commercialGoods, this.resources.commercialGoods + netCommercialGoods));
         
         this.updateResourceDisplay();
+        this.updateIndustrialZoneIndicators();
     }
     
     // Calculate resource sources from map
@@ -299,7 +300,7 @@ class ResourceManagement {
                     <span class="resource-name">Goods: </span>
                     <span class="resource-amount"> ${Math.floor(this.resources.commercialGoods)}</span>
                 </div>
-                <span class="resource-rate">(${this.generationRates.commercialGoods - this.consumptionRates.commercialGoods > 0 ? '+' : ''}${(this.generationRates.commercialGoods - this.consumptionRates.commercialGoods).toFixed(1)}/s)</span>
+                ${this.getGoodsProductionStatus()}
             </div>
             <div class="resource-item">
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
@@ -352,12 +353,67 @@ class ResourceManagement {
         this.calculateResourceSources();
         this.calculateResourceConsumers();
         this.updateResourceDisplay();
+        this.updateIndustrialZoneIndicators();
     }
     
     // Set current player ID for multiplayer resource tracking
     setCurrentPlayerId(playerId) {
         this.currentPlayerId = playerId;
         console.log('Resource management player ID set to:', playerId);
+    }
+    
+    // Get goods production status with power requirement feedback
+    getGoodsProductionStatus() {
+        const netGoods = this.generationRates.commercialGoods - this.consumptionRates.commercialGoods;
+        const hasPower = this.resources.power > 0;
+        const hasWood = this.resources.wood >= this.consumptionRates.wood;
+        const hasOre = this.resources.ore >= this.consumptionRates.ore;
+        
+        // Check if production is blocked
+        if (!hasPower) {
+            return `<span class="resource-rate" style="color: #ff4444;">⚠️ No power - production stopped</span>`;
+        } else if (!hasWood) {
+            return `<span class="resource-rate" style="color: #ff9800;">⚠️ Insufficient wood</span>`;
+        } else if (!hasOre) {
+            return `<span class="resource-rate" style="color: #ff9800;">⚠️ Insufficient ore</span>`;
+        } else {
+            // Normal production
+            return `<span class="resource-rate">(${netGoods > 0 ? '+' : ''}${netGoods.toFixed(1)}/s)</span>`;
+        }
+    }
+    
+    // Check if industrial zones should show no-power indicator
+    shouldShowNoPowerIndicator() {
+        return this.resources.power <= 0 && this.resourceSources.commercialGoods.size > 0;
+    }
+    
+    // Update industrial zone visual indicators
+    updateIndustrialZoneIndicators() {
+        const hasPower = this.resources.power > 0;
+        const hasWood = this.resources.wood >= this.consumptionRates.wood;
+        const hasOre = this.resources.ore >= this.consumptionRates.ore;
+        const canProduce = hasPower && hasWood && hasOre;
+        
+        // Update all industrial zones
+        for (const key of this.resourceSources.commercialGoods) {
+            const [row, col] = key.split(',').map(Number);
+            const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (cellElement) {
+                if (!canProduce) {
+                    cellElement.classList.add('no-power-indicator');
+                    if (!hasPower) {
+                        cellElement.title = 'Industrial zone: No power - production stopped';
+                    } else if (!hasWood) {
+                        cellElement.title = 'Industrial zone: Insufficient wood';
+                    } else if (!hasOre) {
+                        cellElement.title = 'Industrial zone: Insufficient ore';
+                    }
+                } else {
+                    cellElement.classList.remove('no-power-indicator');
+                    cellElement.title = 'Industrial zone: Producing goods';
+                }
+            }
+        }
     }
 
     // Reset resources to starting values (for new world generation)

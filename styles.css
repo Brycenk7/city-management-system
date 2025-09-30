@@ -1463,6 +1463,85 @@ body {
     color: white !important;
 }
 
+/* Fixed Action Counter */
+.action-counter-fixed {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Arial', sans-serif;
+    min-width: 100px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+    transition: all 0.3s ease;
+    border: none;
+}
+
+/* Action counter color states */
+.action-counter-fixed.low-actions {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.action-counter-fixed.no-actions {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+/* Disconnected road styling */
+.disconnected-road {
+    background-color: #ffcccc !important;
+    border: 2px solid #ff4444 !important;
+    position: relative;
+}
+
+.disconnected-road::after {
+    content: "⚠️ Inoperable";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 68, 68, 0.9);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* No power indicator for industrial zones */
+.no-power-indicator {
+    position: relative;
+    opacity: 0.7;
+}
+
+.no-power-indicator::after {
+    content: "⚡";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 68, 68, 0.9);
+    color: white;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: bold;
+    z-index: 10;
+    pointer-events: none;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
 .room-controls-section {
     margin-bottom: 15px;
     padding: 10px;

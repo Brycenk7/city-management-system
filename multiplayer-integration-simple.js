@@ -472,8 +472,27 @@ class SimpleMultiplayerIntegration {
                 nextTurnFixedBtn.textContent = 'Not Your Turn';
                 nextTurnFixedBtn.style.background = '#ccc';
             }
+            
+            // Update action counter
+            this.updateActionCounter();
         } else {
             nextTurnContainer.style.display = 'none';
+        }
+    }
+    
+    updateActionCounter() {
+        const actionCounter = document.getElementById('action-counter-fixed');
+        if (!actionCounter) return;
+        
+        const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
+        actionCounter.textContent = `Actions: ${actionsLeft}/${this.maxActionsPerTurn}`;
+        
+        // Update color based on actions remaining
+        actionCounter.classList.remove('low-actions', 'no-actions');
+        if (actionsLeft === 0) {
+            actionCounter.classList.add('no-actions');
+        } else if (actionsLeft <= 1) {
+            actionCounter.classList.add('low-actions');
         }
     }
 
@@ -1572,26 +1591,39 @@ class SimpleMultiplayerIntegration {
             text-align: center;
         `;
         
-        // Check if the reason is related to no actions left
+        // Provide more descriptive error messages
         let displayReason = reason;
         if (reason && reason.toLowerCase().includes('not your turn')) {
             // Check if player has no actions left
             const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
             if (actionsLeft <= 0) {
-                displayReason = 'You are out of actions this turn!';
+                displayReason = `You are out of actions this turn! (${this.actionsThisTurn}/${this.maxActionsPerTurn} used)`;
+            } else {
+                const currentPlayer = this.turnOrder ? this.turnOrder[this.currentTurn] : 'Unknown';
+                displayReason = `It's not your turn! Wait for your turn to place buildings.`;
             }
+        } else if (reason && reason.toLowerCase().includes('insufficient')) {
+            displayReason = `Insufficient resources! Check your resource count.`;
+        } else if (reason && reason.toLowerCase().includes('invalid placement')) {
+            displayReason = `Invalid placement! Check building requirements and terrain.`;
+        } else if (reason && reason.toLowerCase().includes('game not started')) {
+            displayReason = `Game has not started yet! Wait for the host to start the game.`;
+        } else if (reason && reason.toLowerCase().includes('paused')) {
+            displayReason = `Game is paused! No actions allowed until someone unpauses.`;
+        } else if (!reason || reason.trim() === '') {
+            displayReason = `Action rejected! Check game state and requirements.`;
         }
         
-        notification.textContent = `Action Rejected: ${displayReason}`;
+        notification.textContent = `❌ Action Rejected: ${displayReason}`;
         
         document.body.appendChild(notification);
         
-        // Remove after 3 seconds
+        // Remove after 4 seconds (longer for more detailed messages)
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
             }
-        }, 3000);
+        }, 4000);
     }
 
     isInMultiplayerMode() {
@@ -1637,13 +1669,14 @@ class SimpleMultiplayerIntegration {
         // If game hasn't started yet, don't allow placement
         if (!this.gameStarted) {
             console.log('Game not started yet, cannot place buildings');
+            this.showNotification('Game has not started yet - wait for the host to start the game', 'warning');
             return false;
         }
         
         // If game is paused, don't allow placement
         if (this.gamePaused) {
             console.log('Game is paused, cannot place buildings');
-            this.showNotification('Game is paused - no actions allowed', 'warning');
+            this.showNotification('Game is paused - no actions allowed until someone unpauses', 'warning');
             return false;
         }
         
