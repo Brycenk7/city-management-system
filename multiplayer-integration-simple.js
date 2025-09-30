@@ -316,6 +316,7 @@ class SimpleMultiplayerIntegration {
             console.log('🎮 Game started by', data.startedBy);
             console.log('🎮 Map data length:', data.mapData ? data.mapData.length : 'none');
             console.log('🎮 Current gameStarted state:', this.gameStarted);
+            console.log('🎮 Current isHost state:', this.isHost);
             
             this.gameStarted = true;
             this.gamePaused = false; // Reset pause state when game starts
@@ -331,6 +332,15 @@ class SimpleMultiplayerIntegration {
             
             console.log('🎮 Updating UI after game started...');
             this.updateUI();
+            
+            // Force show game started elements for debugging
+            console.log('🔧 FORCE SHOWING GAME STARTED ELEMENTS FOR DEBUGGING');
+            const gameStartedElements = document.querySelectorAll('.game-started-dependent');
+            gameStartedElements.forEach(element => {
+                element.style.display = 'block';
+                console.log('🔧 Force showing element:', element.id);
+            });
+            
             this.showNotification(`Game started by ${data.startedBy}!`, 'success');
             console.log('🎮 Game started event processing complete');
         });
@@ -418,14 +428,22 @@ class SimpleMultiplayerIntegration {
     }
 
     updateGameStartedDependentElements() {
+        console.log('🔧 updateGameStartedDependentElements called, gameStarted:', this.gameStarted, 'isHost:', this.isHost);
         const gameStartedElements = document.querySelectorAll('.game-started-dependent');
+        console.log('🔧 Found', gameStartedElements.length, 'game-started-dependent elements');
+        
         gameStartedElements.forEach(element => {
+            console.log('🔧 Processing element:', element.id, 'class:', element.className);
             if (element.id === 'sync-map-btn') {
                 // Sync map button only visible to non-hosts when game started
-                element.style.display = (this.gameStarted && !this.isHost) ? 'block' : 'none';
+                const shouldShow = (this.gameStarted && !this.isHost);
+                element.style.display = shouldShow ? 'block' : 'none';
+                console.log('🔧 Sync map button display:', shouldShow ? 'block' : 'none');
             } else {
                 // Other game started elements visible to all players when game started
-                element.style.display = this.gameStarted ? 'block' : 'none';
+                const shouldShow = this.gameStarted;
+                element.style.display = shouldShow ? 'block' : 'none';
+                console.log('🔧 Element', element.id, 'display:', shouldShow ? 'block' : 'none');
             }
         });
     }
