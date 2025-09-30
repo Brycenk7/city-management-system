@@ -732,8 +732,17 @@ class CellInteraction {
                 newCol >= 0 && newCol < this.mapSystem.cols) {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
-                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road' || adjacentCell.attribute === 'bridge' ||
-                    adjacentCell.class === 'industrial' || adjacentCell.class === 'road' || adjacentCell.class === 'bridge') {
+                
+                // Check if adjacent cell is industrial, road, or bridge
+                const isValidAdjacent = 
+                    adjacentCell.attribute === 'industrial' || 
+                    adjacentCell.attribute === 'road' || 
+                    adjacentCell.attribute === 'bridge' ||
+                    adjacentCell.class === 'industrial' || 
+                    adjacentCell.class === 'road' || 
+                    adjacentCell.class === 'bridge';
+                
+                if (isValidAdjacent) {
                     return true;
                 }
             }
@@ -796,6 +805,7 @@ class CellInteraction {
                 newCol >= 0 && newCol < this.mapSystem.cols) {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
+                
                 if (adjacentCell.attribute === 'road' || adjacentCell.class === 'road') {
                     return true;
                 }
