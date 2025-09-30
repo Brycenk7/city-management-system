@@ -553,7 +553,7 @@ class CellInteraction {
             } else if (attribute === 'road') {
                 // Road placement validation
                 if (!this.isValidRoadPlacement(row, col)) {
-                    errorMessage = '❌ Roads must be placed next to industrial zones or other roads!';
+                    errorMessage = '❌ Roads must be placed next to industrial zones!';
                 }
             } else if (attribute === 'bridge') {
                 // Bridge placement validation
@@ -716,7 +716,7 @@ class CellInteraction {
     }
     
     isValidRoadPlacement(row, col) {
-        // Check if there's an industrial zone or road adjacent to this position
+        // Check if there's an industrial zone adjacent to this position
         const directions = [
             [-1, -1], [-1, 0], [-1, 1],
             [0, -1],           [0, 1],
@@ -733,16 +733,8 @@ class CellInteraction {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
                 
-                // Check if adjacent cell is industrial, road, or bridge
-                const isValidAdjacent = 
-                    adjacentCell.attribute === 'industrial' || 
-                    adjacentCell.attribute === 'road' || 
-                    adjacentCell.attribute === 'bridge' ||
-                    adjacentCell.class === 'industrial' || 
-                    adjacentCell.class === 'road' || 
-                    adjacentCell.class === 'bridge';
-                
-                if (isValidAdjacent) {
+                // Check if adjacent cell is industrial
+                if (adjacentCell.attribute === 'industrial' || adjacentCell.class === 'industrial') {
                     return true;
                 }
             }
