@@ -4,7 +4,47 @@ class CellInteraction {
         this.mapSystem = mapSystem;
     }
     
-    // handleCellClick removed - using script.js version instead
+    handleCellClick(e) {
+        // Handle cell click events
+        const cell = e.target;
+        if (cell.classList.contains('cell')) {
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            
+            // Check if game is paused in multiplayer mode
+            if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode() && window.multiplayerIntegration.gamePaused) {
+                console.log('Game is paused - blocking all actions');
+                window.multiplayerIntegration.showNotification('Game is paused - no actions allowed', 'warning');
+                return;
+            }
+            
+            // Check if it's the player's turn in multiplayer mode
+            if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding()) {
+                this.showTurnError(cell);
+                return;
+            }
+
+            // Check if placement is valid
+            if (!this.isValidPlacement(row, col, this.mapSystem.selectedAttribute)) {
+                this.showPlacementError(cell, this.mapSystem.selectedAttribute);
+                return;
+            }
+            
+            // Check resource costs BEFORE placing
+            if (this.mapSystem.resourceManagement) {
+                const costs = this.getBuildingCosts(this.mapSystem.selectedAttribute);
+                if (costs) {
+                    if (!this.mapSystem.resourceManagement.hasEnoughResources(costs)) {
+                        this.showInsufficientResourcesError(cell, this.mapSystem.selectedAttribute, costs);
+                        return;
+                    }
+                }
+            }
+            
+            // Place the building
+            this.paintCell(cell);
+        }
+    }
     
     handleCellMouseDown(e) {
         // Don't paint in viewer mode
