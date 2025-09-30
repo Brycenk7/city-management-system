@@ -485,7 +485,7 @@ class SimpleMultiplayerIntegration {
         if (!actionCounter) return;
         
         const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
-        actionCounter.textContent = `Actions: ${actionsLeft}/${this.maxActionsPerTurn}`;
+        actionCounter.textContent = `${actionsLeft}/${this.maxActionsPerTurn}`;
         
         // Update color based on actions remaining
         actionCounter.classList.remove('low-actions', 'no-actions');

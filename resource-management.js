@@ -7,7 +7,8 @@ class ResourceManagement {
         this.resources = {
             wood: 30, // Start with 30 wood
             ore: 10,  // Start with 10 ore
-            commercialGoods: 0,
+            processedMaterials: 0, // New resource: processed materials from industrial zones
+            commercialGoods: 0,   // Goods from commercial zones
             power: 0
         };
         this.currentPlayerId = null; // Track current player for multiplayer
@@ -15,6 +16,7 @@ class ResourceManagement {
         this.maxResources = {
             wood: 1000,
             ore: 1000,
+            processedMaterials: 500,
             commercialGoods: 500,
             power: 1000
         };
@@ -22,6 +24,7 @@ class ResourceManagement {
         this.generationRates = {
             wood: 0,
             ore: 0,
+            processedMaterials: 0,
             commercialGoods: 0,
             power: 0
         };
@@ -29,6 +32,7 @@ class ResourceManagement {
         this.consumptionRates = {
             wood: 0,
             ore: 0,
+            processedMaterials: 0,
             commercialGoods: 0,
             power: 0
         };
@@ -36,13 +40,15 @@ class ResourceManagement {
         this.resourceSources = {
             wood: new Set(), // Lumber yards
             ore: new Set(),  // Mining outposts
-            commercialGoods: new Set(), // Industrial zones
+            processedMaterials: new Set(), // Industrial zones
+            commercialGoods: new Set(), // Commercial zones
             power: new Set() // Power plants
         };
         
         this.resourceConsumers = {
             wood: new Set(), // Buildings that consume wood
             ore: new Set(),  // Buildings that consume ore
+            processedMaterials: new Set(), // Buildings that consume processed materials
             commercialGoods: new Set(), // Buildings that consume commercial goods
             power: new Set() // Buildings that consume power
         };
@@ -95,18 +101,29 @@ class ResourceManagement {
         this.resources.ore = Math.max(0, Math.min(this.maxResources.ore, this.resources.ore + netOre));
         this.resources.power = Math.max(0, Math.min(this.maxResources.power, this.resources.power + netPower));
         
-        // Calculate commercial goods production based on available resources AND power
-        let netCommercialGoods = -this.consumptionRates.commercialGoods; // Start with consumption
+        // Calculate processed materials production (industrial zones)
+        let netProcessedMaterials = -this.consumptionRates.processedMaterials; // Start with consumption
         
-        // Only produce commercial goods if we have enough wood, ore, AND power
-        // If there's no power (0 or less), industrial zones stop producing
+        // Only produce processed materials if we have enough wood, ore, AND power
         if (this.resources.wood >= this.consumptionRates.wood && 
             this.resources.ore >= this.consumptionRates.ore &&
-            this.resources.power > 0) { // Changed: require power > 0, not just >= consumption
+            this.resources.power > 0) {
             // We have enough resources and power, so industrial zones can produce
+            netProcessedMaterials += this.generationRates.processedMaterials;
+        }
+        
+        // Update processed materials
+        this.resources.processedMaterials = Math.max(0, Math.min(this.maxResources.processedMaterials, this.resources.processedMaterials + netProcessedMaterials));
+        
+        // Calculate commercial goods production (commercial zones)
+        let netCommercialGoods = -this.consumptionRates.commercialGoods; // Start with consumption
+        
+        // Only produce commercial goods if we have enough processed materials AND power
+        if (this.resources.processedMaterials >= this.consumptionRates.processedMaterials &&
+            this.resources.power > 0) {
+            // We have enough processed materials and power, so commercial zones can produce
             netCommercialGoods += this.generationRates.commercialGoods;
         }
-        // If we don't have enough resources or power, netCommercialGoods remains negative (only consumption)
         
         // Update commercial goods
         this.resources.commercialGoods = Math.max(0, Math.min(this.maxResources.commercialGoods, this.resources.commercialGoods + netCommercialGoods));
@@ -119,6 +136,7 @@ class ResourceManagement {
     calculateResourceSources() {
         this.resourceSources.wood.clear();
         this.resourceSources.ore.clear();
+        this.resourceSources.processedMaterials.clear();
         this.resourceSources.commercialGoods.clear();
         this.resourceSources.power.clear();
         
@@ -141,8 +159,13 @@ class ResourceManagement {
                         this.resourceSources.ore.add(key);
                     }
                     
-                    // Commercial goods from industrial zones
+                    // Processed materials from industrial zones
                     if (cell.attribute === 'industrial' || cell.class === 'industrial') {
+                        this.resourceSources.processedMaterials.add(key);
+                    }
+                    
+                    // Commercial goods from commercial zones
+                    if (cell.attribute === 'commercial' || cell.class === 'commercial') {
                         this.resourceSources.commercialGoods.add(key);
                     }
                     
@@ -161,6 +184,7 @@ class ResourceManagement {
     calculateResourceConsumers() {
         this.resourceConsumers.wood.clear();
         this.resourceConsumers.ore.clear();
+        this.resourceConsumers.processedMaterials.clear();
         this.resourceConsumers.commercialGoods.clear();
         this.resourceConsumers.power.clear();
         
@@ -177,15 +201,15 @@ class ResourceManagement {
                     }
                 }
                 
-                // Industrial zones consume wood and ore to produce commercial goods
+                // Industrial zones consume wood and ore to produce processed materials
                 if (cell.attribute === 'industrial' || cell.class === 'industrial') {
                     this.resourceConsumers.wood.add(key);
                     this.resourceConsumers.ore.add(key);
                 }
                 
-                // Commercial zones consume commercial goods
+                // Commercial zones consume processed materials to produce goods
                 if (cell.attribute === 'commercial' || cell.class === 'commercial') {
-                    this.resourceConsumers.commercialGoods.add(key);
+                    this.resourceConsumers.processedMaterials.add(key);
                 }
             }
         }
@@ -207,7 +231,10 @@ class ResourceManagement {
         // Ore generation: 0.5 per mining outpost per second
         this.generationRates.ore = this.resourceSources.ore.size * 0.5;
         
-        // Commercial goods generation: 1 per industrial zone per second
+        // Processed materials generation: 1 per industrial zone per second
+        this.generationRates.processedMaterials = this.resourceSources.processedMaterials.size * 1;
+        
+        // Commercial goods generation: 1 per commercial zone per second
         this.generationRates.commercialGoods = this.resourceSources.commercialGoods.size * 1;
         
         // Power generation: 0.7 per power plant per second
@@ -225,8 +252,8 @@ class ResourceManagement {
         // Ore consumption: 0.3 per industrial zone per second
         this.consumptionRates.ore = this.resourceConsumers.ore.size * 0.3;
         
-        // Commercial goods consumption: 0.3 per commercial zone per second
-        this.consumptionRates.commercialGoods = this.resourceConsumers.commercialGoods.size * 0.3;
+        // Processed materials consumption: 0.3 per commercial zone per second
+        this.consumptionRates.processedMaterials = this.resourceConsumers.processedMaterials.size * 0.3;
     }
     
     // Add resources (for testing or special events)
@@ -296,6 +323,14 @@ class ResourceManagement {
             </div>
             <div class="resource-item">
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                    <span class="resource-icon">🔧</span>
+                    <span class="resource-name">Materials: </span>
+                    <span class="resource-amount"> ${Math.floor(this.resources.processedMaterials)}</span>
+                </div>
+                ${this.getProcessedMaterialsProductionStatus()}
+            </div>
+            <div class="resource-item">
+                <div style="display: flex; align-items: center; margin-bottom: 4px;">
                     <span class="resource-icon">📦</span>
                     <span class="resource-name">Goods: </span>
                     <span class="resource-amount"> ${Math.floor(this.resources.commercialGoods)}</span>
@@ -362,9 +397,9 @@ class ResourceManagement {
         console.log('Resource management player ID set to:', playerId);
     }
     
-    // Get goods production status with power requirement feedback
-    getGoodsProductionStatus() {
-        const netGoods = this.generationRates.commercialGoods - this.consumptionRates.commercialGoods;
+    // Get processed materials production status with power requirement feedback
+    getProcessedMaterialsProductionStatus() {
+        const netMaterials = this.generationRates.processedMaterials - this.consumptionRates.processedMaterials;
         const hasPower = this.resources.power > 0;
         const hasWood = this.resources.wood >= this.consumptionRates.wood;
         const hasOre = this.resources.ore >= this.consumptionRates.ore;
@@ -378,13 +413,30 @@ class ResourceManagement {
             return `<span class="resource-rate" style="color: #ff9800;">⚠️ Insufficient ore</span>`;
         } else {
             // Normal production
+            return `<span class="resource-rate">(${netMaterials > 0 ? '+' : ''}${netMaterials.toFixed(1)}/s)</span>`;
+        }
+    }
+    
+    // Get goods production status with power requirement feedback
+    getGoodsProductionStatus() {
+        const netGoods = this.generationRates.commercialGoods - this.consumptionRates.commercialGoods;
+        const hasPower = this.resources.power > 0;
+        const hasProcessedMaterials = this.resources.processedMaterials >= this.consumptionRates.processedMaterials;
+        
+        // Check if production is blocked
+        if (!hasPower) {
+            return `<span class="resource-rate" style="color: #ff4444;">⚠️ No power - production stopped</span>`;
+        } else if (!hasProcessedMaterials) {
+            return `<span class="resource-rate" style="color: #ff9800;">⚠️ Insufficient processed materials</span>`;
+        } else {
+            // Normal production
             return `<span class="resource-rate">(${netGoods > 0 ? '+' : ''}${netGoods.toFixed(1)}/s)</span>`;
         }
     }
     
     // Check if industrial zones should show no-power indicator
     shouldShowNoPowerIndicator() {
-        return this.resources.power <= 0 && this.resourceSources.commercialGoods.size > 0;
+        return this.resources.power <= 0 && this.resourceSources.processedMaterials.size > 0;
     }
     
     // Update industrial zone visual indicators
@@ -395,7 +447,7 @@ class ResourceManagement {
         const canProduce = hasPower && hasWood && hasOre;
         
         // Update all industrial zones
-        for (const key of this.resourceSources.commercialGoods) {
+        for (const key of this.resourceSources.processedMaterials) {
             const [row, col] = key.split(',').map(Number);
             const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
             if (cellElement) {
@@ -410,7 +462,7 @@ class ResourceManagement {
                     }
                 } else {
                     cellElement.classList.remove('no-power-indicator');
-                    cellElement.title = 'Industrial zone: Producing goods';
+                    cellElement.title = 'Industrial zone: Producing processed materials';
                 }
             }
         }
@@ -490,12 +542,14 @@ class ResourceManagement {
             sources: {
                 wood: this.resourceSources.wood.size,
                 ore: this.resourceSources.ore.size,
+                processedMaterials: this.resourceSources.processedMaterials.size,
                 commercialGoods: this.resourceSources.commercialGoods.size,
                 power: this.resourceSources.power.size
             },
             consumers: {
                 wood: this.resourceConsumers.wood.size,
                 ore: this.resourceConsumers.ore.size,
+                processedMaterials: this.resourceConsumers.processedMaterials.size,
                 commercialGoods: this.resourceConsumers.commercialGoods.size,
                 power: this.resourceConsumers.power.size
             }

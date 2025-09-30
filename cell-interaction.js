@@ -555,6 +555,11 @@ class CellInteraction {
                 if (!this.isValidRoadPlacement(row, col)) {
                     errorMessage = '❌ Roads must be placed next to industrial zones or other roads!';
                 }
+            } else if (attribute === 'bridge') {
+                // Bridge placement validation
+                if (!this.isValidBridgePlacement(row, col)) {
+                    errorMessage = '❌ Bridges must be placed on water next to roads!';
+                }
                 } else {
                     errorMessage = `❌ Cannot place ${attribute} here! Check building requirements.`;
                 }
@@ -727,7 +732,8 @@ class CellInteraction {
                 newCol >= 0 && newCol < this.mapSystem.cols) {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
-                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road') {
+                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road' || adjacentCell.attribute === 'bridge' ||
+                    adjacentCell.class === 'industrial' || adjacentCell.class === 'road' || adjacentCell.class === 'bridge') {
                     return true;
                 }
             }
@@ -753,7 +759,44 @@ class CellInteraction {
                 newCol >= 0 && newCol < this.mapSystem.cols) {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
-                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road') {
+                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road' || adjacentCell.attribute === 'bridge' ||
+                    adjacentCell.class === 'industrial' || adjacentCell.class === 'road' || adjacentCell.class === 'bridge') {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    isValidBridgePlacement(row, col) {
+        // Check if there's a road adjacent to this position
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+        
+        // First check if the target cell is water
+        const currentCell = this.mapSystem.cells[row][col];
+        const waterTypes = ['water', 'lake', 'ocean', 'river'];
+        const isWater = waterTypes.includes(currentCell.attribute) || waterTypes.includes(currentCell.class);
+        
+        if (!isWater) {
+            return false; // Bridges can only be placed on water
+        }
+        
+        // Check if there's a road adjacent to this position
+        for (const [dRow, dCol] of directions) {
+            const newRow = row + dRow;
+            const newCol = col + dCol;
+            
+            // Check bounds
+            if (newRow >= 0 && newRow < this.mapSystem.rows && 
+                newCol >= 0 && newCol < this.mapSystem.cols) {
+                
+                const adjacentCell = this.mapSystem.cells[newRow][newCol];
+                if (adjacentCell.attribute === 'road' || adjacentCell.class === 'road') {
                     return true;
                 }
             }
@@ -763,11 +806,11 @@ class CellInteraction {
     }
     
     updateRoadConnections() {
-        // Check all roads and update their appearance based on connection status
+        // Check all roads and bridges and update their appearance based on connection status
         for (let row = 0; row < this.mapSystem.rows; row++) {
             for (let col = 0; col < this.mapSystem.cols; col++) {
                 const cell = this.mapSystem.cells[row][col];
-                if (cell.attribute === 'road') {
+                if (cell.attribute === 'road' || cell.attribute === 'bridge') {
                     const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                     if (cellElement) {
                         if (this.isRoadConnected(row, col)) {

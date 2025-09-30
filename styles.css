@@ -1401,11 +1401,11 @@ body {
 /* Fixed Next Turn Button Container */
 .next-turn-container {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
+    bottom: 15px;
+    left: 15px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 8px;
     z-index: 1000;
 }
 
@@ -1414,14 +1414,14 @@ body {
     background: linear-gradient(135deg, #4CAF50, #45a049);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
     transition: all 0.3s ease;
-    min-width: 120px;
+    min-width: 80px;
 }
 
 .next-turn-fixed:hover {
@@ -1446,14 +1446,14 @@ body {
 .turn-timer-fixed {
     background: linear-gradient(135deg, #4CAF50, #45a049);
     color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: 600;
     font-family: 'Courier New', monospace;
-    min-width: 80px;
+    min-width: 60px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
     transition: all 0.3s ease;
     border: none;
 }
@@ -1467,14 +1467,14 @@ body {
 .action-counter-fixed {
     background: linear-gradient(135deg, #2196F3, #1976D2);
     color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: 600;
     font-family: 'Arial', sans-serif;
-    min-width: 100px;
+    min-width: 60px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+    box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
     transition: all 0.3s ease;
     border: none;
 }
