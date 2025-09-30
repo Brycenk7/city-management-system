@@ -12,13 +12,25 @@ class WebSocketManager {
         this.eventHandlers = new Map();
     }
 
-    connect(serverUrl = 'https://city-builder-backend.onrender.com') {
+    connect(serverUrl = null) {
+        // Auto-detect server URL based on environment
+        if (!serverUrl) {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                serverUrl = 'http://localhost:3000';
+                console.log('🔧 Local environment detected, using localhost:3000');
+            } else {
+                serverUrl = 'https://city-builder-backend.onrender.com';
+                console.log('🔧 Production environment detected, using Render server');
+            }
+        }
+        console.log('🔌 Connecting to server:', serverUrl);
         return new Promise((resolve, reject) => {
             try {
                 this.socket = io(serverUrl);
                 
                 this.socket.on('connect', () => {
-                    console.log('Connected to server');
+                    console.log('✅ Connected to server:', serverUrl);
+                    console.log('✅ Socket ID:', this.socket.id);
                     this.isConnected = true;
                     this.reconnectAttempts = 0;
                     this.startHeartbeat();

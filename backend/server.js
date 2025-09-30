@@ -1075,7 +1075,9 @@ io.on('connection', (socket) => {
 
   // Handle start game
   socket.on('start_game', (data) => {
+    console.log(`🎮🎮🎮 START GAME EVENT RECEIVED ON SERVER! 🎮🎮🎮`);
     console.log(`🎮 Start game request from ${socket.id}:`, data);
+    console.log(`🎮 Server time:`, new Date().toISOString());
     const playerInfo = players.get(socket.id);
     const roomCode = playerInfo ? playerInfo.roomCode : null;
     
@@ -1101,6 +1103,11 @@ io.on('connection', (socket) => {
           console.log(`🗺️ Map data stored for room ${roomCode}: ${data.mapData.length} cells`);
         }
         
+        // Get all sockets in the room for debugging
+        io.in(`game_${roomCode}`).fetchSockets().then(roomSockets => {
+          console.log(`🔍 DEBUG: Room game_${roomCode} has ${roomSockets.length} sockets:`, roomSockets.map(s => s.id));
+        });
+        
         // Broadcast game started to all players in the room with map data
         io.to(`game_${roomCode}`).emit('game_started', {
           roomCode: roomCode,
@@ -1108,6 +1115,14 @@ io.on('connection', (socket) => {
           mapData: data.mapData || game.gameState.cells
         });
         console.log(`✅ game_started event with map data broadcasted to room game_${roomCode}`);
+        
+        // Also try broadcasting to all connected sockets as a fallback
+        console.log(`🔧 FALLBACK: Broadcasting to all connected sockets (${io.engine.clientsCount} total)`);
+        io.emit('game_started', {
+          roomCode: roomCode,
+          startedBy: playerInfo.playerName || playerInfo.username || 'Unknown',
+          mapData: data.mapData || game.gameState.cells
+        });
       } else if (game && game.players.length < 2) {
         console.log(`⚠️ Not enough players to start game in room ${roomCode} (${game.players.length}/2)`);
         socket.emit('error', { message: 'Need at least 2 players to start the game' });
