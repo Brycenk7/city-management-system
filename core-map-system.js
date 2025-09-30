@@ -62,6 +62,8 @@ class MapSystem {
                 cell.dataset.col = col;
                 cell.dataset.attribute = 'grassland';
                 
+                // Remove existing listener to prevent duplicates
+                cell.removeEventListener('click', this.handleCellClick);
                 cell.addEventListener('click', (e) => this.handleCellClick(e));
                 cell.addEventListener('mousedown', (e) => this.handleCellMouseDown(e));
                 cell.addEventListener('mouseenter', (e) => this.handleCellHover(e));

@@ -763,6 +763,8 @@ class CellInteraction {
             [1, -1],  [1, 0],  [1, 1]
         ];
         
+        console.log(`Checking road placement at ${row},${col}`);
+        
         for (const [dRow, dCol] of directions) {
             const newRow = row + dRow;
             const newCol = col + dCol;
@@ -773,13 +775,21 @@ class CellInteraction {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
                 
+                console.log(`Checking adjacent cell at ${newRow},${newCol}:`, {
+                    attribute: adjacentCell.attribute,
+                    class: adjacentCell.class,
+                    isIndustrial: adjacentCell.attribute === 'industrial' || adjacentCell.class === 'industrial'
+                });
+                
                 // Check if adjacent cell is industrial
                 if (adjacentCell.attribute === 'industrial' || adjacentCell.class === 'industrial') {
+                    console.log('Found industrial zone adjacent to road placement');
                     return true;
                 }
             }
         }
         
+        console.log('No industrial zones found adjacent to road placement');
         return false;
     }
     
