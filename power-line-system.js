@@ -163,19 +163,26 @@ class PowerLineSystem {
     }
     
     isWithinPowerPlantOrPowerLinesRadius(row, col, radius) {
+        console.log(`Checking power radius for mixed use at ${row},${col} with radius ${radius}`);
+        let powerSourcesFound = 0;
+        
         for (let r = Math.max(0, row - radius); r <= Math.min(this.mapSystem.mapSize.rows - 1, row + radius); r++) {
             for (let c = Math.max(0, col - radius); c <= Math.min(this.mapSystem.mapSize.cols - 1, col + radius); c++) {
                 const cell = this.mapSystem.cells[r][c];
                 if (['powerPlant', 'powerLines'].includes(cell.attribute)) {
+                    powerSourcesFound++;
                     // Use proper radius calculation (max of row and col differences)
                     const distance = Math.max(Math.abs(row - r), Math.abs(col - c));
+                    console.log(`Found power source at ${r},${c} (distance: ${distance}, radius: ${radius})`);
                     if (distance <= radius) {
+                        console.log(`Mixed use at ${row},${col} is within power range!`);
                         return true;
                     }
                 }
             }
         }
         
+        console.log(`No power sources found within radius ${radius} for mixed use at ${row},${col} (checked ${powerSourcesFound} power sources)`);
         return false;
     }
     

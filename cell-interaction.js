@@ -24,7 +24,7 @@ class CellInteraction {
                     }
                     
                     // Check if it's the player's turn in multiplayer mode
-                    if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding()) {
+                    if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
                         this.showTurnError(cell);
                         return;
                     }
@@ -210,9 +210,10 @@ class CellInteraction {
                     if (window.multiplayerIntegration.isMyTurn()) {
                         if (wasPlacedThisTurn) {
                             // Refund the action since we're erasing something we placed this turn
-                            window.multiplayerIntegration.actionsThisTurn = Math.max(0, window.multiplayerIntegration.actionsThisTurn - 1);
-                            console.log(`Action refunded for erasing current turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
-                            window.multiplayerIntegration.showNotification('Action refunded - erased building from current turn!', 'success');
+                            const actionCost = window.multiplayerIntegration.getActionCost(erasedAttribute);
+                            window.multiplayerIntegration.actionsThisTurn = Math.max(0, window.multiplayerIntegration.actionsThisTurn - actionCost);
+                            console.log(`Action refunded for erasing current turn building: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn} (refunded: ${actionCost})`);
+                            window.multiplayerIntegration.showNotification(`Action refunded - erased building from current turn! (${actionCost} action(s) refunded)`, 'success');
                             // Update action counter display
                             window.multiplayerIntegration.updateActionCounter();
                         } else {
@@ -247,7 +248,7 @@ class CellInteraction {
         }
         
         // Check if it's the player's turn in multiplayer mode
-        if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding()) {
+        if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
             this.showTurnError(cell);
             return;
         }
@@ -291,8 +292,9 @@ class CellInteraction {
             
             // Count action if it's our turn
             if (window.multiplayerIntegration.isMyTurn()) {
-                window.multiplayerIntegration.actionsThisTurn++;
-                console.log(`Action used: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn}`);
+                const actionCost = window.multiplayerIntegration.getActionCost(this.mapSystem.selectedAttribute);
+                window.multiplayerIntegration.actionsThisTurn += actionCost;
+                console.log(`Action used: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn} (cost: ${actionCost})`);
                 // Update action counter display
                 window.multiplayerIntegration.updateActionCounter();
             }
@@ -604,10 +606,14 @@ class CellInteraction {
     
     isValidMixedPlacement(row, col) {
         // Mixed use only requires power within a 5x5 area
+        console.log(`Checking mixed use placement at ${row},${col}`);
         if (this.mapSystem.powerLineSystem) {
-            return this.mapSystem.powerLineSystem.isWithinPowerPlantOrPowerLinesRadius(row, col, 2); // 2 radius = 5x5 area
+            const result = this.mapSystem.powerLineSystem.isWithinPowerPlantOrPowerLinesRadius(row, col, 2); // 2 radius = 5x5 area
+            console.log(`Mixed use power check result: ${result}`);
+            return result;
         }
         // Fallback to adjacent power check
+        console.log(`Using fallback power check for mixed use at ${row},${col}`);
         return this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
     }
     

@@ -23,8 +23,8 @@ class SimpleMultiplayerIntegration {
             '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
         ];
         this.hasSyncedBefore = false;
-        this.actionsThisTurn = 0;
-        this.maxActionsPerTurn = 3; // Default actions limit
+        this.actionsThisTurn = 0.0; // Use decimal for fractional actions
+        this.maxActionsPerTurn = 3.0; // Default actions limit
         this.turnTimeLimit = 60; // 60 seconds per turn
         this.turnStartTime = null;
         this.turnTimer = null;
@@ -485,11 +485,14 @@ class SimpleMultiplayerIntegration {
         if (!actionCounter) return;
         
         const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
-        actionCounter.textContent = `${actionsLeft}/${this.maxActionsPerTurn}`;
+        // Format fractional actions nicely
+        const displayActionsLeft = actionsLeft % 1 === 0 ? actionsLeft.toString() : actionsLeft.toFixed(1);
+        const displayMaxActions = this.maxActionsPerTurn % 1 === 0 ? this.maxActionsPerTurn.toString() : this.maxActionsPerTurn.toFixed(1);
+        actionCounter.textContent = `${displayActionsLeft}/${displayMaxActions}`;
         
         // Update color based on actions remaining
         actionCounter.classList.remove('low-actions', 'no-actions');
-        if (actionsLeft === 0) {
+        if (actionsLeft <= 0) {
             actionCounter.classList.add('no-actions');
         } else if (actionsLeft <= 1) {
             actionCounter.classList.add('low-actions');
@@ -1663,7 +1666,24 @@ class SimpleMultiplayerIntegration {
         });
     }
 
-    canPlaceBuilding() {
+    // Get action cost for a building type
+    getActionCost(buildingType) {
+        const actionCosts = {
+            'road': 0.5,
+            'bridge': 0.5,
+            'residential': 1.0,
+            'commercial': 1.0,
+            'industrial': 1.0,
+            'mixed': 1.0,
+            'powerPlant': 1.0,
+            'powerLines': 1.0,
+            'lumberYard': 1.0,
+            'miningOutpost': 1.0
+        };
+        return actionCosts[buildingType] || 1.0; // Default to 1 action
+    }
+    
+    canPlaceBuilding(buildingType = null) {
         if (!this.isInMultiplayer) return true;
         
         // If game hasn't started yet, don't allow placement
@@ -1688,6 +1708,23 @@ class SimpleMultiplayerIntegration {
         
         const isMyTurn = this.isMyTurn();
         const hasActionsLeft = this.actionsThisTurn < this.maxActionsPerTurn;
+        
+        // If building type is specified, check if player has enough actions for that specific building
+        if (buildingType) {
+            const actionCost = this.getActionCost(buildingType);
+            const hasEnoughActions = (this.maxActionsPerTurn - this.actionsThisTurn) >= actionCost;
+            
+            console.log(`Can place ${buildingType}?`, isMyTurn && hasEnoughActions, 'My turn:', isMyTurn, 'Actions left:', this.maxActionsPerTurn - this.actionsThisTurn, 'Required:', actionCost);
+            
+            if (isMyTurn && !hasEnoughActions) {
+                const actionsLeft = this.maxActionsPerTurn - this.actionsThisTurn;
+                const displayActionsLeft = actionsLeft % 1 === 0 ? actionsLeft.toString() : actionsLeft.toFixed(1);
+                const displayRequired = actionCost % 1 === 0 ? actionCost.toString() : actionCost.toFixed(1);
+                this.showNotification(`Not enough actions! Need ${displayRequired} action(s), have ${displayActionsLeft} remaining`, 'warning');
+            }
+            
+            return isMyTurn && hasEnoughActions;
+        }
         
         console.log('Can place building?', isMyTurn && hasActionsLeft, 'My turn:', isMyTurn, 'Actions left:', this.maxActionsPerTurn - this.actionsThisTurn, 'Current turn:', this.currentTurn, 'My turn:', this.turnOrder[this.currentTurn], 'My ID:', this.playerId);
         
