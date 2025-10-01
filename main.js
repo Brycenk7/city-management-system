@@ -29,6 +29,10 @@ class MainApplication {
         this.roadSystem = new RoadSystem(this.mapSystem);
         console.log('RoadSystem created:', this.roadSystem);
         
+        console.log('Creating PowerLineSystem...');
+        this.powerLineSystem = new PowerLineSystem(this.mapSystem);
+        console.log('PowerLineSystem created:', this.powerLineSystem);
+        
         console.log('Creating ProceduralGeneration...');
         this.proceduralGeneration = new ProceduralGeneration(this.mapSystem);
         console.log('ProceduralGeneration created:', this.proceduralGeneration);
@@ -41,6 +45,10 @@ class MainApplication {
         this.resourceManagement = new ResourceManagement(this.mapSystem);
         console.log('ResourceManagement created:', this.resourceManagement);
         
+        console.log('Creating DevMode...');
+        this.devMode = new DevMode(this.mapSystem);
+        console.log('DevMode created:', this.devMode);
+        
         // Connect modules to map system
         this.mapSystem.tabManagement = this.tabManagement;
         this.mapSystem.waveAnimation = this.waveAnimation;
@@ -48,9 +56,11 @@ class MainApplication {
         this.mapSystem.cellInteraction = this.cellInteraction;
         this.mapSystem.waterSystem = this.waterSystem;
         this.mapSystem.roadSystem = this.roadSystem;
+        this.mapSystem.powerLineSystem = this.powerLineSystem;
         this.mapSystem.proceduralGeneration = this.proceduralGeneration;
         this.mapSystem.utilityFunctions = this.utilityFunctions;
         this.mapSystem.resourceManagement = this.resourceManagement;
+        this.mapSystem.devMode = this.devMode;
         
         console.log('Modules connected to map system:');
         console.log('  - tabManagement:', !!this.mapSystem.tabManagement);
@@ -59,6 +69,7 @@ class MainApplication {
         console.log('  - cellInteraction:', !!this.mapSystem.cellInteraction);
         console.log('  - waterSystem:', !!this.mapSystem.waterSystem);
         console.log('  - roadSystem:', !!this.mapSystem.roadSystem);
+        console.log('  - powerLineSystem:', !!this.mapSystem.powerLineSystem);
         console.log('  - proceduralGeneration:', !!this.mapSystem.proceduralGeneration);
         console.log('  - utilityFunctions:', !!this.mapSystem.utilityFunctions);
         

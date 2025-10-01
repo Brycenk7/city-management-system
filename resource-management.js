@@ -169,6 +169,12 @@ class ResourceManagement {
                         this.resourceSources.commercialGoods.add(key);
                     }
                     
+                    // Mixed use zones produce half of both industrial and commercial
+                    if (cell.attribute === 'mixed' || cell.class === 'mixed') {
+                        this.resourceSources.processedMaterials.add(key + '_mixed'); // Half industrial production
+                        this.resourceSources.commercialGoods.add(key + '_mixed'); // Half commercial production
+                    }
+                    
                     // Power from power plants
                     if (cell.attribute === 'powerPlant' || cell.class === 'powerPlant') {
                         this.resourceSources.power.add(key);
@@ -231,11 +237,15 @@ class ResourceManagement {
         // Ore generation: 0.5 per mining outpost per second
         this.generationRates.ore = this.resourceSources.ore.size * 0.5;
         
-        // Processed materials generation: 1 per industrial zone per second
-        this.generationRates.processedMaterials = this.resourceSources.processedMaterials.size * 1;
+        // Processed materials generation: 1 per industrial zone per second + 0.5 per mixed use zone
+        const industrialZones = Array.from(this.resourceSources.processedMaterials).filter(key => !key.includes('_mixed')).length;
+        const mixedZones = Array.from(this.resourceSources.processedMaterials).filter(key => key.includes('_mixed')).length;
+        this.generationRates.processedMaterials = (industrialZones * 1) + (mixedZones * 0.5);
         
-        // Commercial goods generation: 1 per commercial zone per second
-        this.generationRates.commercialGoods = this.resourceSources.commercialGoods.size * 1;
+        // Commercial goods generation: 1 per commercial zone per second + 0.5 per mixed use zone
+        const commercialZones = Array.from(this.resourceSources.commercialGoods).filter(key => !key.includes('_mixed')).length;
+        const mixedCommercialZones = Array.from(this.resourceSources.commercialGoods).filter(key => key.includes('_mixed')).length;
+        this.generationRates.commercialGoods = (commercialZones * 1) + (mixedCommercialZones * 0.5);
         
         // Power generation: 0.7 per power plant per second
         this.generationRates.power = this.resourceSources.power.size * 0.7;
@@ -365,7 +375,7 @@ class ResourceManagement {
             'zoneResidential': { wood: 20, ore: 4 },
             'zoneCommercial': { wood: 30, ore: 10 },
             'zoneIndustrial': { wood: 40, ore: 20 },
-            'zoneMixed': { wood: 36, ore: 16 }
+            'zoneMixed': { wood: 44, ore: 24 }
         };
         
         Object.entries(buttonCosts).forEach(([buttonId, costs]) => {
@@ -406,11 +416,11 @@ class ResourceManagement {
         
         // Check if production is blocked
         if (!hasPower) {
-            return `<span class="resource-rate" style="color: #ff4444;">⚠️ No power - production stopped</span>`;
+            return `<span class="resource-rate" style="color: #ff4444;">⚠️ No power</span>`;
         } else if (!hasWood) {
-            return `<span class="resource-rate" style="color: #ff9800;">⚠️ Insufficient wood</span>`;
+            return `<span class="resource-rate" style="color: #ff9800;">⚠️ No wood</span>`;
         } else if (!hasOre) {
-            return `<span class="resource-rate" style="color: #ff9800;">⚠️ Insufficient ore</span>`;
+            return `<span class="resource-rate" style="color: #ff9800;">⚠️ No ore</span>`;
         } else {
             // Normal production
             return `<span class="resource-rate">(${netMaterials > 0 ? '+' : ''}${netMaterials.toFixed(1)}/s)</span>`;
@@ -425,9 +435,9 @@ class ResourceManagement {
         
         // Check if production is blocked
         if (!hasPower) {
-            return `<span class="resource-rate" style="color: #ff4444;">⚠️ No power - production stopped</span>`;
+            return `<span class="resource-rate" style="color: #ff4444;">⚠️ No power</span>`;
         } else if (!hasProcessedMaterials) {
-            return `<span class="resource-rate" style="color: #ff9800;">⚠️ Insufficient processed materials</span>`;
+            return `<span class="resource-rate" style="color: #ff9800;">⚠️ No materials</span>`;
         } else {
             // Normal production
             return `<span class="resource-rate">(${netGoods > 0 ? '+' : ''}${netGoods.toFixed(1)}/s)</span>`;
@@ -454,11 +464,11 @@ class ResourceManagement {
                 if (!canProduce) {
                     cellElement.classList.add('no-power-indicator');
                     if (!hasPower) {
-                        cellElement.title = 'Industrial zone: No power - production stopped';
+                        cellElement.title = 'Industrial zone: No power';
                     } else if (!hasWood) {
-                        cellElement.title = 'Industrial zone: Insufficient wood';
+                        cellElement.title = 'Industrial zone: No wood';
                     } else if (!hasOre) {
-                        cellElement.title = 'Industrial zone: Insufficient ore';
+                        cellElement.title = 'Industrial zone: No ore';
                     }
                 } else {
                     cellElement.classList.remove('no-power-indicator');

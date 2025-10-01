@@ -2,47 +2,54 @@
 class CellInteraction {
     constructor(mapSystem) {
         this.mapSystem = mapSystem;
+        this.paintedCells = new Set(); // Track painted cells during current drag
     }
     
     handleCellClick(e) {
-        // Handle cell click events
+        // Handle cell click events - only for single clicks (not drag operations)
         const cell = e.target;
         if (cell.classList.contains('cell')) {
-            const row = parseInt(cell.dataset.row);
-            const col = parseInt(cell.dataset.col);
-            
-            // Check if game is paused in multiplayer mode
-            if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode() && window.multiplayerIntegration.gamePaused) {
-                console.log('Game is paused - blocking all actions');
-                window.multiplayerIntegration.showNotification('Game is paused - no actions allowed', 'warning');
-                return;
-            }
-            
-            // Check if it's the player's turn in multiplayer mode
-            if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding()) {
-                this.showTurnError(cell);
-                return;
-            }
-
-            // Check if placement is valid
-            if (!this.isValidPlacement(row, col, this.mapSystem.selectedAttribute)) {
-                this.showPlacementError(cell, this.mapSystem.selectedAttribute);
-                return;
-            }
-            
-            // Check resource costs BEFORE placing
-            if (this.mapSystem.resourceManagement) {
-                const costs = this.getBuildingCosts(this.mapSystem.selectedAttribute);
-                if (costs) {
-                    if (!this.mapSystem.resourceManagement.hasEnoughResources(costs)) {
-                        this.showInsufficientResourcesError(cell, this.mapSystem.selectedAttribute, costs);
+            // Only handle click if we're not in a drag operation
+            // Add a small delay to ensure this is a real click, not part of a drag
+            setTimeout(() => {
+                if (!this.mapSystem.isDragging) {
+                    const row = parseInt(cell.dataset.row);
+                    const col = parseInt(cell.dataset.col);
+                    
+                    // Check if game is paused in multiplayer mode
+                    if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode() && window.multiplayerIntegration.gamePaused) {
+                        console.log('Game is paused - blocking all actions');
+                        window.multiplayerIntegration.showNotification('Game is paused - no actions allowed', 'warning');
                         return;
                     }
+                    
+                    // Check if it's the player's turn in multiplayer mode
+                    if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding()) {
+                        this.showTurnError(cell);
+                        return;
+                    }
+
+                    // Check if placement is valid
+                    if (!this.isValidPlacement(row, col, this.mapSystem.selectedAttribute)) {
+                        this.showPlacementError(cell, this.mapSystem.selectedAttribute);
+                        return;
+                    }
+                    
+                    // Check resource costs BEFORE placing
+                    if (this.mapSystem.resourceManagement) {
+                        const costs = this.getBuildingCosts(this.mapSystem.selectedAttribute);
+                        if (costs) {
+                            if (!this.mapSystem.resourceManagement.hasEnoughResources(costs)) {
+                                this.showInsufficientResourcesError(cell, this.mapSystem.selectedAttribute, costs);
+                                return;
+                            }
+                        }
+                    }
+                    
+                    // Place the building
+                    this.paintCell(cell, true); // Skip validation since it was already checked
                 }
-            }
-            
-            // Place the building
-            this.paintCell(cell);
+            }, 10); // Small delay to distinguish clicks from drags
         }
     }
     
@@ -76,7 +83,9 @@ class CellInteraction {
         this.mapSystem.isDragging = true;
         this.mapSystem.dragStartCell = e.target;
         this.mapSystem.lastPaintedCell = null;
-        this.paintCell(e.target);
+        
+        // For single clicks, let the click handler deal with it
+        // For drag operations, we'll paint in handleGlobalMouseMove
     }
     
     handleGlobalMouseMove(e) {
@@ -87,13 +96,36 @@ class CellInteraction {
         
         if (this.mapSystem.isDragging) {
             const cell = e.target;
-            // Check if we're over a cell and it's different from the last painted cell
-            if (cell.classList.contains('cell') && cell !== this.mapSystem.lastPaintedCell) {
+            // Check if we're over a cell and it hasn't been painted in this drag operation
+            if (cell.classList.contains('cell') && !this.paintedCells.has(cell)) {
                 // Set the selected attribute based on current mode
                 if (this.mapSystem.currentTab === 'player') {
                     this.mapSystem.selectedAttribute = this.mapSystem.playerMode;
                 }
-                this.paintCell(cell);
+                
+                // Check if placement is valid before painting
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                // Check if cell already has the attribute we're trying to place
+                const currentCell = this.mapSystem.cells[row][col];
+                if (currentCell.attribute === this.mapSystem.selectedAttribute || 
+                    currentCell.class === this.mapSystem.selectedAttribute) {
+                    // Cell already has this attribute, skip painting
+                    this.paintedCells.add(cell); // Add to set to prevent future attempts
+                    return;
+                }
+                
+                if (this.isValidPlacement(row, col, this.mapSystem.selectedAttribute)) {
+                    // Paint immediately and add to painted cells set
+                    this.paintCell(cell, true); // Pass true to skip validation in paintCell
+                    this.paintedCells.add(cell);
+                    console.log('Painted cell, added to set:', cell, 'Set size:', this.paintedCells.size);
+                } else {
+                    // Show error for invalid placement
+                    this.showPlacementError(cell, this.mapSystem.selectedAttribute);
+                    console.log('Validation failed for cell:', cell, 'Attribute:', this.mapSystem.selectedAttribute);
+                }
             }
         }
     }
@@ -103,6 +135,7 @@ class CellInteraction {
             this.mapSystem.isDragging = false;
             this.mapSystem.dragStartCell = null;
             this.mapSystem.lastPaintedCell = null;
+            this.paintedCells.clear(); // Clear painted cells set
         }
     }
     
@@ -112,12 +145,19 @@ class CellInteraction {
             this.mapSystem.isDragging = false;
             this.mapSystem.dragStartCell = null;
             this.mapSystem.lastPaintedCell = null;
+            this.paintedCells.clear(); // Clear painted cells set
         }
     }
     
-    paintCell(cell) {
+    paintCell(cell, skipValidation = false) {
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
+        
+        console.log('paintCell called:', {
+            attribute: this.mapSystem.selectedAttribute,
+            row, col,
+            skipValidation
+        });
         
         // Check if game is paused in multiplayer mode
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode() && window.multiplayerIntegration.gamePaused) {
@@ -212,8 +252,9 @@ class CellInteraction {
             return;
         }
 
-        // Check if placement is valid for river start/end
-        if (!this.isValidPlacement(row, col, this.mapSystem.selectedAttribute)) {
+        // Check if placement is valid (specific validation first, then general)
+        // Skip validation if called from drag handler (already validated)
+        if (!skipValidation && !this.isValidPlacement(row, col, this.mapSystem.selectedAttribute)) {
             // Show error feedback and don't place
             this.showPlacementError(cell, this.mapSystem.selectedAttribute);
             return;
@@ -306,8 +347,29 @@ class CellInteraction {
         // Update info panel
         this.updateCellInfo();
         
-        // Update road connections after any placement or erasure
-        this.updateRoadConnections();
+        // Update road connections after any placement or erasure with a delay
+        setTimeout(() => {
+            // Verify the cell data is actually updated before checking road connections
+            const cell = this.mapSystem.cells[row][col];
+            console.log(`Road update for ${this.mapSystem.selectedAttribute} at ${row},${col}:`, cell);
+            console.log(`Cell attribute: "${cell.attribute}", Cell class: "${cell.class}"`);
+            
+            // Ensure roads remain connected to industrial zones after any building placement
+            this.ensureRoadConnectionsToIndustrial();
+            
+            this.updateRoadConnections();
+        }, 200); // Increased delay to ensure building is fully placed and processed
+        
+        // If we just placed an industrial zone, update road connections again to ensure they become operable
+        if (this.mapSystem.selectedAttribute === 'industrial') {
+            // Call the road system's specific method for industrial zone placement with a delay
+            if (this.mapSystem.roadSystem) {
+                setTimeout(() => {
+                    console.log(`Industrial zone specific update for ${row},${col}`);
+                    this.mapSystem.roadSystem.onIndustrialZonePlaced(row, col);
+                }, 250); // Increased delay to ensure industrial zone is fully processed
+            }
+        }
     }
     
     handleCellHover(e) {
@@ -364,37 +426,12 @@ class CellInteraction {
             return false;
         }
         
-        // In City Player Pro, prevent placement over natural terrain and existing infrastructure
-        if (this.mapSystem.currentTab === 'player') {
-            const currentCell = this.mapSystem.cells[row][col];
-            const naturalTerrain = ['forest', 'mountain', 'lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
-            const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
-            const zoning = ['residential', 'commercial', 'industrial', 'mixed'];
-            
-            // Check if current cell is natural terrain
-            if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
-                return false;
-            }
-            
-            // Prevent replacing existing infrastructure unless using erase
-            if (attribute !== 'erase') {
-                if (infrastructure.includes(currentCell.attribute) || infrastructure.includes(currentCell.class)) {
-                    return false;
-                }
-                if (zoning.includes(currentCell.attribute) || zoning.includes(currentCell.class)) {
-                    return false;
-                }
-            }
-        }
-        
-        // Special placement rules for different attributes
+        // First, check specific validation for buildings that have special rules
         switch (attribute) {
-            case 'erase':
-                return true; // Erase can be used on any tile
-            case 'riverStart':
-                return this.isValidRiverStartPlacement(row, col);
-            case 'riverEnd':
-                return this.isValidRiverEndPlacement(row, col);
+            case 'bridge':
+                return this.isValidBridgePlacement(row, col);
+            case 'road':
+                return this.isValidRoadPlacement(row, col);
             case 'powerPlant':
                 return this.isValidPowerPlantPlacement(row, col);
             case 'powerLines':
@@ -409,15 +446,51 @@ class CellInteraction {
                 return this.isValidCommercialPlacement(row, col);
             case 'residential':
                 return this.isValidResidentialPlacement(row, col);
-            case 'bridge':
-                return this.isValidBridgePlacement(row, col);
             case 'mixed':
                 return this.isValidMixedPlacement(row, col);
-            case 'road':
-                return this.isValidRoadPlacement(row, col);
-            default:
-                return true;
         }
+        
+        // For other attributes, do general validation
+        if (this.mapSystem.currentTab === 'player') {
+            const currentCell = this.mapSystem.cells[row][col];
+            const naturalTerrain = ['forest', 'mountain', 'lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
+            const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
+            const zoning = ['residential', 'commercial', 'industrial', 'mixed'];
+            
+            // Allow buildings to be placed on grassland
+            if (currentCell.attribute === 'grassland' || currentCell.class === 'grassland') {
+                // Building on grassland is allowed, continue with other checks
+            }
+            // Check if current cell is natural terrain
+            else if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
+                return false; // No buildings on natural terrain
+            }
+            
+            // Prevent replacing existing infrastructure unless using erase
+            if (attribute !== 'erase') {
+                if (infrastructure.includes(currentCell.attribute) || infrastructure.includes(currentCell.class)) {
+                    return false;
+                }
+                if (zoning.includes(currentCell.attribute) || zoning.includes(currentCell.class)) {
+                    return false;
+                }
+            }
+        }
+        
+        // Special placement rules for different attributes
+        // Handle special cases
+        if (attribute === 'erase') {
+            return true; // Erase can be used on any tile
+        }
+        if (attribute === 'riverStart') {
+            return this.isValidRiverStartPlacement(row, col);
+        }
+        if (attribute === 'riverEnd') {
+            return this.isValidRiverEndPlacement(row, col);
+        }
+        
+        // Default to true for other attributes
+        return true;
     }
     
     isValidRiverStartPlacement(row, col) {
@@ -508,37 +581,81 @@ class CellInteraction {
     }
     
     isValidCommercialPlacement(row, col) {
-        // Commercial must be near roads AND within 5 tiles of power
-        const hasRoadAccess = this.mapSystem.isAdjacentToCommercialRoad(row, col);
+        // Commercial must be near operable roads AND within 5 tiles of power
+        const hasRoadAccess = this.mapSystem.roadSystem ? 
+            this.mapSystem.roadSystem.hasRoadAccess(row, col) : 
+            this.mapSystem.isAdjacentToCommercialRoad(row, col);
         const hasPowerAccess = this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
         
         return hasRoadAccess && hasPowerAccess;
     }
     
     isValidResidentialPlacement(row, col) {
-        // Residential must be near roads and not too close to industrial
-        return this.mapSystem.isAdjacentToCommercialRoad(row, col) && 
-               !this.mapSystem.isAdjacentToIndustrial(row, col);
+        // Residential must be near operable roads and not too close to industrial
+        const hasRoadAccess = this.mapSystem.roadSystem ? 
+            this.mapSystem.roadSystem.hasRoadAccess(row, col) : 
+            this.mapSystem.isAdjacentToCommercialRoad(row, col);
+        
+        return hasRoadAccess && !this.mapSystem.isAdjacentToIndustrial(row, col);
     }
     
     
-    isValidBridgePlacement(row, col) {
-        // Bridge must be over water
-        const currentCell = this.mapSystem.cells[row][col];
-        return ['water', 'lake', 'ocean', 'river'].includes(currentCell.attribute) || 
-               ['water', 'lake', 'ocean', 'river'].includes(currentCell.class);
-    }
     
     
     isValidMixedPlacement(row, col) {
-        // Mixed use must be near roads and have access to both commercial and residential areas
-        return this.mapSystem.isAdjacentToCommercialRoad(row, col) && 
-               this.mapSystem.isAdjacentToResidential(row, col);
+        // Mixed use only requires power within a 5x5 area
+        if (this.mapSystem.powerLineSystem) {
+            return this.mapSystem.powerLineSystem.isWithinPowerPlantOrPowerLinesRadius(row, col, 2); // 2 radius = 5x5 area
+        }
+        // Fallback to adjacent power check
+        return this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
     }
     
-    isValidRoadPlacement(row, col) {
-        // Basic roads can be placed anywhere on grassland or existing infrastructure
-        return true; // Basic roads have no special requirements
+    // Ensure roads remain connected to industrial zones after any building placement
+    ensureRoadConnectionsToIndustrial() {
+        if (!this.mapSystem.roadSystem) return;
+        
+        console.log('Ensuring road connections to industrial zones...');
+        
+        // First, validate all road connections
+        const validation = this.mapSystem.roadSystem.validateAllRoadConnections();
+        
+        // If there are disconnected roads, try to fix them
+        if (validation.disconnectedRoads > 0) {
+            console.log(`Found ${validation.disconnectedRoads} disconnected roads - attempting to fix...`);
+            
+            // Force a complete road connection update
+            this.mapSystem.roadSystem.updateRoadConnections();
+            
+            // Validate again to see if the fix worked
+            const revalidation = this.mapSystem.roadSystem.validateAllRoadConnections();
+            console.log(`After fix: ${revalidation.connectedRoads}/${revalidation.totalRoads} connected, ${revalidation.disconnectedRoads} disconnected`);
+        }
+    }
+    
+    // Check if there's an industrial zone nearby that could connect to a road
+    hasNearbyIndustrialZone(row, col) {
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+        
+        for (const [dRow, dCol] of directions) {
+            const newRow = row + dRow;
+            const newCol = col + dCol;
+            
+            if (newRow >= 0 && newRow < this.mapSystem.mapSize.rows &&
+                newCol >= 0 && newCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[newRow][newCol];
+                if (cell.attribute === 'industrial' || cell.class === 'industrial') {
+                    return true; // Found an industrial zone nearby
+                }
+            }
+        }
+        
+        return false;
     }
     
     showPlacementError(cell, attribute) {
@@ -556,7 +673,15 @@ class CellInteraction {
             let errorMessage = '';
             
             if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
-                errorMessage = `❌ Cannot place ${attribute} on ${currentCell.attribute || currentCell.class} terrain!\nNatural terrain cannot be built on.`;
+                // Allow bridges on water
+                if (attribute === 'bridge' && (currentCell.attribute === 'water' || currentCell.attribute === 'lake' || 
+                    currentCell.attribute === 'ocean' || currentCell.attribute === 'river' ||
+                    currentCell.class === 'water' || currentCell.class === 'lake' || 
+                    currentCell.class === 'ocean' || currentCell.class === 'river')) {
+                    errorMessage = '❌ Bridges must be placed on water next to roads!';
+                } else {
+                    errorMessage = `❌ Cannot place ${attribute} on ${currentCell.attribute || currentCell.class} terrain!\nNatural terrain cannot be built on.`;
+                }
             } else {
                 // Check if trying to replace existing infrastructure
                 const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
@@ -593,16 +718,25 @@ class CellInteraction {
             } else if (attribute === 'road') {
                 // Road placement validation
                 if (!this.isValidRoadPlacement(row, col)) {
-                    errorMessage = '❌ Roads must be placed next to industrial zones!';
+                    // Check if it's water
+                    const currentCell = this.mapSystem.cells[row][col];
+                    const waterTypes = ['water', 'lake', 'ocean', 'river'];
+                    const isWater = waterTypes.includes(currentCell.attribute) || waterTypes.includes(currentCell.class);
+                    
+                    if (isWater) {
+                        errorMessage = '❌ Roads cannot be placed on water! Use bridges instead.';
+                    } else {
+                        errorMessage = '❌ Roads must be placed next to industrial zones, roads, or bridges!';
+                    }
                 }
             } else if (attribute === 'bridge') {
                 // Bridge placement validation
                 if (!this.isValidBridgePlacement(row, col)) {
-                    errorMessage = '❌ Bridges must be placed on water next to roads!';
+                    errorMessage = '❌ Bridges must be placed on water next to roads or bridges!';
                 }
-                } else {
-                    errorMessage = `❌ Cannot place ${attribute} here! Check building requirements.`;
-                }
+            } else {
+                errorMessage = `❌ Cannot place ${attribute} here! Check building requirements.`;
+            }
             }
             
             // Show tooltip with specific error message
@@ -713,7 +847,7 @@ class CellInteraction {
             'residential': { wood: 60, ore: 8 },
             'commercial': { wood: 30, ore: 20 },
             'industrial': { wood: 40, ore: 20 },
-            'mixed': { wood: 36, ore: 16 },
+            'mixed': { wood: 44, ore: 24 },
 
             // Power infrastructure - unchanged
             'powerPlant': { wood: 25, ore: 15 },
@@ -756,14 +890,17 @@ class CellInteraction {
     }
     
     isValidRoadPlacement(row, col) {
-        // Check if there's an industrial zone adjacent to this position
+        // Use the road system for validation
+        if (this.mapSystem.roadSystem) {
+            return this.mapSystem.roadSystem.isValidRoadPlacement(row, col);
+        }
+        
+        // Fallback validation if road system is not available
         const directions = [
             [-1, -1], [-1, 0], [-1, 1],
             [0, -1],           [0, 1],
             [1, -1],  [1, 0],  [1, 1]
         ];
-        
-        console.log(`Checking road placement at ${row},${col}`);
         
         for (const [dRow, dCol] of directions) {
             const newRow = row + dRow;
@@ -775,26 +912,23 @@ class CellInteraction {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
                 
-                console.log(`Checking adjacent cell at ${newRow},${newCol}:`, {
-                    attribute: adjacentCell.attribute,
-                    class: adjacentCell.class,
-                    isIndustrial: adjacentCell.attribute === 'industrial' || adjacentCell.class === 'industrial'
-                });
-                
                 // Check if adjacent cell is industrial
                 if (adjacentCell.attribute === 'industrial' || adjacentCell.class === 'industrial') {
-                    console.log('Found industrial zone adjacent to road placement');
                     return true;
                 }
             }
         }
         
-        console.log('No industrial zones found adjacent to road placement');
         return false;
     }
     
     isRoadConnected(row, col) {
-        // Check if a road is connected to an industrial zone or other roads
+        // Use the road system for connection checking
+        if (this.mapSystem.roadSystem) {
+            return this.mapSystem.roadSystem.isRoadConnected(row, col);
+        }
+        
+        // Fallback validation if road system is not available
         const directions = [
             [-1, -1], [-1, 0], [-1, 1],
             [0, -1],           [0, 1],
@@ -810,8 +944,8 @@ class CellInteraction {
                 newCol >= 0 && newCol < this.mapSystem.cols) {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
-                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road' || adjacentCell.attribute === 'bridge' ||
-                    adjacentCell.class === 'industrial' || adjacentCell.class === 'road' || adjacentCell.class === 'bridge') {
+                if (adjacentCell.attribute === 'industrial' || adjacentCell.attribute === 'road' ||
+                    adjacentCell.class === 'industrial' || adjacentCell.class === 'road') {
                     return true;
                 }
             }
@@ -821,7 +955,7 @@ class CellInteraction {
     }
     
     isValidBridgePlacement(row, col) {
-        // Check if there's a road adjacent to this position
+        // Check if there's a road or bridge adjacent to this position
         const directions = [
             [-1, -1], [-1, 0], [-1, 1],
             [0, -1],           [0, 1],
@@ -837,18 +971,26 @@ class CellInteraction {
             return false; // Bridges can only be placed on water
         }
         
-        // Check if there's a road adjacent to this position
+        // Check if there's a road or bridge adjacent to this position
         for (const [dRow, dCol] of directions) {
             const newRow = row + dRow;
             const newCol = col + dCol;
             
             // Check bounds
-            if (newRow >= 0 && newRow < this.mapSystem.rows && 
-                newCol >= 0 && newCol < this.mapSystem.cols) {
+            if (newRow >= 0 && newRow < this.mapSystem.mapSize.rows && 
+                newCol >= 0 && newCol < this.mapSystem.mapSize.cols) {
                 
                 const adjacentCell = this.mapSystem.cells[newRow][newCol];
                 
-                if (adjacentCell.attribute === 'road' || adjacentCell.class === 'road') {
+                if (adjacentCell.attribute === 'road' || adjacentCell.class === 'road' ||
+                    adjacentCell.attribute === 'bridge' || adjacentCell.class === 'bridge') {
+                    
+                    // Check if the adjacent road/bridge is inoperable (disconnected)
+                    const cellElement = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`);
+                    if (cellElement && cellElement.classList.contains('disconnected-road')) {
+                        return false; // Cannot place bridges off of inoperable roads/bridges
+                    }
+                    
                     return true;
                 }
             }
@@ -858,7 +1000,13 @@ class CellInteraction {
     }
     
     updateRoadConnections() {
-        // Check all roads and bridges and update their appearance based on connection status
+        // Use the road system for connection updates
+        if (this.mapSystem.roadSystem) {
+            this.mapSystem.roadSystem.updateRoadConnections();
+            return;
+        }
+        
+        // Fallback if road system is not available
         for (let row = 0; row < this.mapSystem.rows; row++) {
             for (let col = 0; col < this.mapSystem.cols; col++) {
                 const cell = this.mapSystem.cells[row][col];

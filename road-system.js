@@ -1,405 +1,467 @@
-// Road System - Road classification and management
+// Road System - Simple road management and validation
 class RoadSystem {
     constructor(mapSystem) {
         this.mapSystem = mapSystem;
     }
     
-    classifyRoadRegions() {
-        this.resetRoadTiles();
-        const regions = this.findConnectedRoadRegions();
-        
-        regions.forEach(region => {
-            this.classifyRoadRegion(region);
-        });
-    }
-    
-    resetRoadTiles() {
-        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
-            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
-                const cell = this.mapSystem.cells[row][col];
-                if (['road', 'highway', 'bridge', 'tunnel'].includes(cell.attribute)) {
-                    cell.class = cell.attribute;
-                    this.mapSystem.updateCellVisual(row, col);
-                }
-            }
+    // Check if a road can be placed at the given location
+    isValidRoadPlacement(row, col) {
+        // First check if the target cell is not water (roads can't be placed on water)
+        const currentCell = this.mapSystem.cells[row][col];
+        const waterTypes = ['water', 'lake', 'ocean', 'river'];
+        const isWater = waterTypes.includes(currentCell.attribute) || waterTypes.includes(currentCell.class);
+
+        if (isWater) {
+            return false; // Roads cannot be placed on water
         }
-    }
-    
-    findConnectedRoadRegions() {
-        const visited = new Set();
-        const regions = [];
-        
-        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
-            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
-                const cell = this.mapSystem.cells[row][col];
-                if (['road', 'highway', 'bridge', 'tunnel'].includes(cell.attribute) && 
-                    !visited.has(`${row},${col}`)) {
-                    const region = [];
-                    this.floodFillRoad(row, col, visited, region);
-                    if (region.length > 0) {
-                        regions.push(region);
-                    }
-                }
-            }
+
+        // Check if trying to place on natural terrain (forest, mountain, etc.)
+        const naturalTerrain = ['forest', 'mountain', 'desert'];
+        if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
+            return false; // Roads cannot be placed on natural terrain
+        }
+
+        // Check if there's a disconnected road at this location (prevent placing on inoperable roads)
+        const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        if (cellElement && cellElement.classList.contains('disconnected-road')) {
+            return false; // Cannot place roads on disconnected/inoperable roads
         }
         
-        return regions;
+        // Roads must be adjacent to industrial zones, other roads, or bridges
+        return this.isAdjacentToIndustrial(row, col) || this.isAdjacentToRoad(row, col) || this.isAdjacentToBridge(row, col);
     }
     
-    floodFillRoad(startRow, startCol, visited, region) {
-        const stack = [{ row: startRow, col: startCol }];
-        
-        while (stack.length > 0) {
-            const { row, col } = stack.pop();
-            const key = `${row},${col}`;
-            
-            if (visited.has(key)) continue;
-            if (row < 0 || row >= this.mapSystem.mapSize.rows || 
-                col < 0 || col >= this.mapSystem.mapSize.cols) continue;
-            
-            const cell = this.mapSystem.cells[row][col];
-            if (!['road', 'highway', 'bridge', 'tunnel'].includes(cell.attribute)) continue;
-            
-            visited.add(key);
-            region.push({ row, col, attribute: cell.attribute });
-            
-            // Add adjacent cells to stack
-            const directions = [
-                { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-                { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-            ];
-            
-            directions.forEach(dir => {
-                stack.push({ row: row + dir.dr, col: col + dir.dc });
-            });
-        }
-    }
-    
-    classifyRoadRegion(region) {
-        if (region.length === 0) return;
-        
-        // Count different road types
-        const counts = { road: 0, highway: 0, bridge: 0, tunnel: 0 };
-        region.forEach(cell => {
-            counts[cell.attribute]++;
-        });
-        
-        // Determine the dominant road type
-        let dominantType = 'road';
-        let maxCount = 0;
-        
-        Object.keys(counts).forEach(type => {
-            if (counts[type] > maxCount) {
-                maxCount = counts[type];
-                dominantType = type;
-            }
-        });
-        
-        // Apply classification based on size and type
-        if (region.length >= 20) {
-            // Large region - likely highway
-            dominantType = 'highway';
-        } else if (region.length >= 5) {
-            // Medium region - likely road
-            dominantType = 'road';
-        }
-        
-        // Update all cells in the region
-        region.forEach(cell => {
-            this.mapSystem.cells[cell.row][cell.col].attribute = dominantType;
-            this.mapSystem.cells[cell.row][cell.col].class = dominantType;
-            this.mapSystem.updateCellVisual(cell.row, cell.col);
-        });
-        
-        // Propagate road classes for better connectivity
-        this.propagateRoadClasses(region);
-    }
-    
-    propagateRoadClasses(region) {
-        // This method can be expanded to improve road connectivity
-        // For now, it's a placeholder for future road network optimization
-    }
-    
-    reclassifyRoadAfterRemoval(removedRow, removedCol) {
-        const nearbyRegions = this.findRoadRegionsNearRemoval(removedRow, removedCol);
-        
-        nearbyRegions.forEach(region => {
-            this.reclassifyRoadRegion(region);
-        });
-    }
-    
-    findRoadRegionsNearRemoval(removedRow, removedCol) {
-        const regions = [];
-        const visited = new Set();
-        
-        // Check 8 surrounding cells
+    // Check if a location is adjacent to an industrial zone
+    isAdjacentToIndustrial(row, col) {
         const directions = [
             { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
             { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
             { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
         ];
         
-        directions.forEach(dir => {
-            const checkRow = removedRow + dir.dr;
-            const checkCol = removedCol + dir.dc;
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
             
             if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
                 checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
                 
                 const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (['road', 'highway', 'bridge', 'tunnel'].includes(cell.attribute) &&
-                    !visited.has(`${checkRow},${checkCol}`)) {
+                if (cell.attribute === 'industrial' || cell.class === 'industrial') {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Check if a location is adjacent to a road
+    isAdjacentToRoad(row, col) {
+        const directions = [
+            { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+            { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if (cell.attribute === 'road' || cell.class === 'road') {
+                    // Check if this road is disconnected (inoperable)
+                    const cellElement = document.querySelector(`[data-row="${checkRow}"][data-col="${checkCol}"]`);
+                    if (cellElement && cellElement.classList.contains('disconnected-road')) {
+                        return false; // Cannot connect to disconnected roads
+                    }
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Check if a location is adjacent to a bridge
+    isAdjacentToBridge(row, col) {
+        const directions = [
+            { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+            { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if (cell.attribute === 'bridge' || cell.class === 'bridge') {
+                    // Check if this bridge is disconnected (inoperable)
+                    const cellElement = document.querySelector(`[data-row="${checkRow}"][data-col="${checkCol}"]`);
+                    if (cellElement && cellElement.classList.contains('disconnected-road')) {
+                        return false; // Cannot connect to disconnected bridges
+                    }
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Check if a road is connected to the road network
+    isRoadConnected(row, col) {
+        // A road is connected if it's part of a network that reaches an industrial zone
+        return this.isConnectedToIndustrialNetwork(row, col);
+    }
+    
+    // Check if a road is connected to the industrial network (using flood fill)
+    isConnectedToIndustrialNetwork(row, col) {
+        const visited = new Set();
+        const queue = [{ row, col }];
+        let industrialZonesFound = 0;
+        let roadsChecked = 0;
+        
+        console.log(`Starting flood fill for road at ${row},${col}`);
+        
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const key = `${current.row},${current.col}`;
+            
+            if (visited.has(key)) continue;
+            visited.add(key);
+            roadsChecked++;
+            
+            // Check if this cell is an industrial zone
+            if (current.row >= 0 && current.row < this.mapSystem.mapSize.rows &&
+                current.col >= 0 && current.col < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[current.row][current.col];
+                
+                if (cell.attribute === 'industrial' || cell.class === 'industrial') {
+                    industrialZonesFound++;
+                    console.log(`Found industrial zone at ${current.row},${current.col} for road at ${row},${col}`);
+                    return true; // Found industrial zone in the network
+                }
+                
+                // Also check if this cell is adjacent to an industrial zone
+                const hasAdjacentIndustrial = this.hasAdjacentIndustrial(current.row, current.col);
+                if (hasAdjacentIndustrial) {
+                    console.log(`Found adjacent industrial zone near ${current.row},${current.col} for road at ${row},${col}`);
+                    return true; // Found industrial zone adjacent to this cell
+                }
+            }
+            
+            // Add adjacent roads and bridges to the queue (including diagonal directions)
+        const directions = [
+                { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+                { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+                { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+                const newRow = current.row + dir.dr;
+                const newCol = current.col + dir.dc;
+                
+                if (newRow >= 0 && newRow < this.mapSystem.mapSize.rows &&
+                    newCol >= 0 && newCol < this.mapSystem.mapSize.cols) {
                     
-                    const region = [];
-                    this.floodFillRoad(checkRow, checkCol, visited, region);
-                    if (region.length > 0) {
-                        regions.push(region);
-                    }
-                }
-            }
-        });
-        
-        return regions;
-    }
-    
-    reclassifyRoadRegion(region) {
-        if (region.length === 0) return;
-        
-        // Determine new classification based on size
-        let newType = 'road';
-        
-        if (region.length >= 20) {
-            newType = 'highway';
-        }
-        
-        // Update all cells in the region
-        region.forEach(cell => {
-            this.mapSystem.cells[cell.row][cell.col].attribute = newType;
-            this.mapSystem.cells[cell.row][cell.col].class = newType;
-            this.mapSystem.updateCellVisual(cell.row, cell.col);
-        });
-    }
-    
-    isAdjacentToPowerPlantOrPowerLines(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
-        
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (['powerPlant', 'powerLines'].includes(cell.attribute)) {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    isWithinPowerPlantOrPowerLinesRadius(row, col, radius) {
-        for (let r = Math.max(0, row - radius); r <= Math.min(this.mapSystem.mapSize.rows - 1, row + radius); r++) {
-            for (let c = Math.max(0, col - radius); c <= Math.min(this.mapSystem.mapSize.cols - 1, col + radius); c++) {
-                const cell = this.mapSystem.cells[r][c];
-                if (['powerPlant', 'powerLines'].includes(cell.attribute)) {
-                    const distance = Math.abs(row - r) + Math.abs(col - c);
-                    if (distance <= radius) {
-                        return true;
+                    const adjacentCell = this.mapSystem.cells[newRow][newCol];
+                    
+                    if (adjacentCell.attribute === 'road' || adjacentCell.class === 'road' ||
+                        adjacentCell.attribute === 'bridge' || adjacentCell.class === 'bridge') {
+                        queue.push({ row: newRow, col: newCol });
                     }
                 }
             }
         }
         
-        return false;
+        console.log(`No industrial zones found for road at ${row},${col} (searched ${visited.size} cells, checked ${roadsChecked} roads, found ${industrialZonesFound} industrial zones)`);
+        return false; // No industrial zone found in the network
     }
     
-    isAdjacentToCommercialRoad(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
+    // Update road connections and visual indicators
+    updateRoadConnections() {
+        let disconnectedCount = 0;
+        let totalRoads = 0;
+        let connectedCount = 0;
         
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (['road', 'highway', 'bridge', 'tunnel'].includes(cell.attribute)) {
-                    return true;
-                }
-            }
-        }
+        console.log('Updating road connections...');
         
-        return false;
-    }
-    
-    isAdjacentToIndustrialSupplyRoads(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
-        
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (['road', 'highway', 'bridge', 'tunnel'].includes(cell.attribute)) {
-                    // Check if this road connects to industrial areas
-                    if (this.hasWoodAndOreSupplyLineAccess(checkRow, checkCol)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    hasWoodAndOreSupplyLineAccess(row, col) {
-        // Check if this location has access to wood (forests) and ore (mountains)
-        const hasWood = this.isAdjacentToForest(row, col);
-        const hasOre = this.isAdjacentToMountain(row, col);
-        
-        return hasWood && hasOre;
-    }
-    
-    isAdjacentToForest(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
-        
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (cell.attribute === 'forest') {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    isAdjacentToMountain(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
-        
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (cell.attribute === 'mountain') {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    isAdjacentToIndustrial(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
-        
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (cell.attribute === 'industrial') {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    isAdjacentToCommercial(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
-        
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (cell.attribute === 'commercial') {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    isAdjacentToResidential(row, col) {
-        const directions = [
-            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
-            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
-        ];
-        
-        for (let dir of directions) {
-            const checkRow = row + dir.dr;
-            const checkCol = col + dir.dc;
-            
-            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
-                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
-                
-                const cell = this.mapSystem.cells[checkRow][checkCol];
-                if (cell.attribute === 'residential') {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    hasExistingResidential() {
         for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
             for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
                 const cell = this.mapSystem.cells[row][col];
-                if (cell.attribute === 'residential') {
+                if (cell.attribute === 'road' || cell.class === 'road' || 
+                    cell.attribute === 'bridge' || cell.class === 'bridge') {
+                    totalRoads++;
+                    const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    if (cellElement) {
+                        const isConnected = this.isRoadConnected(row, col);
+                        if (isConnected) {
+                            connectedCount++;
+                            // Road/Bridge is connected - normal appearance
+                            cellElement.classList.remove('disconnected-road');
+                            // Force the correct road color with !important to override CSS
+                            if (cell.attribute === 'road' || cell.class === 'road') {
+                                cellElement.style.setProperty('background-color', '#4A4A4A', 'important');
+                                cellElement.style.setProperty('border', 'none', 'important');
+                            } else if (cell.attribute === 'bridge' || cell.class === 'bridge') {
+                                cellElement.style.setProperty('background-color', '#708090', 'important');
+                                cellElement.style.setProperty('border', 'none', 'important');
+                            }
+                            const type = (cell.attribute === 'bridge' || cell.class === 'bridge') ? 'Bridge' : 'Road';
+                            cellElement.title = `${type}: Connected to industrial network`;
+                        } else {
+                            disconnectedCount++;
+                            // Road/Bridge is disconnected - show warning with red highlighting
+                            cellElement.classList.add('disconnected-road');
+                            cellElement.style.setProperty('background-color', '#ffcccc', 'important');
+                            cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
+                            const type = (cell.attribute === 'bridge' || cell.class === 'bridge') ? 'Bridge' : 'Road';
+                            cellElement.title = `${type}: Disconnected from industrial network - inoperable`;
+                        }
+                    }
+                }
+            }
+        }
+        
+        console.log(`Road connection update complete: ${connectedCount}/${totalRoads} connected, ${disconnectedCount} disconnected`);
+        
+        // Show single notification if there are disconnected roads
+        if (disconnectedCount > 0 && totalRoads > 0) {
+            this.showDisconnectedRoadsNotification(disconnectedCount, totalRoads);
+        }
+    }
+    
+    // Show notification for disconnected roads
+    showDisconnectedRoadsNotification(disconnectedCount, totalRoads) {
+        // Remove any existing notification
+        const existingNotification = document.getElementById('disconnected-roads-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        // Create notification
+        const notification = document.createElement('div');
+        notification.id = 'disconnected-roads-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            background: #ff4444;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
+            text-align: center;
+            max-width: 400px;
+        `;
+        notification.innerHTML = `⚠️ ${disconnectedCount} of ${totalRoads} roads/bridges are disconnected from industrial zones!`;
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+    
+    // Get road network statistics
+    getRoadStats() {
+        const stats = {
+            totalRoads: 0,
+            connectedRoads: 0,
+            disconnectedRoads: 0
+        };
+        
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell.attribute === 'road' || cell.class === 'road') {
+                    stats.totalRoads++;
+                    if (this.isRoadConnected(row, col)) {
+                        stats.connectedRoads++;
+                    } else {
+                        stats.disconnectedRoads++;
+                    }
+                }
+            }
+        }
+        
+        return stats;
+    }
+    
+    // Force update road connections when an industrial zone is placed
+    onIndustrialZonePlaced(industrialRow, industrialCol) {
+        console.log(`Industrial zone placed at ${industrialRow},${industrialCol} - updating road connections`);
+        
+        // Verify the industrial zone is actually there
+        const cell = this.mapSystem.cells[industrialRow][industrialCol];
+        console.log('Cell at industrial location:', cell);
+        
+        // Count roads before update
+        let roadsBefore = 0;
+        let connectedBefore = 0;
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const roadCell = this.mapSystem.cells[row][col];
+                if (roadCell.attribute === 'road' || roadCell.class === 'road' ||
+                    roadCell.attribute === 'bridge' || roadCell.class === 'bridge') {
+                    roadsBefore++;
+                    if (this.isRoadConnected(row, col)) {
+                        connectedBefore++;
+                    }
+                }
+            }
+        }
+        console.log(`Roads before update: ${connectedBefore}/${roadsBefore} connected`);
+        
+        // Force clear all disconnected road classes first
+        this.clearAllDisconnectedRoadClasses();
+        
+        // Update road connections to reflect the new industrial zone
+        this.updateRoadConnections();
+        
+        // Count roads after update
+        let roadsAfter = 0;
+        let connectedAfter = 0;
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const roadCell = this.mapSystem.cells[row][col];
+                if (roadCell.attribute === 'road' || roadCell.class === 'road' ||
+                    roadCell.attribute === 'bridge' || roadCell.class === 'bridge') {
+                    roadsAfter++;
+                    if (this.isRoadConnected(row, col)) {
+                        connectedAfter++;
+                    }
+                }
+            }
+        }
+        console.log(`Roads after update: ${connectedAfter}/${roadsAfter} connected`);
+    }
+    
+    // Clear all disconnected road classes to force re-evaluation
+    clearAllDisconnectedRoadClasses() {
+        console.log('Clearing all disconnected road classes...');
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell.attribute === 'road' || cell.class === 'road' ||
+                    cell.attribute === 'bridge' || cell.class === 'bridge') {
+                    const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    if (cellElement) {
+                        cellElement.classList.remove('disconnected-road');
+                        // Reset to normal road colors
+                        if (cell.attribute === 'road' || cell.class === 'road') {
+                            cellElement.style.setProperty('background-color', '#4A4A4A', 'important');
+                            cellElement.style.setProperty('border', 'none', 'important');
+                        } else if (cell.attribute === 'bridge' || cell.class === 'bridge') {
+                            cellElement.style.setProperty('background-color', '#708090', 'important');
+                            cellElement.style.setProperty('border', 'none', 'important');
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Check if a cell is adjacent to an industrial zone
+    hasAdjacentIndustrial(row, col) {
+        const directions = [
+            { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+            { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if (cell.attribute === 'industrial' || cell.class === 'industrial') {
+                    console.log(`Found adjacent industrial zone at ${checkRow},${checkCol} near ${row},${col}`);
                     return true;
                 }
             }
         }
         return false;
     }
+    
+    // Check if a location has road access (excluding inoperable roads)
+    hasRoadAccess(row, col) {
+        // Check if the cell itself is a road (and not inoperable)
+        const currentCell = this.mapSystem.cells[row][col];
+        if (currentCell.attribute === 'road' || currentCell.class === 'road') {
+            const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (cellElement && cellElement.classList.contains('disconnected-road')) {
+                return false; // Inoperable road doesn't count as road access
+            }
+            return true;
+        }
+        
+        // Check if adjacent to operable roads
+        return this.isAdjacentToRoad(row, col);
+    }
+    
+    // Validate that all roads have at least one industrial connection
+    validateAllRoadConnections() {
+        console.log('Validating all road connections...');
+        let totalRoads = 0;
+        let connectedRoads = 0;
+        let disconnectedRoads = 0;
+        
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell.attribute === 'road' || cell.class === 'road' ||
+                    cell.attribute === 'bridge' || cell.class === 'bridge') {
+                    totalRoads++;
+                    
+                    if (this.isRoadConnected(row, col)) {
+                        connectedRoads++;
+                    } else {
+                        disconnectedRoads++;
+                        console.log(`Disconnected road found at ${row},${col}`);
+                    }
+                }
+            }
+        }
+        
+        console.log(`Road validation complete: ${connectedRoads}/${totalRoads} connected, ${disconnectedRoads} disconnected`);
+        return { totalRoads, connectedRoads, disconnectedRoads };
+    }
+    
+    // Classify road regions (required by cell-interaction.js)
+    classifyRoadRegions() {
+        console.log('RoadSystem: Classifying road regions');
+        // This method is called when roads are placed
+        // We can use this to update road connections
+        this.updateRoadConnections();
+    }
+    
+    // Reclassify road regions after removal (required by cell-interaction.js)
+    reclassifyRoadAfterRemoval(removedRow, removedCol) {
+        console.log(`RoadSystem: Reclassifying road regions after removal at ${removedRow},${removedCol}`);
+        // This method is called when roads are removed
+        // We can use this to update road connections
+        this.updateRoadConnections();
+    }
 }
+

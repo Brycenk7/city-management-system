@@ -295,6 +295,8 @@ class TabManagement {
             'tunnel': 'buildTunnel',
             'powerPlant': 'buildPowerPlant',
             'powerLines': 'buildPowerLines',
+            'lumberYard': 'buildLumberYard',
+            'miningOutpost': 'buildMiningOutpost',
             'residential': 'zoneResidential',
             'commercial': 'zoneCommercial',
             'industrial': 'zoneIndustrial',

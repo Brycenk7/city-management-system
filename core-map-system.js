@@ -551,6 +551,25 @@ class MapSystem {
         }
     }
     
+    // Power Line System Methods
+    classifyPowerLineRegions() {
+        console.log('MapSystem classifyPowerLineRegions called');
+        if (this.powerLineSystem) {
+            this.powerLineSystem.classifyPowerLineRegions();
+        } else {
+            console.error('Power line system not available for classifyPowerLineRegions');
+        }
+    }
+    
+    reclassifyPowerLineAfterRemoval(row, col) {
+        console.log('MapSystem reclassifyPowerLineAfterRemoval called:', row, col);
+        if (this.powerLineSystem) {
+            this.powerLineSystem.reclassifyPowerLineAfterRemoval(row, col);
+        } else {
+            console.error('Power line system not available for reclassifyPowerLineAfterRemoval');
+        }
+    }
+    
     generateProceduralMap() {
         console.log('MapSystem generateProceduralMap called');
         if (this.proceduralGeneration) {
@@ -1058,15 +1077,20 @@ class MapSystem {
             this.cells[row][col].class = originalState.class;
             this.updateCellVisual(row, col);
             this.updateStats();
-            return true;
+        } else {
+            // If no original terrain saved, revert to grassland
+            this.cells[row][col].attribute = 'grassland';
+            this.cells[row][col].class = 'grassland';
+            this.updateCellVisual(row, col);
+            this.updateStats();
         }
         
-        // If no original terrain saved, revert to grassland
-        this.cells[row][col].attribute = 'grassland';
-        this.cells[row][col].class = 'grassland';
-        this.updateCellVisual(row, col);
-        this.updateStats();
-        return false;
+        // Update road connections after erasing (important for road highlighting)
+        if (this.cellInteraction && this.cellInteraction.updateRoadConnections) {
+            this.cellInteraction.updateRoadConnections();
+        }
+        
+        return originalState ? true : false;
     }
     
     isPlayerPlaced(row, col) {
