@@ -271,7 +271,7 @@ class ResourceManagement {
         if (this.resources.hasOwnProperty(type)) {
             this.resources[type] = Math.max(0, Math.min(this.maxResources[type], this.resources[type] + amount));
             this.updateResourceDisplay();
-            console.log(`Added ${amount} ${type}. Total: ${this.resources[type]}`);
+            console.log(`Added ${amount} ${type}. Total: ${Math.floor(this.resources[type])}`);
         }
     }
     
@@ -282,7 +282,7 @@ class ResourceManagement {
             const actualRemoved = this.resources[type] - newAmount;
             this.resources[type] = newAmount;
             this.updateResourceDisplay();
-            console.log(`Removed ${actualRemoved} ${type}. Total: ${this.resources[type]}`);
+            console.log(`Removed ${actualRemoved} ${type}. Total: ${Math.floor(this.resources[type])}`);
             return actualRemoved;
         }
         return 0;
@@ -321,7 +321,7 @@ class ResourceManagement {
                     <span class="resource-name">Wood: </span>
                     <span class="resource-amount"> ${Math.floor(this.resources.wood)}</span>
                 </div>
-                <span class="resource-rate">(${this.generationRates.wood - this.consumptionRates.wood > 0 ? '+' : ''}${(this.generationRates.wood - this.consumptionRates.wood).toFixed(1)}/s)</span>
+                <span class="resource-rate">(${this.generationRates.wood - this.consumptionRates.wood > 0 ? '+' : ''}${Math.round((this.generationRates.wood - this.consumptionRates.wood) * 10) / 10}/s)</span>
             </div>
             <div class="resource-item">
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
@@ -329,7 +329,7 @@ class ResourceManagement {
                     <span class="resource-name">Ore: </span>
                     <span class="resource-amount"> ${Math.floor(this.resources.ore)}</span>
                 </div>
-                <span class="resource-rate">(${this.generationRates.ore - this.consumptionRates.ore > 0 ? '+' : ''}${(this.generationRates.ore - this.consumptionRates.ore).toFixed(1)}/s)</span>
+                <span class="resource-rate">(${this.generationRates.ore - this.consumptionRates.ore > 0 ? '+' : ''}${Math.round((this.generationRates.ore - this.consumptionRates.ore) * 10) / 10}/s)</span>
             </div>
             <div class="resource-item">
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
@@ -353,7 +353,7 @@ class ResourceManagement {
                     <span class="resource-name">Power:</span>
                     <span class="resource-amount"> ${Math.floor(this.resources.power)}</span>
                 </div>
-                <span class="resource-rate">(${this.generationRates.power - this.consumptionRates.power > 0 ? '+' : ''}${(this.generationRates.power - this.consumptionRates.power).toFixed(1)}/s)</span>
+                <span class="resource-rate">(${this.generationRates.power - this.consumptionRates.power > 0 ? '+' : ''}${Math.round((this.generationRates.power - this.consumptionRates.power) * 10) / 10}/s)</span>
             </div>
         `;
         
@@ -423,7 +423,7 @@ class ResourceManagement {
             return `<span class="resource-rate" style="color: #ff9800;">⚠️ No ore</span>`;
         } else {
             // Normal production
-            return `<span class="resource-rate">(${netMaterials > 0 ? '+' : ''}${netMaterials.toFixed(1)}/s)</span>`;
+            return `<span class="resource-rate">(${netMaterials > 0 ? '+' : ''}${Math.round(netMaterials * 10) / 10}/s)</span>`;
         }
     }
     
@@ -440,7 +440,7 @@ class ResourceManagement {
             return `<span class="resource-rate" style="color: #ff9800;">⚠️ No materials</span>`;
         } else {
             // Normal production
-            return `<span class="resource-rate">(${netGoods > 0 ? '+' : ''}${netGoods.toFixed(1)}/s)</span>`;
+            return `<span class="resource-rate">(${netGoods > 0 ? '+' : ''}${Math.round(netGoods * 10) / 10}/s)</span>`;
         }
     }
     

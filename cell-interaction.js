@@ -23,8 +23,8 @@ class CellInteraction {
                         return;
                     }
                     
-                    // Check if it's the player's turn in multiplayer mode
-                    if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
+                    // Check if it's the player's turn in multiplayer mode (skip action validation for erase)
+                    if (window.multiplayerIntegration && this.mapSystem.selectedAttribute !== 'erase' && !window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
                         this.showTurnError(cell);
                         return;
                     }
@@ -247,8 +247,8 @@ class CellInteraction {
             return;
         }
         
-        // Check if it's the player's turn in multiplayer mode
-        if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
+        // Check if it's the player's turn in multiplayer mode (skip action validation for erase)
+        if (window.multiplayerIntegration && this.mapSystem.selectedAttribute !== 'erase' && !window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
             this.showTurnError(cell);
             return;
         }

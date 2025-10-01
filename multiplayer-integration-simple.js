@@ -951,7 +951,7 @@ class SimpleMultiplayerIntegration {
                 <div style="flex: 1;">
                     <div style="font-weight: ${isCurrentPlayer ? 'bold' : 'normal'}; color: ${isCurrentPlayer ? '#FFD700' : '#2c3e50'};">${player.username} ${isCurrentPlayer ? '(You)' : ''}</div>
                     <div style="font-size: 12px; opacity: 0.8; color: #2c3e50;">
-                        Wood: ${resources.wood || 0} | Ore: ${resources.ore || 0} | Power: ${resources.power || 0}
+                        Wood: ${Math.floor(resources.wood || 0)} | Ore: ${Math.floor(resources.ore || 0)} | Power: ${Math.floor(resources.power || 0)}
                     </div>
                 </div>
                 ${isCurrentTurn ? '<div style="color: #4CAF50; font-weight: bold;">TURN</div>' : ''}
@@ -1105,7 +1105,7 @@ class SimpleMultiplayerIntegration {
                 <div class="player-color" style="background: ${player.color};"></div>
                 <div class="player-info">
                     <div class="player-name">${player.username} ${isCurrentPlayer ? '(You)' : ''}</div>
-                    <div class="player-resources">Wood: ${resources.wood || 0} | Ore: ${resources.ore || 0} | Power: ${resources.power || 0}</div>
+                    <div class="player-resources">Wood: ${Math.floor(resources.wood || 0)} | Ore: ${Math.floor(resources.ore || 0)} | Power: ${Math.floor(resources.power || 0)}</div>
                 </div>
             `;
             
@@ -1669,6 +1669,7 @@ class SimpleMultiplayerIntegration {
     // Get action cost for a building type
     getActionCost(buildingType) {
         const actionCosts = {
+            'erase': 0.0,        // Erase is free
             'road': 0.5,
             'bridge': 0.5,
             'residential': 1.0,
@@ -1685,6 +1686,12 @@ class SimpleMultiplayerIntegration {
     
     canPlaceBuilding(buildingType = null) {
         if (!this.isInMultiplayer) return true;
+        
+        // Always allow erase operations regardless of game state or actions
+        if (buildingType === 'erase') {
+            console.log('Erase operation - always allowed');
+            return true;
+        }
         
         // If game hasn't started yet, don't allow placement
         if (!this.gameStarted) {
