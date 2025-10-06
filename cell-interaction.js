@@ -247,6 +247,53 @@ class CellInteraction {
             return;
         }
         
+        // Handle terrain modification mode
+        if (this.mapSystem.selectedAttribute === 'terrainMod') {
+            // Check if current tile is modifiable terrain
+            const currentCell = this.mapSystem.cells[row][col];
+            const modifiableTerrain = ['mountain', 'forest'];
+            
+            if (!modifiableTerrain.includes(currentCell.attribute) && !modifiableTerrain.includes(currentCell.class)) {
+                // Show error feedback for non-modifiable terrain
+                this.showTerrainModError(cell, currentCell.attribute || currentCell.class);
+                return;
+            }
+            
+            // Convert terrain to grassland
+            this.mapSystem.cells[row][col].attribute = 'grassland';
+            this.mapSystem.cells[row][col].class = 'grassland';
+            this.mapSystem.cells[row][col].playerId = window.multiplayerIntegration ? window.multiplayerIntegration.playerId : null;
+            this.mapSystem.cells[row][col].placedThisTurn = true;
+            
+            // Update visual representation
+            cell.className = 'cell grassland';
+            cell.style.backgroundColor = '#90EE90';
+            cell.style.border = '1px solid #ddd';
+            
+            // Send multiplayer update if in multiplayer mode
+            if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                window.multiplayerIntegration.sendGameAction('place', row, col, 'terrainMod', 'grassland');
+                
+                // Count action if it's our turn
+                if (window.multiplayerIntegration.isMyTurn()) {
+                    const actionCost = window.multiplayerIntegration.getActionCost('terrainMod');
+                    window.multiplayerIntegration.actionsThisTurn += actionCost;
+                    console.log(`Terrain modification action used: ${window.multiplayerIntegration.actionsThisTurn}/${window.multiplayerIntegration.maxActionsPerTurn} (cost: ${actionCost})`);
+                    // Update action counter display
+                    window.multiplayerIntegration.updateActionCounter();
+                }
+            }
+            
+            // Update UI to show action changes
+            if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                window.multiplayerIntegration.updateUI();
+            }
+            
+            this.mapSystem.lastPaintedCell = cell;
+            this.updateCellInfo();
+            return;
+        }
+        
         // Check if it's the player's turn in multiplayer mode (skip action validation for erase)
         if (window.multiplayerIntegration && this.mapSystem.selectedAttribute !== 'erase' && !window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
             this.showTurnError(cell);
@@ -380,25 +427,161 @@ class CellInteraction {
         const cell = this.mapSystem.cells[row][col];
         
         // Update info panel with hovered cell info
-        document.getElementById('cellInfo').innerHTML = `
+        let infoContent = `
             <div class="info-item">
                 <span class="info-label">Position:</span>
                 <span class="info-value">Row ${row}, Col ${col}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Type:</span>
-                <span class="info-value">${cell.attribute}</span>
+                <span class="info-value">${cell.attribute || 'None'}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Class:</span>
-                <span class="info-value">${cell.class}</span>
+                <span class="info-value">${cell.class || 'None'}</span>
             </div>
         `;
+        
+        // Add production information if applicable
+        const productionInfo = this.getSquareProductionInfo(row, col, cell);
+        if (productionInfo) {
+            infoContent += `
+                <div class="info-item">
+                    <span class="info-label">Production:</span>
+                    <span class="info-value">${productionInfo}</span>
+                </div>
+            `;
+        }
+        
+        // Add power status
+        const powerStatus = this.getSquarePowerStatus(row, col, cell);
+        if (powerStatus) {
+            infoContent += `
+                <div class="info-item">
+                    <span class="info-label">Power:</span>
+                    <span class="info-value">${powerStatus}</span>
+                </div>
+            `;
+        }
+        
+        // Add ownership information for multiplayer
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode() && cell.playerId) {
+            infoContent += `
+                <div class="info-item">
+                    <span class="info-label">Owner:</span>
+                    <span class="info-value">Player ${cell.playerId}</span>
+                </div>
+            `;
+        }
+        
+        document.getElementById('cellInfo').innerHTML = infoContent;
     }
     
     handleCellLeave(e) {
         // Reset info panel to selected tool info
         this.updateCellInfo();
+    }
+    
+    getSquareProductionInfo(row, col, cell) {
+        if (!this.mapSystem.resourceManagement) return null;
+        
+        const attribute = cell.attribute || cell.class;
+        
+        switch (attribute) {
+            case 'lumberYard':
+                return 'Wood: +1/s';
+            case 'miningOutpost':
+                return 'Ore: +1/s';
+            case 'powerPlant':
+                return 'Power: +2/s';
+            case 'industrial':
+                return 'Materials: +1/s (needs wood + ore + power)';
+            case 'commercial':
+                return 'Goods: +1/s (needs materials + power)';
+            case 'mixed':
+                return 'Materials: +0.5/s, Goods: +0.5/s';
+            default:
+                return null;
+        }
+    }
+    
+    getSquarePowerStatus(row, col, cell) {
+        if (!this.mapSystem.powerLineSystem) return null;
+        
+        const attribute = cell.attribute || cell.class;
+        
+        // Check if this square has power access
+        if (this.mapSystem.powerLineSystem.isAdjacentToPowerPlantOrPowerLines(row, col)) {
+            return '✅ Powered';
+        } else if (['industrial', 'commercial', 'mixed'].includes(attribute)) {
+            return '❌ No Power';
+        }
+        
+        return null;
+    }
+    
+    hasOwnRoadAccess(row, col) {
+        // Check if the player has their own roads adjacent to this position
+        const directions = [
+            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if ((cell.attribute === 'road' || cell.attribute === 'bridge') &&
+                    cell.playerId === window.multiplayerIntegration.playerId) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    hasOwnPowerAccess(row, col) {
+        // Check if the player has their own power plants or power lines within range
+        if (!this.mapSystem.powerLineSystem) return false;
+        
+        const playerId = window.multiplayerIntegration.playerId;
+        
+        // Check adjacent cells for power plants or power lines owned by this player
+        const directions = [
+            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if ((cell.attribute === 'powerPlant' || cell.attribute === 'powerLines') &&
+                    cell.playerId === playerId) {
+                    return true;
+                }
+            }
+        }
+        
+        // Check within 5x5 radius for power plants owned by this player
+        for (let r = Math.max(0, row - 2); r <= Math.min(this.mapSystem.mapSize.rows - 1, row + 2); r++) {
+            for (let c = Math.max(0, col - 2); c <= Math.min(this.mapSystem.mapSize.cols - 1, col + 2); c++) {
+                const cell = this.mapSystem.cells[r][c];
+                if (cell.attribute === 'powerPlant' && cell.playerId === playerId) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
     
     updateCellInfo() {
@@ -450,6 +633,8 @@ class CellInteraction {
                 return this.isValidResidentialPlacement(row, col);
             case 'mixed':
                 return this.isValidMixedPlacement(row, col);
+            case 'terrainMod':
+                return this.isValidTerrainModPlacement(row, col);
         }
         
         // For other attributes, do general validation
@@ -507,6 +692,13 @@ class CellInteraction {
     }
     
     isValidPowerPlantPlacement(row, col) {
+        // Check if trying to place on water (not allowed)
+        const currentCell = this.mapSystem.cells[row][col];
+        const waterTypes = ['water', 'lake', 'ocean', 'river', 'riverStart', 'riverEnd'];
+        if (waterTypes.includes(currentCell.attribute) || waterTypes.includes(currentCell.class)) {
+            return false; // Cannot place power plants directly on water
+        }
+        
         // Power plant must have water access OR be adjacent to another power plant
         return this.mapSystem.hasPowerPlantAccess(row, col);
     }
@@ -523,26 +715,11 @@ class CellInteraction {
     }
     
     isValidLumberYardPlacement(row, col) {
-        // Check if player has enough wood (10 wood required)
-        if (this.mapSystem.resourceManagement && this.mapSystem.resourceManagement.resources.wood < 10) {
-            return false;
-        }
-        
         // Lumber yard must have forests within 3 tiles
         return this.mapSystem.hasLumberYardForestAccess(row, col);
     }
     
     isValidMiningOutpostPlacement(row, col) {
-        // Check if player has enough resources (20 wood and 10 ore required)
-        if (this.mapSystem.resourceManagement) {
-            if (this.mapSystem.resourceManagement.resources.wood < 20) {
-                return false;
-            }
-            if (this.mapSystem.resourceManagement.resources.ore < 10) {
-                return false;
-            }
-        }
-        
         // Mining outpost must be within 1 tile of a mountain (4 directions only)
         return this.isAdjacentToMountain4Directions(row, col);
     }
@@ -573,6 +750,13 @@ class CellInteraction {
     }
     
     isValidIndustrialPlacement(row, col) {
+        // Check ownership of nearby infrastructure in multiplayer
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            if (!this.hasOwnPowerAccess(row, col)) {
+                return false; // Cannot use other players' power
+            }
+        }
+        
         // Industrial must have water access and be near power
         const hasWater = this.mapSystem.hasIndustrialWaterAccess(row, col);
         const hasPower = this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
@@ -583,6 +767,23 @@ class CellInteraction {
     }
     
     isValidCommercialPlacement(row, col) {
+        // Check if trying to place on existing infrastructure
+        const currentCell = this.mapSystem.cells[row][col];
+        const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
+        if (infrastructure.includes(currentCell.attribute) || infrastructure.includes(currentCell.class)) {
+            return false; // Cannot place commercial on existing infrastructure
+        }
+        
+        // Check ownership of nearby infrastructure in multiplayer
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            if (!this.hasOwnRoadAccess(row, col)) {
+                return false; // Cannot use other players' roads
+            }
+            if (!this.hasOwnPowerAccess(row, col)) {
+                return false; // Cannot use other players' power
+            }
+        }
+        
         // Commercial must be near operable roads AND within 5 tiles of power
         const hasRoadAccess = this.mapSystem.roadSystem ? 
             this.mapSystem.roadSystem.hasRoadAccess(row, col) : 
@@ -593,6 +794,20 @@ class CellInteraction {
     }
     
     isValidResidentialPlacement(row, col) {
+        // Check if trying to place on existing infrastructure
+        const currentCell = this.mapSystem.cells[row][col];
+        const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
+        if (infrastructure.includes(currentCell.attribute) || infrastructure.includes(currentCell.class)) {
+            return false; // Cannot place residential on existing infrastructure
+        }
+        
+        // Check ownership of nearby infrastructure in multiplayer
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            if (!this.hasOwnRoadAccess(row, col)) {
+                return false; // Cannot use other players' roads
+            }
+        }
+        
         // Residential must be near operable roads and not too close to industrial
         const hasRoadAccess = this.mapSystem.roadSystem ? 
             this.mapSystem.roadSystem.hasRoadAccess(row, col) : 
@@ -605,6 +820,20 @@ class CellInteraction {
     
     
     isValidMixedPlacement(row, col) {
+        // Check if trying to place on existing infrastructure
+        const currentCell = this.mapSystem.cells[row][col];
+        const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
+        if (infrastructure.includes(currentCell.attribute) || infrastructure.includes(currentCell.class)) {
+            return false; // Cannot place mixed use on existing infrastructure
+        }
+        
+        // Check ownership of nearby infrastructure in multiplayer
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            if (!this.hasOwnPowerAccess(row, col)) {
+                return false; // Cannot use other players' power
+            }
+        }
+        
         // Mixed use only requires power within a 5x5 area
         console.log(`Checking mixed use placement at ${row},${col}`);
         if (this.mapSystem.powerLineSystem) {
@@ -615,6 +844,14 @@ class CellInteraction {
         // Fallback to adjacent power check
         console.log(`Using fallback power check for mixed use at ${row},${col}`);
         return this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
+    }
+    
+    isValidTerrainModPlacement(row, col) {
+        // Terrain modification can only be used on mountains and forests
+        const currentCell = this.mapSystem.cells[row][col];
+        const modifiableTerrain = ['mountain', 'forest'];
+        
+        return modifiableTerrain.includes(currentCell.attribute) || modifiableTerrain.includes(currentCell.class);
     }
     
     // Ensure roads remain connected to industrial zones after any building placement
@@ -704,22 +941,52 @@ class CellInteraction {
                     errorMessage = '❌ Power lines must be within 5 tiles of a power plant or adjacent to other power lines!';
                 }
             } else if (attribute === 'lumberYard') {
-                if (this.mapSystem.resourceManagement && this.mapSystem.resourceManagement.resources.wood < 10) {
-                    errorMessage = '❌ Lumber yard requires 10 wood to build! Check your resources.';
-                } else {
-                    errorMessage = '❌ Lumber yard must be placed within 3 tiles of forests!';
-                }
-                } else if (attribute === 'miningOutpost') {
-                if (this.mapSystem.resourceManagement) {
-                    if (this.mapSystem.resourceManagement.resources.wood < 20) {
-                        errorMessage = '❌ Mining outpost requires 20 wood to build! Check your resources.';
-                    } else if (this.mapSystem.resourceManagement.resources.ore < 10) {
-                        errorMessage = '❌ Mining outpost requires 10 ore to build! Check your resources.';
+                errorMessage = '❌ Lumber yard must be placed within 3 tiles of forests!';
+            } else if (attribute === 'miningOutpost') {
+                errorMessage = '❌ Mining outpost must be placed within 1 tile of a mountain!';
+            } else if (attribute === 'terrainMod') {
+                errorMessage = '❌ Terrain modification can only be used on mountains and forests!';
+            } else if (attribute === 'residential') {
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    if (!this.hasOwnRoadAccess(row, col)) {
+                        errorMessage = '❌ Cannot use other players\' roads for residential placement!';
                     } else {
-                        errorMessage = '❌ Mining outpost must be placed within 1 tile of a mountain!';
+                        errorMessage = '❌ Residential must be near operable roads and not too close to industrial!';
                     }
                 } else {
-                    errorMessage = '❌ Mining outpost must be placed within 1 tile of a mountain!';
+                    errorMessage = '❌ Residential must be near operable roads and not too close to industrial!';
+                }
+            } else if (attribute === 'commercial') {
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    if (!this.hasOwnRoadAccess(row, col)) {
+                        errorMessage = '❌ Cannot use other players\' roads for commercial placement!';
+                    } else if (!this.hasOwnPowerAccess(row, col)) {
+                        errorMessage = '❌ Cannot use other players\' power for commercial placement!';
+                    } else {
+                        errorMessage = '❌ Commercial must be near operable roads AND within 5 tiles of power!';
+                    }
+                } else {
+                    errorMessage = '❌ Commercial must be near operable roads AND within 5 tiles of power!';
+                }
+            } else if (attribute === 'industrial') {
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    if (!this.hasOwnPowerAccess(row, col)) {
+                        errorMessage = '❌ Cannot use other players\' power for industrial placement!';
+                    } else {
+                        errorMessage = '❌ Industrial must have water access and be near power!';
+                    }
+                } else {
+                    errorMessage = '❌ Industrial must have water access and be near power!';
+                }
+            } else if (attribute === 'mixed') {
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    if (!this.hasOwnPowerAccess(row, col)) {
+                        errorMessage = '❌ Cannot use other players\' power for mixed use placement!';
+                    } else {
+                        errorMessage = '❌ Mixed use must be within 5x5 area of power!';
+                    }
+                } else {
+                    errorMessage = '❌ Mixed use must be within 5x5 area of power!';
                 }
             } else if (attribute === 'road') {
                 // Road placement validation
@@ -843,6 +1110,23 @@ class CellInteraction {
         }, 2000);
     }
     
+    showTerrainModError(cell, terrainType) {
+        // Add error styling
+        cell.style.border = '2px solid #e74c3c';
+        cell.style.backgroundColor = '#fadbd8';
+        
+        // Show specific error message for terrain modification mode
+        if (this.mapSystem.currentTab === 'player') {
+            const errorMessage = `Cannot modify ${terrainType} - only mountains and forests can be cleared!`;
+            this.showErrorTooltip(cell, errorMessage);
+        }
+        
+        // Remove error styling after 2 seconds
+        setTimeout(() => {
+            this.clearErrorStyling(cell);
+        }, 2000);
+    }
+    
     getBuildingCosts(attribute) {
         const costs = {
             // Basic infrastructure - doubled cost
@@ -862,6 +1146,9 @@ class CellInteraction {
             // Resource production - unchanged
             'lumberYard': { wood: 10 }, // Pays for itself in 20 seconds
             'miningOutpost': { wood: 20, ore: 10 }, // Pays for itself in 40 seconds
+            
+            // Terrain modification - expensive
+            'terrainMod': { wood: 100, ore: 50 },
 
             // No cost items
             'erase': null,

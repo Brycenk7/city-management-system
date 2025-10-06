@@ -397,10 +397,28 @@ class TabManagement {
             const roads = this.mapSystem.countAttribute('road');
             const highways = this.mapSystem.countAttribute('highway');
             
+            // Get population constraints
+            const stats = {
+                residential: residential,
+                commercial: commercial,
+                industrial: industrial,
+                road: roads,
+                bridge: highways
+            };
+            const populationConstraints = this.mapSystem.getPopulationConstraints(stats);
+            
             playerStatsElement.innerHTML = `
                 <div class="stat-item">
                     <span class="stat-label">Population:</span>
                     <span class="stat-value">${residential * 100}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Possible:</span>
+                    <span class="stat-value">${populationConstraints.maxPossible}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Constraints:</span>
+                    <span class="stat-value">${populationConstraints.constraints}</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Commercial:</span>

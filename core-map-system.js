@@ -818,15 +818,89 @@ class MapSystem {
         }
     }
     
+    getPopulationConstraints(stats) {
+        const constraints = [];
+        let maxPossible = stats.residential * 100; // Base population from residential zones
+        
+        // Check for unpowered residential zones
+        if (this.powerLineSystem) {
+            let unpoweredResidential = 0;
+            for (let row = 0; row < this.mapSize.rows; row++) {
+                for (let col = 0; col < this.mapSize.cols; col++) {
+                    const cell = this.cells[row][col];
+                    if (cell.attribute === 'residential' || cell.class === 'residential') {
+                        if (!this.powerLineSystem.isAdjacentToPowerPlantOrPowerLines(row, col)) {
+                            unpoweredResidential++;
+                        }
+                    }
+                }
+            }
+            if (unpoweredResidential > 0) {
+                constraints.push(`${unpoweredResidential} unpowered residential`);
+                maxPossible -= unpoweredResidential * 100;
+            }
+        }
+        
+        // Check for residential zones without road access
+        if (this.roadSystem) {
+            let noRoadAccess = 0;
+            for (let row = 0; row < this.mapSize.rows; row++) {
+                for (let col = 0; col < this.mapSize.cols; col++) {
+                    const cell = this.cells[row][col];
+                    if (cell.attribute === 'residential' || cell.class === 'residential') {
+                        if (!this.roadSystem.hasRoadAccess(row, col)) {
+                            noRoadAccess++;
+                        }
+                    }
+                }
+            }
+            if (noRoadAccess > 0) {
+                constraints.push(`${noRoadAccess} no road access`);
+                maxPossible -= noRoadAccess * 100;
+            }
+        }
+        
+        // Check for residential zones too close to industrial
+        let tooCloseToIndustrial = 0;
+        for (let row = 0; row < this.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSize.cols; col++) {
+                const cell = this.cells[row][col];
+                if (cell.attribute === 'residential' || cell.class === 'residential') {
+                    if (this.isAdjacentToIndustrial(row, col)) {
+                        tooCloseToIndustrial++;
+                    }
+                }
+            }
+        }
+        if (tooCloseToIndustrial > 0) {
+            constraints.push(`${tooCloseToIndustrial} too close to industrial`);
+            maxPossible -= tooCloseToIndustrial * 100;
+        }
+        
+        return {
+            maxPossible: Math.max(0, maxPossible),
+            constraints: constraints.length > 0 ? constraints.join(', ') : 'None'
+        };
+    }
+    
     updatePlayerStats() {
         console.log('MapSystem updatePlayerStats called');
         const playerStats = document.getElementById('playerStats');
         if (playerStats) {
             const stats = this.calculateMapStats();
+            const populationConstraints = this.getPopulationConstraints(stats);
             playerStats.innerHTML = `
                 <div class="stat-item">
                     <span class="stat-label">Population:</span>
                     <span class="stat-value">${stats.residential * 100}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Possible:</span>
+                    <span class="stat-value">${populationConstraints.maxPossible}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Constraints:</span>
+                    <span class="stat-value">${populationConstraints.constraints}</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Zoning:</span>
