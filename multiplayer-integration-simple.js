@@ -1679,8 +1679,7 @@ class SimpleMultiplayerIntegration {
             'powerPlant': 1.0,
             'powerLines': 1.0,
             'lumberYard': 1.0,
-            'miningOutpost': 1.0,
-            'terrainMod': 2.0    // Terrain modification costs 2 actions
+            'miningOutpost': 1.0
         };
         return actionCosts[buildingType] || 1.0; // Default to 1 action
     }
