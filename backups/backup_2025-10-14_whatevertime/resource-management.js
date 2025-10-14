@@ -167,7 +167,6 @@ class ResourceManagement {
                 const key = `${row},${col}`;
                 
                 // Only count buildings owned by the current player in multiplayer
-                // In single player mode (no currentPlayerId), count all buildings
                 const isOwnedByCurrentPlayer = !this.currentPlayerId || !cell.playerId || cell.playerId === this.currentPlayerId;
                 
                 if (isOwnedByCurrentPlayer) {
@@ -220,11 +219,6 @@ class ResourceManagement {
             for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
                 const cell = this.mapSystem.cells[row][col];
                 const key = `${row},${col}`;
-                
-                // Only count buildings owned by the current player in multiplayer
-                const isOwnedByCurrentPlayer = !this.currentPlayerId || !cell.playerId || cell.playerId === this.currentPlayerId;
-                
-                if (!isOwnedByCurrentPlayer) continue;
                 
                 // Most buildings consume power (except resource production buildings and power plants)
                 if (this.isBuilding(cell.attribute)) {

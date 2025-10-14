@@ -88,10 +88,6 @@ class MainApplication {
         console.log('Setting up tutorial modal...');
         this.setupTutorialModal();
         console.log('Tutorial modal set up');
-        
-        console.log('Initializing version system...');
-        this.initializeVersionSystem();
-        console.log('Version system initialized');
     }
     
     setupRulesModal() {
@@ -172,73 +168,6 @@ class MainApplication {
                 }
             });
         }
-    }
-    
-    initializeVersionSystem() {
-        // Initialize version tracking
-        this.currentVersion = this.getCurrentVersion();
-        this.updateVersionDisplay();
-        
-        // Make version system globally accessible
-        window.versionManager = this;
-        
-        console.log('Version system initialized with version:', this.currentVersion);
-    }
-    
-    getCurrentVersion() {
-        // Try to get version from localStorage, default to 1.0.0
-        const storedVersion = localStorage.getItem('cityBuilderVersion');
-        if (storedVersion) {
-            return storedVersion;
-        }
-        
-        // Default version
-        const defaultVersion = '1.0.0';
-        localStorage.setItem('cityBuilderVersion', defaultVersion);
-        return defaultVersion;
-    }
-    
-    updateVersionDisplay() {
-        const versionDisplay = document.getElementById('version-display');
-        if (versionDisplay) {
-            versionDisplay.textContent = `v${this.currentVersion}`;
-        }
-    }
-    
-    incrementVersion(incrementType = 'minor') {
-        const versionParts = this.currentVersion.split('.').map(Number);
-        let [major, minor, patch] = versionParts;
-        
-        if (incrementType === 'major') {
-            major += 1;
-            minor = 0;
-            patch = 0;
-        } else if (incrementType === 'minor') {
-            minor += 1;
-            patch = 0;
-        } else if (incrementType === 'patch') {
-            patch += 1;
-        }
-        
-        this.currentVersion = `${major}.${minor}.${patch}`;
-        localStorage.setItem('cityBuilderVersion', this.currentVersion);
-        this.updateVersionDisplay();
-        
-        console.log(`Version incremented to: v${this.currentVersion}`);
-        return this.currentVersion;
-    }
-    
-    // Public methods for external version management
-    incrementMinor() {
-        return this.incrementVersion('minor');
-    }
-    
-    incrementMajor() {
-        return this.incrementVersion('major');
-    }
-    
-    incrementPatch() {
-        return this.incrementVersion('patch');
     }
     
 }

@@ -341,6 +341,10 @@ class SimpleMultiplayerIntegration {
             this.handleMapMarkerPlaced(data);
         });
 
+        // Game mode events
+        this.wsManager.on('game_modes_list', (data) => {
+            this.handleGameModesList(data);
+        });
 
         this.wsManager.on('game_creation_failed', (data) => {
             this.handleGameCreationFailed(data);
@@ -733,6 +737,18 @@ class SimpleMultiplayerIntegration {
                 <!-- Dropdown Content -->
                 <div class="dropdown-content" id="multiplayer-dropdown" style="display: none;">
                     
+                    <!-- Game Mode -->
+                    <div class="dropdown-section">
+                        <h5>Game Mode</h5>
+                        <select id="game-mode-select" class="multiplayer-select">
+                            <option value="cooperative">Cooperative</option>
+                            <option value="competitive">Competitive</option>
+                            <option value="creative">Creative</option>
+                        </select>
+                        <div id="game-mode-description" class="mode-description">
+                            Work together to build the ultimate city!
+                        </div>
+                    </div>
                     
                     <!-- Players List -->
                     <div class="dropdown-section">
@@ -908,6 +924,13 @@ class SimpleMultiplayerIntegration {
             this.leaveGame();
         };
 
+        // Game mode selection
+        const gameModeSelect = document.getElementById('game-mode-select');
+        if (gameModeSelect) {
+            gameModeSelect.addEventListener('change', () => this.updateGameModeDescription());
+            // Initialize the description
+            this.updateGameModeDescription();
+        }
 
         // Blue Next Turn button removed - using only the fixed green button
 
@@ -1475,8 +1498,8 @@ class SimpleMultiplayerIntegration {
             return;
         }
         
-        // Use default game mode (removed game mode selection)
-        const gameMode = 'free_for_all';
+        const gameMode = document.getElementById('game-mode-select')?.value || 'free_for_all';
+        console.log('Game mode selected:', gameMode);
         console.log('WebSocket connected:', this.wsManager.isConnected);
         
         if (!this.wsManager.isConnected) {
@@ -1767,7 +1790,8 @@ class SimpleMultiplayerIntegration {
             if (heading && (
                 heading.textContent.includes('Game Stats') ||
                 heading.textContent.includes('Game Control') ||
-                heading.textContent.includes('Players')
+                heading.textContent.includes('Players') ||
+                heading.textContent.includes('Game Mode')
             )) {
                 section.style.display = 'none';
             }
@@ -1856,15 +1880,6 @@ class SimpleMultiplayerIntegration {
         });
         
         this.updatePendingActionsDisplay();
-        
-        // Update action counter if this is our action
-        if (data.playerId === this.playerId && data.type === 'place') {
-            const actionCost = this.getActionCost(data.attribute);
-            this.actionsThisTurn += actionCost;
-            console.log(`Action counter updated: ${this.actionsThisTurn}/${this.maxActionsPerTurn} actions used`);
-            this.updateActionCounter();
-            this.updateUI(); // Refresh UI to show updated action counter
-        }
         
         // Process action regardless of who sent it
         if (data.type === 'place') {
@@ -2019,38 +2034,6 @@ class SimpleMultiplayerIntegration {
             roomCode: this.currentRoom,
             playerId: this.playerId
         });
-    }
-
-    // Send building action to server
-    sendBuildingAction(row, col, attribute) {
-        if (!this.wsManager || !this.wsManager.isConnected) {
-            this.showNotification('Not connected to server', 'error');
-            return;
-        }
-        
-        // Check if we can place this building
-        if (!this.canPlaceBuilding(attribute)) {
-            return;
-        }
-        
-        // Create action
-        const action = {
-            actionId: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            type: 'place',
-            row: row,
-            col: col,
-            attribute: attribute,
-            playerId: this.playerId,
-            timestamp: Date.now()
-        };
-        
-        // Add to pending actions
-        this.pendingActions.set(action.actionId, action);
-        this.updatePendingActionsDisplay();
-        
-        // Send to server
-        this.wsManager.send('place_building', action);
-        console.log(`Sent building action: ${attribute} at (${row}, ${col})`);
     }
 
     // Get action cost for a building type
@@ -2519,6 +2502,27 @@ class SimpleMultiplayerIntegration {
         console.log('Map marker placed:', data);
     }
 
+    // Game mode methods
+    updateGameModeDescription() {
+        const gameModeSelect = document.getElementById('game-mode-select');
+        const descriptionDiv = document.getElementById('game-mode-description');
+        
+        if (!gameModeSelect || !descriptionDiv) return;
+        
+        const descriptions = {
+            'free_for_all': 'Build your city independently, compete for resources and territory',
+            'team_based': 'Work in teams to build connected cities and shared infrastructure',
+            'competitive': 'Compete for limited resources in a high-stakes economic battle',
+            'collaborative': 'Work together to build the ultimate megacity with shared goals'
+        };
+        
+        descriptionDiv.textContent = descriptions[gameModeSelect.value] || descriptions['free_for_all'];
+    }
+
+    handleGameModesList(data) {
+        console.log('Available game modes:', data.modes);
+        // This could be used to dynamically populate the game mode selector
+    }
 
     handleGameCreationFailed(data) {
         this.showNotification(`Game creation failed: ${data.reason}`, 'error');
