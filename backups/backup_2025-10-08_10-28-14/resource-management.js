@@ -12,7 +12,6 @@ class ResourceManagement {
             power: 0
         };
         this.currentPlayerId = null; // Track current player for multiplayer
-        this.playerResources = new Map(); // Track resources per player in multiplayer
         this.updateCounter = 0; // Counter for road operability updates
         
         this.maxResources = {
@@ -92,15 +91,6 @@ class ResourceManagement {
     
     // Update all resources based on generation and consumption
     updateResources() {
-        // Only update resources for the current player in multiplayer
-        if (!this.currentPlayerId) {
-            console.log('No current player ID set, skipping resource update');
-            return;
-        }
-        
-        // Get current player's resources
-        const playerResources = this.getCurrentPlayerResources();
-        
         // Calculate net generation for wood and ore (generation - consumption)
         // Lumber yards and mining outposts work even without power
         const netWood = this.generationRates.wood - this.consumptionRates.wood;
@@ -108,39 +98,36 @@ class ResourceManagement {
         const netPower = this.generationRates.power - this.consumptionRates.power;
         
         // Update wood and ore first (these work without power)
-        playerResources.wood = Math.max(0, Math.min(this.maxResources.wood, playerResources.wood + netWood));
-        playerResources.ore = Math.max(0, Math.min(this.maxResources.ore, playerResources.ore + netOre));
-        playerResources.power = Math.max(0, Math.min(this.maxResources.power, playerResources.power + netPower));
+        this.resources.wood = Math.max(0, Math.min(this.maxResources.wood, this.resources.wood + netWood));
+        this.resources.ore = Math.max(0, Math.min(this.maxResources.ore, this.resources.ore + netOre));
+        this.resources.power = Math.max(0, Math.min(this.maxResources.power, this.resources.power + netPower));
         
         // Calculate processed materials production (industrial zones)
         let netProcessedMaterials = -this.consumptionRates.processedMaterials; // Start with consumption
         
         // Only produce processed materials if we have enough wood, ore, AND power
-        if (playerResources.wood >= this.consumptionRates.wood && 
-            playerResources.ore >= this.consumptionRates.ore &&
-            playerResources.power > 0) {
+        if (this.resources.wood >= this.consumptionRates.wood && 
+            this.resources.ore >= this.consumptionRates.ore &&
+            this.resources.power > 0) {
             // We have enough resources and power, so industrial zones can produce
             netProcessedMaterials += this.generationRates.processedMaterials;
         }
         
         // Update processed materials
-        playerResources.processedMaterials = Math.max(0, Math.min(this.maxResources.processedMaterials, playerResources.processedMaterials + netProcessedMaterials));
+        this.resources.processedMaterials = Math.max(0, Math.min(this.maxResources.processedMaterials, this.resources.processedMaterials + netProcessedMaterials));
         
         // Calculate commercial goods production (commercial zones)
         let netCommercialGoods = -this.consumptionRates.commercialGoods; // Start with consumption
         
         // Only produce commercial goods if we have enough processed materials AND power
-        if (playerResources.processedMaterials >= this.consumptionRates.processedMaterials &&
-            playerResources.power > 0) {
+        if (this.resources.processedMaterials >= this.consumptionRates.processedMaterials &&
+            this.resources.power > 0) {
             // We have enough processed materials and power, so commercial zones can produce
             netCommercialGoods += this.generationRates.commercialGoods;
         }
         
         // Update commercial goods
-        playerResources.commercialGoods = Math.max(0, Math.min(this.maxResources.commercialGoods, playerResources.commercialGoods + netCommercialGoods));
-        
-        // Update the player's resources in the map
-        this.updateCurrentPlayerResources(playerResources);
+        this.resources.commercialGoods = Math.max(0, Math.min(this.maxResources.commercialGoods, this.resources.commercialGoods + netCommercialGoods));
         
         // Update road operability based on industrial power
         // Check more frequently when power is low for responsive power management
@@ -263,11 +250,10 @@ class ResourceManagement {
         
         // Check if we have enough power for all industrial zones
         // Roads become inoperable ONLY when power amount hits 0 (not when there's a power deficit)
-        const playerResources = this.getCurrentPlayerResources();
-        const hasEnoughPower = playerResources.power > 0;
+        const hasEnoughPower = this.resources.power > 0;
         
-        console.log(`Power status: ${playerResources.power} power, generation: ${this.generationRates.power}/s, consumption: ${this.consumptionRates.power}/s, net: ${this.generationRates.power - this.consumptionRates.power}/s`);
-        console.log(`Power check: power > 0 = ${playerResources.power > 0}, hasEnoughPower = ${hasEnoughPower}`);
+        console.log(`Power status: ${this.resources.power} power, generation: ${this.generationRates.power}/s, consumption: ${this.consumptionRates.power}/s, net: ${this.generationRates.power - this.consumptionRates.power}/s`);
+        console.log(`Power check: power > 0 = ${this.resources.power > 0}, hasEnoughPower = ${hasEnoughPower}`);
         
         // If we have enough power, clear any power-inoperable road markings
         if (hasEnoughPower) {
@@ -489,24 +475,20 @@ class ResourceManagement {
     // Add resources (for testing or special events)
     addResource(type, amount) {
         if (this.resources.hasOwnProperty(type)) {
-            const playerResources = this.getCurrentPlayerResources();
-            playerResources[type] = Math.max(0, Math.min(this.maxResources[type], playerResources[type] + amount));
-            this.updateCurrentPlayerResources(playerResources);
+            this.resources[type] = Math.max(0, Math.min(this.maxResources[type], this.resources[type] + amount));
             this.updateResourceDisplay();
-            console.log(`Added ${amount} ${type}. Total: ${Math.floor(playerResources[type])}`);
+            console.log(`Added ${amount} ${type}. Total: ${Math.floor(this.resources[type])}`);
         }
     }
     
     // Remove resources (for building costs)
     removeResource(type, amount) {
         if (this.resources.hasOwnProperty(type)) {
-            const playerResources = this.getCurrentPlayerResources();
-            const newAmount = Math.max(0, playerResources[type] - amount);
-            const actualRemoved = playerResources[type] - newAmount;
-            playerResources[type] = newAmount;
-            this.updateCurrentPlayerResources(playerResources);
+            const newAmount = Math.max(0, this.resources[type] - amount);
+            const actualRemoved = this.resources[type] - newAmount;
+            this.resources[type] = newAmount;
             this.updateResourceDisplay();
-            console.log(`Removed ${actualRemoved} ${type}. Total: ${Math.floor(playerResources[type])}`);
+            console.log(`Removed ${actualRemoved} ${type}. Total: ${Math.floor(this.resources[type])}`);
             return actualRemoved;
         }
         return 0;
@@ -514,9 +496,8 @@ class ResourceManagement {
     
     // Check if enough resources are available
     hasEnoughResources(costs) {
-        const playerResources = this.getCurrentPlayerResources();
         for (const [resource, amount] of Object.entries(costs)) {
-            if (playerResources[resource] < amount) {
+            if (this.resources[resource] < amount) {
                 return false;
             }
         }
@@ -525,9 +506,8 @@ class ResourceManagement {
     
     // Get resource information
     getResourceInfo(type) {
-        const playerResources = this.getCurrentPlayerResources();
         return {
-            current: playerResources[type],
+            current: this.resources[type],
             max: this.maxResources[type],
             generation: this.generationRates[type],
             consumption: this.consumptionRates[type],
@@ -540,14 +520,12 @@ class ResourceManagement {
         const resourceDisplay = document.getElementById('resourceDisplay');
         if (!resourceDisplay) return;
         
-        const playerResources = this.getCurrentPlayerResources();
-        
         resourceDisplay.innerHTML = `
             <div class="resource-item">
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
                     <span class="resource-icon">🪵</span>
                     <span class="resource-name">Wood: </span>
-                    <span class="resource-amount"> ${Math.floor(playerResources.wood)}</span>
+                    <span class="resource-amount"> ${Math.floor(this.resources.wood)}</span>
                 </div>
                 <span class="resource-rate">(${this.generationRates.wood - this.consumptionRates.wood > 0 ? '+' : ''}${Math.round((this.generationRates.wood - this.consumptionRates.wood) * 10) / 10}/s)</span>
             </div>
@@ -555,7 +533,7 @@ class ResourceManagement {
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
                     <span class="resource-icon">⛏️</span>
                     <span class="resource-name">Ore: </span>
-                    <span class="resource-amount"> ${Math.floor(playerResources.ore)}</span>
+                    <span class="resource-amount"> ${Math.floor(this.resources.ore)}</span>
                 </div>
                 <span class="resource-rate">(${this.generationRates.ore - this.consumptionRates.ore > 0 ? '+' : ''}${Math.round((this.generationRates.ore - this.consumptionRates.ore) * 10) / 10}/s)</span>
             </div>
@@ -563,7 +541,7 @@ class ResourceManagement {
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
                     <span class="resource-icon">🔧</span>
                     <span class="resource-name">Materials: </span>
-                    <span class="resource-amount"> ${Math.floor(playerResources.processedMaterials)}</span>
+                    <span class="resource-amount"> ${Math.floor(this.resources.processedMaterials)}</span>
                 </div>
                 ${this.getProcessedMaterialsProductionStatus()}
             </div>
@@ -571,7 +549,7 @@ class ResourceManagement {
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
                     <span class="resource-icon">📦</span>
                     <span class="resource-name">Goods: </span>
-                    <span class="resource-amount"> ${Math.floor(playerResources.commercialGoods)}</span>
+                    <span class="resource-amount"> ${Math.floor(this.resources.commercialGoods)}</span>
                 </div>
                 ${this.getGoodsProductionStatus()}
             </div>
@@ -579,7 +557,7 @@ class ResourceManagement {
                 <div style="display: flex; align-items: center; margin-bottom: 4px;">
                     <span class="resource-icon">⚡</span>
                     <span class="resource-name">Power:</span>
-                    <span class="resource-amount"> ${Math.floor(playerResources.power)}</span>
+                    <span class="resource-amount"> ${Math.floor(this.resources.power)}</span>
                 </div>
                 <span class="resource-rate">(${this.generationRates.power - this.consumptionRates.power > 0 ? '+' : ''}${Math.round((this.generationRates.power - this.consumptionRates.power) * 10) / 10}/s)</span>
             </div>
@@ -636,71 +614,14 @@ class ResourceManagement {
     setCurrentPlayerId(playerId) {
         this.currentPlayerId = playerId;
         console.log('Resource management player ID set to:', playerId);
-        
-        // Initialize player resources if not exists
-        if (playerId && !this.playerResources.has(playerId)) {
-            this.playerResources.set(playerId, {
-                wood: 30,
-                ore: 10,
-                processedMaterials: 0,
-                commercialGoods: 0,
-                power: 0
-            });
-        }
-        
-        // Update current resources to match player's resources
-        if (playerId && this.playerResources.has(playerId)) {
-            this.resources = { ...this.playerResources.get(playerId) };
-        }
-    }
-    
-    // Get current player's resources
-    getCurrentPlayerResources() {
-        if (this.currentPlayerId && this.playerResources.has(this.currentPlayerId)) {
-            return this.playerResources.get(this.currentPlayerId);
-        }
-        return this.resources; // Fallback to global resources
-    }
-    
-    // Update current player's resources
-    updateCurrentPlayerResources(newResources) {
-        if (this.currentPlayerId) {
-            this.playerResources.set(this.currentPlayerId, { ...newResources });
-            this.resources = { ...newResources };
-        } else {
-            this.resources = { ...newResources };
-        }
-    }
-    
-    // Initialize player resources for a new player
-    initializePlayerResources(playerId) {
-        if (!this.playerResources.has(playerId)) {
-            this.playerResources.set(playerId, {
-                wood: 30,
-                ore: 10,
-                processedMaterials: 0,
-                commercialGoods: 0,
-                power: 0
-            });
-        }
-    }
-    
-    // Get all player resources (for debugging)
-    getAllPlayerResources() {
-        const result = {};
-        for (const [playerId, resources] of this.playerResources) {
-            result[playerId] = { ...resources };
-        }
-        return result;
     }
     
     // Get processed materials production status with power requirement feedback
     getProcessedMaterialsProductionStatus() {
         const netMaterials = this.generationRates.processedMaterials - this.consumptionRates.processedMaterials;
-        const playerResources = this.getCurrentPlayerResources();
-        const hasPower = playerResources.power > 0;
-        const hasWood = playerResources.wood >= this.consumptionRates.wood;
-        const hasOre = playerResources.ore >= this.consumptionRates.ore;
+        const hasPower = this.resources.power > 0;
+        const hasWood = this.resources.wood >= this.consumptionRates.wood;
+        const hasOre = this.resources.ore >= this.consumptionRates.ore;
         
         // Check if production is blocked
         if (!hasPower) {
@@ -718,9 +639,8 @@ class ResourceManagement {
     // Get goods production status with power requirement feedback
     getGoodsProductionStatus() {
         const netGoods = this.generationRates.commercialGoods - this.consumptionRates.commercialGoods;
-        const playerResources = this.getCurrentPlayerResources();
-        const hasPower = playerResources.power > 0;
-        const hasProcessedMaterials = playerResources.processedMaterials >= this.consumptionRates.processedMaterials;
+        const hasPower = this.resources.power > 0;
+        const hasProcessedMaterials = this.resources.processedMaterials >= this.consumptionRates.processedMaterials;
         
         // Check if production is blocked
         if (!hasPower) {
@@ -735,16 +655,14 @@ class ResourceManagement {
     
     // Check if industrial zones should show no-power indicator
     shouldShowNoPowerIndicator() {
-        const playerResources = this.getCurrentPlayerResources();
-        return playerResources.power <= 0 && this.resourceSources.processedMaterials.size > 0;
+        return this.resources.power <= 0 && this.resourceSources.processedMaterials.size > 0;
     }
     
     // Update industrial zone visual indicators
     updateIndustrialZoneIndicators() {
-        const playerResources = this.getCurrentPlayerResources();
-        const hasPower = playerResources.power > 0;
-        const hasWood = playerResources.wood >= this.consumptionRates.wood;
-        const hasOre = playerResources.ore >= this.consumptionRates.ore;
+        const hasPower = this.resources.power > 0;
+        const hasWood = this.resources.wood >= this.consumptionRates.wood;
+        const hasOre = this.resources.ore >= this.consumptionRates.ore;
         const canProduce = hasPower && hasWood && hasOre;
         
         // Update all industrial zones
@@ -777,25 +695,13 @@ class ResourceManagement {
         this.stopResourceGeneration();
         console.log('Resource generation stopped');
         
-        // Reset global resources to starting values
+        // Reset resources to starting values
         this.resources = {
             wood: 30, // Reset to starting values
             ore: 10,
-            processedMaterials: 0,
             commercialGoods: 0,
             power: 0
         };
-        
-        // Reset all player resources to starting values
-        for (const [playerId, playerResources] of this.playerResources) {
-            this.playerResources.set(playerId, {
-                wood: 30,
-                ore: 10,
-                processedMaterials: 0,
-                commercialGoods: 0,
-                power: 0
-            });
-        }
         console.log('Resources reset to:', this.resources);
         
         // Clear all resource sources (this stops passive generation)

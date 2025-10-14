@@ -2,7 +2,7 @@ console.log('Loading SimpleMultiplayerIntegration class... v2.1');
 
 class SimpleMultiplayerIntegration {
     constructor(mapSystem) {
-        console.log('SimpleMultiplayerIntegration constructor called - v20241220-refresh');
+        console.log('SimpleMultiplayerIntegration constructor called - v20241220-status-fix');
         this.mapSystem = mapSystem;
         this.wsManager = new WebSocketManager();
         this.isInMultiplayer = false;
@@ -30,8 +30,6 @@ class SimpleMultiplayerIntegration {
         this.turnTimer = null;
         this.turnTimeRemaining = null; // Track remaining time when paused
         this.turnTimerPaused = false;
-        this.playerJustLeft = false; // Track if a player just left to reset timer
-        // Leave game now just refreshes the page, no complex state needed
     }
 
     async initializeMultiplayer() {
@@ -99,7 +97,25 @@ class SimpleMultiplayerIntegration {
             this.gamePaused = gameState.gamePaused || false;
             this.isHost = gameState.isHost || false;
             
-            console.log('Game joined successfully');
+            console.log('🎮 Game joined - Full data received:', data);
+            // Debug which condition triggered gameStarted
+            const gameStartedReasons = [];
+            if (gameState.gameStarted) gameStartedReasons.push('gameStarted=true');
+            if (gameState.status === 'active' || gameState.status === 'started') gameStartedReasons.push(`status=${gameState.status}`);
+            if (gameState.currentTurn > 0) gameStartedReasons.push(`currentTurn=${gameState.currentTurn}`);
+            if (gameState.cells && gameState.cells.length > 0 && gameState.cells.some(cell => cell.attribute && cell.attribute !== 'grassland')) {
+                gameStartedReasons.push('cells have buildings');
+            }
+            
+            console.log('🎮 Game joined - Game state:', {
+                gameStarted: this.gameStarted,
+                gamePaused: this.gamePaused,
+                isHost: this.isHost,
+                turnOrder: this.turnOrder,
+                currentTurn: this.currentTurn,
+                gameStartedReasons: gameStartedReasons
+            });
+            console.log('🎮 Game joined - Raw gameState:', data.game.gameState);
             
             this.turnOrder = data.game.gameState.turnOrder;
             this.currentTurn = data.game.gameState.currentTurn;
@@ -167,17 +183,6 @@ class SimpleMultiplayerIntegration {
             this.turnOrder = data.game.gameState.turnOrder;
             this.currentTurn = data.game.gameState.currentTurn;
             
-            // Set flag to reset timer on next turn change
-            this.playerJustLeft = true;
-            
-            // Check if it's now our turn and start timer immediately
-            if (this.isMyTurn()) {
-                console.log('Player left - starting timer with 60s');
-                this.turnTimeLimit = 60; // Reset to full 60 seconds
-                this.playerJustLeft = false; // Clear the flag
-                this.startTurnTimer();
-            }
-            
             // Handle host transfer if the leaving player was the host
             if (data.wasHost && data.newHost) {
                 console.log('Host left, transferring to:', data.newHost);
@@ -223,12 +228,6 @@ class SimpleMultiplayerIntegration {
             
             // Start turn timer if it's our turn
             if (this.isMyTurn()) {
-                // If a player just left, reset timer to full 60 seconds
-                if (this.playerJustLeft) {
-                    console.log('Timer reset to 60s due to player leaving');
-                    this.turnTimeLimit = 60; // Reset to full 60 seconds
-                    this.playerJustLeft = false; // Clear the flag
-                }
                 this.startTurnTimer();
             } else {
                 this.stopTurnTimer();
@@ -354,10 +353,6 @@ class SimpleMultiplayerIntegration {
             this.handleGameJoinFailed(data);
         });
 
-        this.wsManager.on('player_disconnected', (data) => {
-            this.handlePlayerDisconnected(data);
-        });
-
         // Map state updates
         this.wsManager.on('map_state_updated', (data) => {
             console.log('🗺️ Map state updated event received:', data);
@@ -395,25 +390,37 @@ class SimpleMultiplayerIntegration {
 
         // Game control events
         this.wsManager.on('game_started', (data) => {
-            console.log('Game started by', data.startedBy);
+            console.log('🎮 GAME STARTED EVENT RECEIVED!');
+            console.log('🎮 Game started by', data.startedBy);
+            console.log('🎮 Map data length:', data.mapData ? data.mapData.length : 'none');
+            console.log('🎮 Current gameStarted state:', this.gameStarted);
+            console.log('🎮 Current isHost state:', this.isHost);
             
             this.gameStarted = true;
             this.gamePaused = false; // Reset pause state when game starts
             
+            // Note: Map sync is now handled by the dedicated map_state_updated event
+            console.log('🎮 Game started - map sync will be handled separately if needed');
+            
             // Start turn timer if it's our turn
             if (this.isMyTurn()) {
                 this.startTurnTimer();
+                console.log('Turn timer started on game start');
             }
             
+            console.log('🎮 Updating UI after game started...');
             this.updateUI();
             
-            // Force show game started elements
+            // Force show game started elements for debugging
+            console.log('🔧 FORCE SHOWING GAME STARTED ELEMENTS FOR DEBUGGING');
             const gameStartedElements = document.querySelectorAll('.game-started-dependent');
             gameStartedElements.forEach(element => {
                 element.style.display = 'block';
+                console.log('🔧 Force showing element:', element.id);
             });
             
             this.showNotification(`Game started by ${data.startedBy}!`, 'success');
+            console.log('🎮 Game started event processing complete');
         });
 
         this.wsManager.on('game_paused', (data) => {
@@ -438,13 +445,9 @@ class SimpleMultiplayerIntegration {
             
             // Resume the turn timer if it was paused and it's our turn
             if (this.turnTimerPaused && this.turnTimeRemaining > 0 && this.isMyTurn()) {
-                // Temporarily set the time limit to the remaining time for this turn only
-                const originalTimeLimit = this.turnTimeLimit;
                 this.turnTimeLimit = this.turnTimeRemaining;
                 this.startTurnTimer();
                 this.turnTimerPaused = false;
-                // Reset to original time limit for future turns
-                this.turnTimeLimit = originalTimeLimit;
                 console.log('Turn timer resumed, remaining time:', this.turnTimeRemaining);
             }
             
@@ -475,18 +478,6 @@ class SimpleMultiplayerIntegration {
             console.log('WebSocket disconnected, updating UI');
             this.updateUI();
         });
-
-        this.wsManager.on('websocket_disconnected', (data) => {
-            console.log('WebSocket disconnected event received:', data);
-            if (this.isInMultiplayer) {
-                console.log('Was in multiplayer, resetting state due to disconnect');
-                this.resetLocalMultiplayerState();
-                this.showNotification('Connection lost. Please refresh to reconnect.', 'warning');
-            } else {
-                // Even if not in multiplayer, ensure UI is in initial state
-                this.resetUIToInitialState();
-            }
-        });
     }
 
     showMultiplayerUI() {
@@ -515,17 +506,22 @@ class SimpleMultiplayerIntegration {
     }
 
     updateGameStartedDependentElements() {
+        console.log('🔧 updateGameStartedDependentElements called, gameStarted:', this.gameStarted, 'isHost:', this.isHost);
         const gameStartedElements = document.querySelectorAll('.game-started-dependent');
+        console.log('🔧 Found', gameStartedElements.length, 'game-started-dependent elements');
         
         gameStartedElements.forEach(element => {
+            console.log('🔧 Processing element:', element.id, 'class:', element.className);
             if (element.id === 'sync-map-btn') {
                 // Sync map button only visible to non-hosts when game started
                 const shouldShow = (this.gameStarted && !this.isHost);
                 element.style.display = shouldShow ? 'block' : 'none';
+                console.log('🔧 Sync map button display:', shouldShow ? 'block' : 'none');
             } else {
                 // Other game started elements visible to all players when game started
                 const shouldShow = this.gameStarted;
                 element.style.display = shouldShow ? 'block' : 'none';
+                console.log('🔧 Element', element.id, 'display:', shouldShow ? 'block' : 'none');
             }
         });
     }
@@ -910,9 +906,8 @@ class SimpleMultiplayerIntegration {
             leaveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                console.log('Leave room button clicked! Refreshing page...');
-                window.location.reload();
+                console.log('Leave room button clicked!');
+                this.leaveGame();
             });
         } else {
             console.error('Leave room button not found!');
@@ -1059,6 +1054,7 @@ class SimpleMultiplayerIntegration {
     }
 
     updateUI() {
+        console.log('updateUI called, isInMultiplayer:', this.isInMultiplayer, 'gameStarted:', this.gameStarted);
         const statusText = document.getElementById('connection-status');
         const statusTextMain = document.getElementById('connection-status-main');
         const roomControlsSection = document.getElementById('room-controls-section');
@@ -1123,16 +1119,8 @@ class SimpleMultiplayerIntegration {
             // Update game started dependent elements
             this.updateGameStartedDependentElements();
             
-        // Update fixed Next Turn button
-        this.updateFixedNextTurnButton();
-        
-        // Ensure timer is running if it's our turn and game is started
-        if (this.isInMultiplayer && this.gameStarted && this.isMyTurn() && !this.gamePaused) {
-            if (!this.turnTimer) {
-                console.log('Timer auto-started from updateUI');
-                this.startTurnTimer();
-            }
-        }
+            // Update fixed Next Turn button
+            this.updateFixedNextTurnButton();
             
             if (this.gameStarted) {
                 // Game has started - hide players main section, show game controls
@@ -1277,6 +1265,8 @@ class SimpleMultiplayerIntegration {
     }
 
     startGame() {
+        console.log('🎮 START GAME FUNCTION CALLED');
+        
         // Show immediate feedback
         this.showNotification('Starting game...', 'info');
         
@@ -1298,7 +1288,7 @@ class SimpleMultiplayerIntegration {
             return;
         }
 
-        console.log('Generating terrain...');
+        console.log('✅ Generating terrain and starting game...');
         
         // Generate terrain first
         this.generateTerrainForGame();
@@ -1555,106 +1545,13 @@ class SimpleMultiplayerIntegration {
         });
     }
 
-    async leaveGame() {
-        // Prevent multiple leave attempts
-        if (this.leaveInProgress) {
-            console.log('Leave already in progress, ignoring request');
-            return;
-        }
-        
-        this.leaveInProgress = true;
-        console.log('🔄 Leaving game...');
+    leaveGame() {
+        console.log('Leaving game...');
         console.log('WebSocket connected:', this.wsManager.isConnected);
         console.log('Current room:', this.currentRoom);
         console.log('Current players:', this.players.size);
         
-        // Show immediate visual feedback that leave is in progress
-        const leaveBtn = document.getElementById('leave-room-btn');
-        if (leaveBtn) {
-            leaveBtn.textContent = 'Leaving...';
-            leaveBtn.disabled = true;
-            leaveBtn.style.opacity = '0.6';
-        }
-        
-        // Immediately reset UI to show leaving state
-        console.log('🔄 Immediately resetting UI to disconnected state...');
-        this.resetUIToInitialState();
-        
-        // Clear any existing leave timeout to prevent conflicts
-        if (this.leaveTimeout) {
-            clearTimeout(this.leaveTimeout);
-            this.leaveTimeout = null;
-        }
-        
-        // If not connected, just reset local state
-        if (!this.wsManager.isConnected) {
-            console.log('Not connected to server, just resetting local state');
-            this.resetLocalMultiplayerState();
-            this.leaveInProgress = false;
-            return;
-        }
-        
-        // Send leave game message to server
-        console.log('📤 Sending leave_game message...');
-        this.wsManager.send('leave_game', {
-            roomCode: this.currentRoom,
-            playerId: this.playerId,
-            playerName: this.playerName
-        });
-        
-        // Set a timeout to force disconnect if server doesn't respond
-        this.leaveTimeout = setTimeout(async () => {
-            console.log('⏰ Leave game timeout, forcing disconnect');
-            await this.forceDisconnect();
-            this.leaveTimeout = null;
-            this.leaveInProgress = false;
-        }, 3000); // Reduced timeout to 3 seconds
-        
-        // Listen for server confirmation (one-time only)
-        this.wsManager.socket.once('leave_game_confirmed', async () => {
-            console.log('✅ Server confirmed leave game');
-            if (this.leaveTimeout) {
-                clearTimeout(this.leaveTimeout);
-                this.leaveTimeout = null;
-            }
-            await this.forceDisconnect();
-            this.leaveInProgress = false;
-        });
-        
-        // Also listen for disconnect event
-        this.wsManager.socket.once('disconnect', async () => {
-            console.log('🔌 Server disconnected after leave game');
-            if (this.leaveTimeout) {
-                clearTimeout(this.leaveTimeout);
-                this.leaveTimeout = null;
-            }
-            this.resetLocalMultiplayerState();
-            this.leaveInProgress = false;
-        });
-        
-        console.log('📡 Leave game message sent, waiting for server confirmation...');
-    }
-    
-    async forceDisconnect() {
-        console.log('Forcing WebSocket disconnect');
-        if (this.wsManager.socket) {
-            this.wsManager.socket.disconnect();
-        }
-        this.wsManager.isConnected = false;
-        this.resetLocalMultiplayerState();
-        
-        // Reconnect for future room operations
-        console.log('🔄 Reconnecting for future room operations...');
-        try {
-            await this.wsManager.connect();
-            console.log('✅ Reconnected successfully');
-        } catch (error) {
-            console.error('❌ Failed to reconnect:', error);
-        }
-    }
-    
-    resetLocalMultiplayerState() {
-        console.log('Resetting local multiplayer state');
+        this.wsManager.send('leave_game', {});
         
         // Reset all multiplayer state
         this.isInMultiplayer = false;
@@ -1680,136 +1577,10 @@ class SimpleMultiplayerIntegration {
         // Reset actions
         this.actionsThisTurn = 0;
         
-        // Reset leave progress flag
-        this.leaveInProgress = false;
+        // Force UI update to show disconnected state
+        this.updateUI();
         
-        // Force complete UI reset to initial state
-        this.resetUIToInitialState();
-        
-        console.log('Local multiplayer state reset complete');
-    }
-    
-    resetUIToInitialState() {
-        console.log('Resetting UI to initial disconnected state');
-        
-        // Reset connection status
-        const statusText = document.getElementById('connection-status');
-        const statusTextMain = document.getElementById('connection-status-main');
-        if (statusText) {
-            statusText.textContent = 'Disconnected';
-            statusText.style.color = '#dc3545';
-        }
-        if (statusTextMain) {
-            statusTextMain.textContent = 'Disconnected';
-            statusTextMain.style.color = '#dc3545';
-        }
-        
-        // Show room controls (initial state)
-        const roomControlsSection = document.querySelector('.room-controls-section');
-        if (roomControlsSection) {
-            roomControlsSection.style.display = 'block';
-        }
-        
-        // Hide players main section (initial state)
-        const playersMainSection = document.getElementById('players-main-section');
-        if (playersMainSection) {
-            playersMainSection.style.display = 'none';
-        }
-        
-        // Clear room input
-        const roomIdInput = document.getElementById('room-id-input');
-        if (roomIdInput) {
-            roomIdInput.value = '';
-        }
-        
-        // Reset room info
-        const roomInfo = document.getElementById('room-info');
-        const roomInfoMain = document.getElementById('room-info-main');
-        if (roomInfo) {
-            roomInfo.textContent = 'None';
-        }
-        if (roomInfoMain) {
-            roomInfoMain.textContent = 'None';
-        }
-        
-        // Hide all game-started-dependent elements
-        const gameStartedElements = document.querySelectorAll('.game-started-dependent');
-        gameStartedElements.forEach(element => {
-            element.style.display = 'none';
-        });
-        
-        // Hide additional status (Players, Turn, Actions)
-        const additionalStatus = document.querySelector('.additional-status');
-        if (additionalStatus) {
-            additionalStatus.style.display = 'none';
-        }
-        
-        // Hide multiplayer actions (Sync Map, Pause Game)
-        const multiplayerActions = document.querySelector('.multiplayer-actions');
-        if (multiplayerActions) {
-            multiplayerActions.style.display = 'none';
-        }
-        
-        // Hide all game-related sections
-        const gameStats = document.querySelector('.game-stats');
-        if (gameStats) {
-            gameStats.style.display = 'none';
-        }
-        
-        const playersList = document.getElementById('players-list');
-        if (playersList) {
-            playersList.style.display = 'none';
-        }
-        
-        const actionButtons = document.querySelector('.action-buttons');
-        if (actionButtons) {
-            actionButtons.style.display = 'none';
-        }
-        
-        const teamPanel = document.querySelector('.team-panel');
-        if (teamPanel) {
-            teamPanel.style.display = 'none';
-        }
-        
-        // Hide start game section
-        const startGameSection = document.querySelector('.start-game-section');
-        if (startGameSection) {
-            startGameSection.style.display = 'none';
-        }
-        
-        // Hide game controls (sync map, pause game, etc.)
-        const gameControls = document.querySelector('.game-controls');
-        if (gameControls) {
-            gameControls.style.display = 'none';
-        }
-        
-        // Hide dropdown sections that contain game stats and controls
-        const dropdownSections = document.querySelectorAll('.dropdown-section');
-        dropdownSections.forEach(section => {
-            const heading = section.querySelector('h5');
-            if (heading && (
-                heading.textContent.includes('Game Stats') ||
-                heading.textContent.includes('Game Control') ||
-                heading.textContent.includes('Players') ||
-                heading.textContent.includes('Game Mode')
-            )) {
-                section.style.display = 'none';
-            }
-        });
-        
-        // Hide fixed next turn button
-        const nextTurnContainer = document.querySelector('.next-turn-container');
-        if (nextTurnContainer) {
-            nextTurnContainer.style.display = 'none';
-        }
-        
-        // Clear players list
-        const playersMainList = document.getElementById('players-main-list');
-        if (playersMainList) {
-            playersMainList.innerHTML = '<div class="no-players">No players connected</div>';
-        }
-        
-        console.log('UI reset to initial state complete');
+        console.log('Game left, UI should be reset');
     }
 
     sendGameAction(action, row, col, attribute, className) {
@@ -2015,9 +1786,19 @@ class SimpleMultiplayerIntegration {
 
     isMyTurn() {
         if (!this.isInMultiplayer || this.turnOrder.length === 0) {
+            console.log('isMyTurn: not in multiplayer or no turn order, returning true');
             return true;
         }
-        return this.turnOrder[this.currentTurn] === this.playerId;
+        const isMyTurn = this.turnOrder[this.currentTurn] === this.playerId;
+        console.log('isMyTurn check:', {
+            isInMultiplayer: this.isInMultiplayer,
+            turnOrderLength: this.turnOrder.length,
+            currentTurn: this.currentTurn,
+            currentPlayerId: this.turnOrder[this.currentTurn],
+            myPlayerId: this.playerId,
+            isMyTurn: isMyTurn
+        });
+        return isMyTurn;
     }
 
     advanceTurn() {
@@ -2533,29 +2314,6 @@ class SimpleMultiplayerIntegration {
         this.showNotification(`Failed to join game: ${data.reason || 'Unknown error'}`, 'error');
     }
 
-    handlePlayerDisconnected(data) {
-        console.log('Player disconnected:', data);
-        if (data.playerId && data.playerId !== this.playerId) {
-            // Another player disconnected
-            this.players.delete(data.playerId);
-            
-            // Set flag to reset timer on next turn change (same as player leaving)
-            this.playerJustLeft = true;
-            
-            // Check if it's now our turn and start timer immediately
-            if (this.isMyTurn()) {
-                console.log('Player disconnected - starting timer with 60s');
-                this.turnTimeLimit = 60; // Reset to full 60 seconds
-                this.playerJustLeft = false; // Clear the flag
-                this.startTurnTimer();
-            }
-            
-            this.updatePlayersList();
-            this.updateUI();
-            this.showNotification(`${data.playerName || 'Player'} has disconnected`, 'info');
-        }
-    }
-
     // Map synchronization methods
     syncMap(cellData) {
         console.log('🗺️ SYNC MAP CALLED');
@@ -2785,11 +2543,10 @@ class SimpleMultiplayerIntegration {
 
     // Turn timer methods
     startTurnTimer() {
+        console.log('startTurnTimer called');
         this.stopTurnTimer(); // Clear any existing timer
         this.turnStartTime = Date.now();
-        
-        // Immediately update the timer display to show full time limit
-        this.updateTurnTimerDisplay(this.turnTimeLimit);
+        console.log('Turn start time set:', this.turnStartTime);
         
         this.turnTimer = setInterval(() => {
             const elapsed = Math.floor((Date.now() - this.turnStartTime) / 1000);
@@ -2806,6 +2563,8 @@ class SimpleMultiplayerIntegration {
             
             this.updateTurnTimerDisplay(remaining);
         }, 1000);
+        
+        console.log(`Turn timer started: ${this.turnTimeLimit} seconds`);
     }
 
     stopTurnTimer() {
@@ -2813,11 +2572,6 @@ class SimpleMultiplayerIntegration {
             clearInterval(this.turnTimer);
             this.turnTimer = null;
         }
-        // Reset paused time tracking
-        this.turnTimeRemaining = null;
-        this.turnTimerPaused = false;
-        // Clear player leave flag when stopping timer
-        this.playerJustLeft = false;
         this.updateTurnTimerDisplay(0);
     }
 
@@ -2829,17 +2583,12 @@ class SimpleMultiplayerIntegration {
             const roundedRemaining = Math.max(0, Math.floor(remaining));
             
             if (this.gamePaused && this.turnTimeRemaining !== null) {
-                // Show paused time with orange background in MM:SS format
-                const pausedMinutes = Math.floor(this.turnTimeRemaining / 60);
-                const pausedSeconds = this.turnTimeRemaining % 60;
-                timerElement.textContent = `PAUSED ${pausedMinutes}:${pausedSeconds.toString().padStart(2, '0')}`;
+                // Show paused time with orange background
+                timerElement.textContent = `PAUSED ${Math.floor(this.turnTimeRemaining)}s`;
                 timerElement.style.color = 'white';
                 timerElement.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
             } else if (roundedRemaining > 0) {
-                // Show time in MM:SS format
-                const minutes = Math.floor(roundedRemaining / 60);
-                const seconds = roundedRemaining % 60;
-                timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                timerElement.textContent = `${roundedRemaining}s`;
                 timerElement.style.color = 'white';
                 if (roundedRemaining <= 10) {
                     // Red background for warning
@@ -2849,10 +2598,13 @@ class SimpleMultiplayerIntegration {
                     timerElement.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
                 }
             } else {
-                timerElement.textContent = '--:--';
+                timerElement.textContent = '--';
                 timerElement.style.color = 'white';
                 timerElement.style.background = 'linear-gradient(135deg, #666, #555)';
             }
+            console.log('Turn timer updated:', roundedRemaining, 'paused:', this.gamePaused);
+        } else {
+            console.log('Turn timer element not found!');
         }
     }
 

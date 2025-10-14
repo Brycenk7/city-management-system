@@ -98,4 +98,3 @@ Add to the `fileExtensions` array in `sync-config.json`:
 ---
 
 **Happy Coding! 🎮**
-

@@ -94,8 +94,16 @@ class CellInteraction {
                 const erasedAttribute = currentCell.attribute;
                 const refundAmounts = this.calculateRefundAmounts(erasedAttribute);
                 
-                // Erase the item
-                this.mapSystem.erasePlayerModifications(row, col);
+                // Special handling for bridge erasure - determine appropriate water type
+                if (erasedAttribute === 'bridge') {
+                    const appropriateWaterType = this.determineAppropriateWaterType(row, col);
+                    this.mapSystem.cells[row][col].attribute = appropriateWaterType;
+                    this.mapSystem.cells[row][col].class = appropriateWaterType;
+                    this.mapSystem.updateCellVisual(row, col);
+                } else {
+                    // Erase the item normally
+                    this.mapSystem.erasePlayerModifications(row, col);
+                }
                 
                 // Send multiplayer update if in multiplayer mode
                 if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
@@ -114,6 +122,15 @@ class CellInteraction {
                 if (this.mapSystem.resourceManagement) {
                     this.mapSystem.resourceManagement.recalculate();
                 }
+                
+                // Force immediate visual update for the DOM element
+                const cellData = this.mapSystem.cells[row][col];
+                cell.className = `cell ${cellData.class}`;
+                cell.dataset.attribute = cellData.attribute;
+                cell.style.backgroundColor = '';
+                cell.style.border = '';
+                cell.removeAttribute('data-inoperable');
+                cell.removeAttribute('data-power-inoperable');
             }
             this.mapSystem.lastPaintedCell = cell;
             this.updateCellInfo();
@@ -132,6 +149,9 @@ class CellInteraction {
             this.showPlacementError(cell, this.mapSystem.selectedAttribute);
             return;
         }
+        
+        // Check resource generation impact before placing
+        this.checkResourceGenerationImpact(row, col, this.mapSystem.selectedAttribute);
         
         // Check resource costs BEFORE placing
         if (this.mapSystem.resourceManagement) {
@@ -265,11 +285,17 @@ class CellInteraction {
         if (this.mapSystem.currentTab === 'player') {
             const currentCell = this.mapSystem.cells[row][col];
             const naturalTerrain = ['forest', 'mountain', 'lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
+            const waterTerrain = ['lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
             const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
             const zoning = ['residential', 'commercial', 'industrial', 'mixed'];
             
             // Check if current cell is natural terrain
-            if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
+            // EXCEPTION: Bridges are allowed on water terrain
+            const isWater = waterTerrain.includes(currentCell.attribute) || waterTerrain.includes(currentCell.class);
+            const isBridgePlacement = attribute === 'bridge';
+            
+            if ((naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) && 
+                !(isWater && isBridgePlacement)) {
                 return false;
             }
             
@@ -317,6 +343,36 @@ class CellInteraction {
         }
     }
     
+    // Helper method to check if a position is adjacent to an operable road
+    isAdjacentToOperableRoad(row, col) {
+        const directions = [
+            { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if (['road', 'bridge'].includes(cell.attribute)) {
+                    // Check if the road is operable (not inoperable)
+                    const domCell = document.querySelector(`[data-row="${checkRow}"][data-col="${checkCol}"]`);
+                    const isInoperable = domCell ? domCell.getAttribute('data-power-inoperable') : null;
+                    
+                    if (!isInoperable) {
+                        return true; // Found an operable road/bridge
+                    }
+                }
+            }
+        }
+        
+        return false; // No operable roads found
+    }
+
     isValidRiverStartPlacement(row, col) {
         // River start must be on the edge of the map
         return (row === 0 || row === this.mapSystem.mapSize.rows - 1 || 
@@ -405,25 +461,59 @@ class CellInteraction {
     }
     
     isValidCommercialPlacement(row, col) {
-        // Commercial must be near roads AND within 5 tiles of power
-        const hasRoadAccess = this.mapSystem.isAdjacentToCommercialRoad(row, col);
+        // Commercial must be near operable roads AND within 5 tiles of power
+        const hasOperableRoadAccess = this.isAdjacentToOperableRoad(row, col);
         const hasPowerAccess = this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
         
-        return hasRoadAccess && hasPowerAccess;
+        return hasOperableRoadAccess && hasPowerAccess;
     }
     
     isValidResidentialPlacement(row, col) {
-        // Residential must be near roads and not too close to industrial
-        return this.mapSystem.isAdjacentToCommercialRoad(row, col) && 
-               !this.mapSystem.isAdjacentToIndustrial(row, col);
+        // Residential must be near operable roads, within 5 tiles of power lines, and not too close to industrial
+        const hasOperableRoadAccess = this.isAdjacentToOperableRoad(row, col);
+        const hasPowerAccess = this.mapSystem.powerLineSystem ? 
+            this.mapSystem.powerLineSystem.isWithinPowerPlantOrPowerLinesRadius(row, col, 5) : 
+            this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
+        const notNearIndustrial = !this.mapSystem.isAdjacentToIndustrial(row, col);
+        
+        return hasOperableRoadAccess && hasPowerAccess && notNearIndustrial;
     }
     
     
     isValidBridgePlacement(row, col) {
         // Bridge must be over water
         const currentCell = this.mapSystem.cells[row][col];
-        return ['water', 'lake', 'ocean', 'river'].includes(currentCell.attribute) || 
-               ['water', 'lake', 'ocean', 'river'].includes(currentCell.class);
+        const isOverWater = ['water', 'lake', 'ocean', 'river'].includes(currentCell.attribute) || 
+                           ['water', 'lake', 'ocean', 'river'].includes(currentCell.class);
+        
+        if (!isOverWater) {
+            return false;
+        }
+        
+        // Bridge must be connected to road or other bridge (check adjacent cells)
+        const adjacentPositions = [
+            {row: row-1, col: col}, {row: row+1, col: col},
+            {row: row, col: col-1}, {row: row, col: col+1}
+        ];
+        
+        for (const pos of adjacentPositions) {
+            if (pos.row >= 0 && pos.row < this.mapSystem.mapSize.rows && 
+                pos.col >= 0 && pos.col < this.mapSystem.mapSize.cols) {
+                const adjacentCell = this.mapSystem.cells[pos.row][pos.col];
+                
+                if (['road', 'bridge'].includes(adjacentCell.attribute)) {
+                    // Get the DOM element to check data attributes
+                    const adjacentDOMCell = document.querySelector(`[data-row="${pos.row}"][data-col="${pos.col}"]`);
+                    const isInoperable = adjacentDOMCell ? adjacentDOMCell.getAttribute('data-power-inoperable') : null;
+                    
+                    if (!isInoperable) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
     }
     
     
@@ -434,8 +524,29 @@ class CellInteraction {
     }
     
     isValidRoadPlacement(row, col) {
-        // Basic roads can be placed anywhere on grassland or existing infrastructure
-        return true; // Basic roads have no special requirements
+        // Check if trying to place road next to an inoperable road
+        const adjacentPositions = [
+            {row: row-1, col: col}, {row: row+1, col: col},
+            {row: row, col: col-1}, {row: row, col: col+1}
+        ];
+        
+        for (const pos of adjacentPositions) {
+            if (pos.row >= 0 && pos.row < this.mapSystem.mapSize.rows && 
+                pos.col >= 0 && pos.col < this.mapSystem.mapSize.cols) {
+                const adjacentCell = this.mapSystem.cells[pos.row][pos.col];
+                if (['road', 'bridge'].includes(adjacentCell.attribute)) {
+                    // Check if adjacent road is inoperable
+                    const adjacentDOMCell = document.querySelector(`[data-row="${pos.row}"][data-col="${pos.col}"]`);
+                    const isInoperable = adjacentDOMCell ? adjacentDOMCell.getAttribute('data-power-inoperable') : null;
+                    
+                    if (isInoperable) {
+                        return false; // Cannot place road next to inoperable road
+                    }
+                }
+            }
+        }
+        
+        return true; // Basic roads can be placed elsewhere
     }
     
     showPlacementError(cell, attribute) {
@@ -449,10 +560,16 @@ class CellInteraction {
             const col = parseInt(cell.dataset.col);
             const currentCell = this.mapSystem.cells[row][col];
             const naturalTerrain = ['forest', 'mountain', 'lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
+            const waterTerrain = ['lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
             
             let errorMessage = '';
             
-            if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
+            // Check if it's natural terrain (with exception for bridges on water)
+            const isNaturalTerrain = naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class);
+            const isWater = waterTerrain.includes(currentCell.attribute) || waterTerrain.includes(currentCell.class);
+            const isBridge = attribute === 'bridge';
+            
+            if (isNaturalTerrain && !(isWater && isBridge)) {
                 errorMessage = `Cannot place ${attribute} on ${currentCell.attribute || currentCell.class} terrain`;
             } else {
                 // Check if trying to replace existing infrastructure
@@ -487,6 +604,17 @@ class CellInteraction {
                 } else {
                     errorMessage = 'Mining outpost must be placed within 1 tile of a mountain';
                 }
+                } else if (attribute === 'bridge') {
+                    errorMessage = 'Bridges must be placed on water and adjacent to operable roads or other bridges';
+                } else if (['road', 'bridge', 'residential', 'commercial'].includes(attribute)) {
+                    // Check if the issue is inoperable roads
+                    const row = parseInt(cell.dataset.row);
+                    const col = parseInt(cell.dataset.col);
+                    if (!this.isAdjacentToOperableRoad(row, col)) {
+                        errorMessage = `Cannot place ${attribute} next to inoperable roads`;
+                    } else {
+                        errorMessage = `Cannot place ${attribute} here`;
+                    }
                 } else {
                     errorMessage = `Cannot place ${attribute} here`;
                 }
@@ -660,5 +788,146 @@ class CellInteraction {
         setTimeout(() => {
             cell.classList.remove('invalid-placement');
         }, 3000);
+    }
+
+    // Resource generation impact checking and notification system
+    checkResourceGenerationImpact(row, col, buildingType) {
+        if (!this.mapSystem.resourceManagement) return;
+
+        const currentResources = { ...this.mapSystem.resourceManagement.resources };
+        const currentGeneration = { ...this.mapSystem.resourceManagement.generationRates };
+        const currentConsumption = { ...this.mapSystem.resourceManagement.consumptionRates };
+
+        // Calculate the impact of placing this building
+        const buildingImpact = this.calculateBuildingResourceImpact(buildingType);
+
+        // Calculate what the new rates would be
+        const newGeneration = {};
+        const newConsumption = {};
+
+        for (const resource of ['power', 'commercialGoods', 'processedMaterials', 'wood', 'ore']) {
+            newGeneration[resource] = (currentGeneration[resource] || 0) + (buildingImpact.generation[resource] || 0);
+            newConsumption[resource] = (currentConsumption[resource] || 0) + (buildingImpact.consumption[resource] || 0);
+        }
+
+        // Check for negative net generation
+        const warnings = [];
+        for (const resource of ['power', 'commercialGoods', 'processedMaterials', 'wood', 'ore']) {
+            const currentNetGeneration = (currentGeneration[resource] || 0) - (currentConsumption[resource] || 0);
+            const newNetGeneration = newGeneration[resource] - newConsumption[resource];
+            
+            // Only show warning if:
+            // 1. The new net generation will be negative, AND
+            // 2. This building is actually affecting this resource (generation or consumption changed)
+            const resourceChanged = (buildingImpact.generation[resource] || 0) !== 0 || 
+                                   (buildingImpact.consumption[resource] || 0) !== 0;
+            
+            if (newNetGeneration < 0 && resourceChanged) {
+                // Format resource name for display
+                let resourceName = resource;
+                if (resource === 'commercialGoods') resourceName = 'Goods';
+                else if (resource === 'processedMaterials') resourceName = 'Materials';
+                else resourceName = resource.charAt(0).toUpperCase() + resource.slice(1);
+                
+                warnings.push({
+                    resource: resource,
+                    amount: Math.abs(newNetGeneration),
+                    message: `⚠️ ${resourceName} production will be negative: -${Math.abs(newNetGeneration).toFixed(1)}/sec`
+                });
+            }
+        }
+
+        // Show warnings if any
+        if (warnings.length > 0) {
+            for (const warning of warnings) {
+                this.showResourceWarning(warning.message);
+            }
+        }
+    }
+
+    calculateBuildingResourceImpact(buildingType) {
+        const impact = {
+            generation: { power: 0, commercialGoods: 0, processedMaterials: 0, wood: 0, ore: 0 },
+            consumption: { power: 0, commercialGoods: 0, processedMaterials: 0, wood: 0, ore: 0 }
+        };
+
+        switch (buildingType) {
+            case 'powerPlant':
+                impact.generation.power = 1.0;
+                break;
+            case 'lumberYard':
+                impact.generation.wood = 2.0;
+                break;
+            case 'miningOutpost':
+                impact.generation.ore = 2.0;
+                break;
+            case 'industrial':
+                impact.consumption.power = 0.5;
+                impact.consumption.wood = 0.3;
+                impact.consumption.ore = 0.3;
+                impact.generation.processedMaterials = 1.0;
+                break;
+            case 'commercial':
+                impact.consumption.power = 0.5;
+                impact.consumption.processedMaterials = 1.0;
+                impact.generation.commercialGoods = 0.5;
+                break;
+            case 'residential':
+                impact.consumption.power = 0.5;
+                impact.consumption.commercialGoods = 1.0;
+                break;
+        }
+
+        return impact;
+    }
+
+    showResourceWarning(message) {
+        // Initialize notification manager if not exists
+        if (!window.notificationManager) {
+            window.notificationManager = new NotificationManager();
+        }
+        
+        // Extract resource type from message
+        let resourceType = 'unknown';
+        if (message.includes('Power')) resourceType = 'power';
+        else if (message.includes('Goods')) resourceType = 'commercialGoods';
+        else if (message.includes('Materials')) resourceType = 'processedMaterials';
+        else if (message.includes('Wood')) resourceType = 'wood';
+        else if (message.includes('Ore')) resourceType = 'ore';
+        
+        // Add or update notification
+        window.notificationManager.addOrUpdateNotification(resourceType, message);
+    }
+
+    // Intelligent water type detection for bridge erasure
+    determineAppropriateWaterType(row, col) {
+        const adjacentPositions = [
+            {row: row-1, col: col}, {row: row+1, col: col},
+            {row: row, col: col-1}, {row: row, col: col+1}
+        ];
+        
+        const waterTypes = {};
+        
+        // Count surrounding water types
+        for (const pos of adjacentPositions) {
+            if (pos.row >= 0 && pos.row < this.mapSystem.mapSize.rows && 
+                pos.col >= 0 && pos.col < this.mapSystem.mapSize.cols) {
+                const adjacentCell = this.mapSystem.cells[pos.row][pos.col];
+                const waterType = adjacentCell.attribute || adjacentCell.class;
+                
+                if (['water', 'lake', 'ocean', 'river'].includes(waterType)) {
+                    waterTypes[waterType] = (waterTypes[waterType] || 0) + 1;
+                }
+            }
+        }
+        
+        // Determine the most appropriate water type
+        if (waterTypes.ocean > 0) return 'ocean';
+        if (waterTypes.lake > 0) return 'lake';
+        if (waterTypes.river > 0) return 'river';
+        if (waterTypes.water > 0) return 'water';
+        
+        // Default to water if no surrounding water detected
+        return 'water';
     }
 }

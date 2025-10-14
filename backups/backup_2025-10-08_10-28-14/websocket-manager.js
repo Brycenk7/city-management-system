@@ -38,13 +38,10 @@ class WebSocketManager {
                     resolve();
                 });
 
-                this.socket.on('disconnect', (reason) => {
-                    console.log('Disconnected from server. Reason:', reason);
+                this.socket.on('disconnect', () => {
+                    console.log('Disconnected from server');
                     this.isConnected = false;
                     this.stopHeartbeat();
-                    
-                    // Emit a custom event for multiplayer integration to handle
-                    this.emit('websocket_disconnected', { reason: reason });
                 });
 
                 this.socket.on('connect_error', (error) => {
