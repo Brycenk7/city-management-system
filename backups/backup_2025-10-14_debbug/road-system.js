@@ -76,9 +76,8 @@ class RoadSystem {
                 if (cell.attribute === 'road' || cell.class === 'road') {
                     // Check if this road is disconnected (inoperable)
                     const cellElement = document.querySelector(`[data-row="${checkRow}"][data-col="${checkCol}"]`);
-                    if (cellElement && (cellElement.classList.contains('disconnected-road') || 
-                                       cellElement.getAttribute('data-power-inoperable') === 'true')) {
-                        return false; // Cannot connect to disconnected/inoperable roads
+                    if (cellElement && cellElement.classList.contains('disconnected-road')) {
+                        return false; // Cannot connect to disconnected roads
                     }
                     return true;
                 }

@@ -77,8 +77,7 @@ const ACTION_TYPES = {
   REMOVE: 'remove',
   TURN_ADVANCE: 'turn_advance',
   TRADE: 'trade',
-  CLAIM_TERRITORY: 'claim_territory',
-  ROAD_OPERABILITY_UPDATE: 'road_operability_update'
+  CLAIM_TERRITORY: 'claim_territory'
 };
 
 const ACTION_PRIORITIES = {
@@ -86,8 +85,7 @@ const ACTION_PRIORITIES = {
   [ACTION_TYPES.REMOVE]: 2,
   [ACTION_TYPES.TURN_ADVANCE]: 3,
   [ACTION_TYPES.TRADE]: 4,
-  [ACTION_TYPES.CLAIM_TERRITORY]: 5,
-  [ACTION_TYPES.ROAD_OPERABILITY_UPDATE]: 6
+  [ACTION_TYPES.CLAIM_TERRITORY]: 5
 };
 
 // Victory conditions
@@ -724,11 +722,9 @@ function processActionQueue(roomCode) {
 }
 
 function validateAction(action, game) {
-  // Check if it's the player's turn (skip for automatic actions like road operability updates)
+  // Check if it's the player's turn
   const currentPlayerId = game.gameState.turnOrder[game.gameState.currentTurn];
-  if (action.playerId !== currentPlayerId && 
-      action.type !== ACTION_TYPES.TURN_ADVANCE && 
-      action.type !== ACTION_TYPES.ROAD_OPERABILITY_UPDATE) {
+  if (action.playerId !== currentPlayerId && action.type !== ACTION_TYPES.TURN_ADVANCE) {
     console.log(`❌ Action rejected: Not player's turn. Current: ${currentPlayerId}, Action: ${action.playerId}`);
     return false;
   }
@@ -791,26 +787,16 @@ function executeAction(action, game, roomCode) {
     }
     
     // Broadcast action to all players in the room
-    const broadcastData = {
+    io.to(`game_${roomCode}`).emit('action_executed', {
       actionId: action.actionId,
       type: action.type,
       playerId: action.playerId,
+      row: action.row,
+      col: action.col,
+      attribute: action.attribute,
+      className: action.className,
       timestamp: Date.now()
-    };
-    
-    // Add specific data based on action type
-    if (action.type === ACTION_TYPES.ROAD_OPERABILITY_UPDATE) {
-      broadcastData.action = action.type;
-      broadcastData.roadPositions = action.roadPositions;
-      broadcastData.isOperable = action.isOperable;
-    } else {
-      broadcastData.row = action.row;
-      broadcastData.col = action.col;
-      broadcastData.attribute = action.attribute;
-      broadcastData.className = action.className;
-    }
-    
-    io.to(`game_${roomCode}`).emit('action_executed', broadcastData);
+    });
   }
 }
 
@@ -1074,19 +1060,12 @@ io.on('connection', (socket) => {
       const action = {
         type: data.action,
         playerId: socket.id,
+        row: data.row,
+        col: data.col,
+        attribute: data.attribute,
+        className: data.className,
         timestamp: data.timestamp
       };
-      
-      // Add specific fields based on action type
-      if (data.action === 'road_operability_update') {
-        action.roadPositions = data.roadPositions;
-        action.isOperable = data.isOperable;
-      } else {
-        action.row = data.row;
-        action.col = data.col;
-        action.attribute = data.attribute;
-        action.className = data.className;
-      }
       
       addActionToQueue(roomCode, action);
     } else {

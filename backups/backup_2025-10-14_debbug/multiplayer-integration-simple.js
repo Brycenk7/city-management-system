@@ -84,18 +84,10 @@ class SimpleMultiplayerIntegration {
         });
 
         this.wsManager.on('game_joined', (data) => {
-            console.log('🎮 game_joined event received:', data);
             this.currentRoom = data.roomCode;
             this.playerId = data.playerId;
             this.playerName = data.game.players.find(p => p.id === data.playerId)?.username || 'Player';
             this.isInMultiplayer = true;
-            
-            console.log('🎮 Player info set:', {
-                currentRoom: this.currentRoom,
-                playerId: this.playerId,
-                playerName: this.playerName,
-                isInMultiplayer: this.isInMultiplayer
-            });
             
             // Check if game is already started - use multiple indicators
             const gameState = data.game.gameState;
@@ -107,19 +99,11 @@ class SimpleMultiplayerIntegration {
             this.gamePaused = gameState.gamePaused || false;
             this.isHost = gameState.isHost || false;
             
-            console.log('🎮 Game state set:', {
-                gameStarted: this.gameStarted,
-                gamePaused: this.gamePaused,
-                isHost: this.isHost
-            });
+            console.log('Game joined successfully');
             
             this.turnOrder = data.game.gameState.turnOrder;
             this.currentTurn = data.game.gameState.currentTurn;
-            
-            console.log('🎮 About to update players list with:', data.game.players);
             this.updatePlayersList(data.game.players);
-            
-            console.log('🎮 About to update UI');
             this.updateUI();
             this.updateRoomDependentElements();
             
@@ -1003,22 +987,12 @@ class SimpleMultiplayerIntegration {
     }
 
     updatePlayersList(players) {
-        console.log('🎮 updatePlayersList called with:', players);
-        console.log('🎮 Players array length:', players ? players.length : 'undefined');
-        
+        console.log('updatePlayersList called with:', players);
         this.players.clear();
-        
-        if (players && Array.isArray(players)) {
-            players.forEach(player => {
-                console.log('🎮 Adding player to map:', player.id, player.username);
-                this.players.set(player.id, player);
-            });
-        } else {
-            console.error('🎮 Invalid players data:', players);
-        }
-        
-        console.log('🎮 Players map updated, size:', this.players.size);
-        console.log('🎮 Players in map:', Array.from(this.players.keys()));
+        players.forEach(player => {
+            this.players.set(player.id, player);
+        });
+        console.log('Players map updated, size:', this.players.size);
         this.updatePlayersDisplay();
     }
 
@@ -1085,12 +1059,8 @@ class SimpleMultiplayerIntegration {
             });
         }
 
-        console.log('Updating connection status. isConnected:', this.wsManager.isConnected, 'isInMultiplayer:', this.isInMultiplayer);
-        
-        // Consider connected if WebSocket is connected OR if we're in a multiplayer game
-        const isEffectivelyConnected = this.wsManager.isConnected || this.isInMultiplayer;
-        
-        if (isEffectivelyConnected) {
+        console.log('Updating connection status. isConnected:', this.wsManager.isConnected);
+        if (this.wsManager.isConnected) {
             if (statusText) {
                 statusText.textContent = 'Connected';
                 statusText.style.color = '#28a745';
@@ -1099,7 +1069,7 @@ class SimpleMultiplayerIntegration {
                 statusTextMain.textContent = 'Connected';
                 statusTextMain.style.color = '#28a745';
             }
-            console.log('Status updated to: Connected (WebSocket:', this.wsManager.isConnected, 'Multiplayer:', this.isInMultiplayer, ')');
+            console.log('Status updated to: Connected');
         } else {
             if (statusText) {
                 statusText.textContent = 'Disconnected';
@@ -1199,23 +1169,14 @@ class SimpleMultiplayerIntegration {
 
     updatePlayersMainDisplay() {
         const playersMainList = document.getElementById('players-main-list');
-        console.log('🎮 updatePlayersMainDisplay called, playersMainList found:', !!playersMainList);
-        console.log('🎮 this.players.size:', this.players.size);
-        
-        if (!playersMainList) {
-            console.error('🎮 players-main-list element not found!');
-            return;
-        }
+        if (!playersMainList) return;
 
         playersMainList.innerHTML = '';
         
         if (this.players.size === 0) {
-            console.log('🎮 No players in map, showing "No players connected"');
             playersMainList.innerHTML = '<div class="no-players">No players connected</div>';
             return;
         }
-        
-        console.log('🎮 Displaying', this.players.size, 'players');
 
         this.players.forEach((player, playerId) => {
             const playerDiv = document.createElement('div');
@@ -1865,70 +1826,6 @@ class SimpleMultiplayerIntegration {
         this.wsManager.send('game_action', actionData);
     }
 
-    // Send road operability update to other players
-    sendRoadOperabilityUpdate(roadPositions, isOperable) {
-        if (!this.isInMultiplayer) {
-            console.log('Not in multiplayer mode, skipping road operability update');
-            return;
-        }
-        
-        console.log(`Sending road operability update: ${roadPositions.length} roads, operable: ${isOperable}`);
-        
-        const updateData = {
-            action: 'road_operability_update',
-            roadPositions: roadPositions,
-            isOperable: isOperable,
-            playerId: this.playerId,
-            timestamp: Date.now()
-        };
-        
-        this.wsManager.send('game_action', updateData);
-    }
-
-    // Apply road operability update from other players
-    applyRoadOperabilityUpdate(roadPositions, isOperable, playerId) {
-        console.log(`Applying road operability update: ${roadPositions.length} roads from player ${playerId}, operable: ${isOperable}`);
-        
-        for (const position of roadPositions) {
-            const { row, col } = position;
-            
-            // Only apply to roads owned by the specified player
-            const cell = this.mapSystem.cells[row][col];
-            if (cell && (cell.attribute === 'road' || cell.attribute === 'bridge' || 
-                        cell.class === 'road' || cell.class === 'bridge')) {
-                
-                // Check if this road is owned by the player sending the update
-                if (!cell.playerId || cell.playerId === playerId) {
-                    const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    if (cellElement) {
-                        if (isOperable) {
-                            // Clear inoperable markings
-                            cellElement.removeAttribute('data-power-inoperable');
-                            cellElement.classList.remove('disconnected-road');
-                            // Remove custom styling
-                            cellElement.style.removeProperty('background-color');
-                            cellElement.style.removeProperty('border');
-                            console.log(`Road at (${row},${col}) marked as operable by player ${playerId}`);
-                        } else {
-                            // Mark as inoperable
-                            cellElement.setAttribute('data-power-inoperable', 'true');
-                            cellElement.classList.add('disconnected-road');
-                            // Apply visual styling for inoperable roads
-                            if (cell.attribute === 'road' || cell.class === 'road') {
-                                cellElement.style.setProperty('background-color', '#ff6b6b', 'important');
-                                cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
-                            } else if (cell.attribute === 'bridge' || cell.class === 'bridge') {
-                                cellElement.style.setProperty('background-color', '#ff8c8c', 'important');
-                                cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
-                            }
-                            console.log(`Road at (${row},${col}) marked as inoperable by player ${playerId}`);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     updatePendingActionsDisplay() {
         const pendingDiv = document.getElementById('pending-actions');
         const pendingCount = document.getElementById('pending-count');
@@ -2030,18 +1927,6 @@ class SimpleMultiplayerIntegration {
             }
             
             console.log(`Successfully removed building at (${data.row}, ${data.col})`);
-        } else if (data.action === 'road_operability_update') {
-            console.log(`Processing road operability update from player ${data.playerId}`);
-            console.log(`Road positions: ${data.roadPositions.length}, Operable: ${data.isOperable}`);
-            
-            // Don't process our own road operability updates (we already handled them locally)
-            if (data.playerId === this.playerId) {
-                console.log('Skipping our own road operability update');
-                return;
-            }
-            
-            // Apply road operability changes from other players
-            this.applyRoadOperabilityUpdate(data.roadPositions, data.isOperable, data.playerId);
         }
     }
 

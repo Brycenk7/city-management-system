@@ -286,18 +286,13 @@ class ResourceManagement {
                 for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
                     const cell = this.mapSystem.cells[row][col];
                     
-                    // Only consider zones owned by the current player
-                    const isOwnedByCurrentPlayer = !this.currentPlayerId || !cell.playerId || cell.playerId === this.currentPlayerId;
-                    
-                    if (isOwnedByCurrentPlayer) {
-                        // Check if this zone needs power (industrial, residential, commercial)
-                        if (cell.attribute === 'industrial' || cell.class === 'industrial' ||
-                            cell.attribute === 'residential' || cell.class === 'residential' ||
-                            cell.attribute === 'commercial' || cell.class === 'commercial') {
-                            console.log(`${cell.attribute} zone at ${row},${col} has no power - marking connected roads as inoperable`);
-                            // Mark all roads connected to this zone as inoperable
-                            this.markConnectedRoadsAsInoperable(row, col);
-                        }
+                    // Check if this zone needs power (industrial, residential, commercial)
+                    if (cell.attribute === 'industrial' || cell.class === 'industrial' ||
+                        cell.attribute === 'residential' || cell.class === 'residential' ||
+                        cell.attribute === 'commercial' || cell.class === 'commercial') {
+                        console.log(`${cell.attribute} zone at ${row},${col} has no power - marking connected roads as inoperable`);
+                        // Mark all roads connected to this zone as inoperable
+                        this.markConnectedRoadsAsInoperable(row, col);
                     }
                 }
             }
@@ -312,44 +307,18 @@ class ResourceManagement {
         if (!this.mapSystem.roadSystem) return;
         
         console.log('Clearing power-inoperable road markings...');
-        const clearedRoads = []; // Track roads that were cleared
-        
         for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
             for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
                 const cell = this.mapSystem.cells[row][col];
                 if (cell.attribute === 'road' || cell.class === 'road' ||
                     cell.attribute === 'bridge' || cell.class === 'bridge') {
-                    
-                    // Only clear markings from roads owned by the current player
-                    const isOwnedByCurrentPlayer = !this.currentPlayerId || !cell.playerId || cell.playerId === this.currentPlayerId;
-                    
-                    if (isOwnedByCurrentPlayer) {
-                        const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                        if (cellElement && cellElement.getAttribute('data-power-inoperable') === 'true') {
-                            cellElement.removeAttribute('data-power-inoperable');
-                            cellElement.classList.remove('disconnected-road');
-                            // Remove custom styling
-                            cellElement.style.removeProperty('background-color');
-                            cellElement.style.removeProperty('border');
-                            console.log(`Cleared power-inoperable marking from road at ${row},${col}`);
-                            
-                            // Track this road for multiplayer sync
-                            clearedRoads.push({row: row, col: col});
-                        }
+                    const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    if (cellElement && cellElement.getAttribute('data-power-inoperable') === 'true') {
+                        cellElement.removeAttribute('data-power-inoperable');
+                        console.log(`Cleared power-inoperable marking from road at ${row},${col}`);
                     }
                 }
             }
-        }
-        
-        // Send multiplayer update if roads were cleared
-        if (clearedRoads.length > 0 && window.multiplayerIntegration) {
-            console.log('🛣️ Sending road operability update to multiplayer:', clearedRoads.length, 'roads marked as operable');
-            window.multiplayerIntegration.sendRoadOperabilityUpdate(clearedRoads, true);
-        } else {
-            console.log('🛣️ Not sending road operability update (clear):', {
-                clearedRoadsLength: clearedRoads.length,
-                hasMultiplayerIntegration: !!window.multiplayerIntegration
-            });
         }
         
         // Now let the road system update connections normally
@@ -368,8 +337,6 @@ class ResourceManagement {
             { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
             { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
         ];
-        
-        const markedRoads = []; // Track roads that were marked as inoperable
         
         while (queue.length > 0) {
             const current = queue.shift();
@@ -390,45 +357,26 @@ class ResourceManagement {
                     if (cell.attribute === 'road' || cell.attribute === 'bridge' ||
                         cell.class === 'road' || cell.class === 'bridge') {
                         
-                        // Only mark roads owned by the current player as inoperable
-                        const isOwnedByCurrentPlayer = !this.currentPlayerId || !cell.playerId || cell.playerId === this.currentPlayerId;
-                        
-                        if (isOwnedByCurrentPlayer) {
-                            // Mark this road as inoperable
-                            const cellElement = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`);
-                            if (cellElement) {
-                                cellElement.classList.add('disconnected-road');
-                                cellElement.setAttribute('data-power-inoperable', 'true');
-                                // Set visual styling for inoperable roads
-                                if (cell.attribute === 'road' || cell.class === 'road') {
-                                    cellElement.style.setProperty('background-color', '#ff6b6b', 'important');
-                                    cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
-                                } else if (cell.attribute === 'bridge' || cell.class === 'bridge') {
-                                    cellElement.style.setProperty('background-color', '#ff8c8c', 'important');
-                                    cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
-                                }
-                                
-                                // Track this road for multiplayer sync
-                                markedRoads.push({row: newRow, col: newCol});
+                        // Mark this road as inoperable
+                        const cellElement = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`);
+                        if (cellElement) {
+                            cellElement.classList.add('disconnected-road');
+                            cellElement.setAttribute('data-power-inoperable', 'true');
+                            // Set visual styling for inoperable roads
+                            if (cell.attribute === 'road' || cell.class === 'road') {
+                                cellElement.style.setProperty('background-color', '#ff6b6b', 'important');
+                                cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
+                            } else if (cell.attribute === 'bridge' || cell.class === 'bridge') {
+                                cellElement.style.setProperty('background-color', '#ff8c8c', 'important');
+                                cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
                             }
                         }
                         
-                        // Add to queue to continue flood fill (regardless of ownership)
+                        // Add to queue to continue flood fill
                         queue.push({row: newRow, col: newCol});
                     }
                 }
             }
-        }
-        
-        // Send multiplayer update if roads were marked as inoperable
-        if (markedRoads.length > 0 && window.multiplayerIntegration) {
-            console.log('🛣️ Sending road operability update to multiplayer:', markedRoads.length, 'roads marked as inoperable');
-            window.multiplayerIntegration.sendRoadOperabilityUpdate(markedRoads, false);
-        } else {
-            console.log('🛣️ Not sending road operability update:', {
-                markedRoadsLength: markedRoads.length,
-                hasMultiplayerIntegration: !!window.multiplayerIntegration
-            });
         }
     }
     

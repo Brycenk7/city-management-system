@@ -1,0 +1,2396 @@
+/* Modern City Builder Pro CSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    height: 100vh;
+    overflow: hidden;
+    color: #333;
+}
+
+/* App Container */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #f8f9fa;
+}
+
+/* Header */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 12px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.header-left h1 {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.subtitle {
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9rem;
+    font-weight: 400;
+    margin-left: 10px;
+}
+
+.tab-container {
+    display: flex;
+    gap: 15px;
+}
+
+.tab {
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    opacity: 0.6;
+}
+
+.tab.active {
+    opacity: 1;
+    background: rgba(255,255,255,0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.tab:hover {
+    opacity: 0.8;
+    background: rgba(255,255,255,0.1);
+}
+
+.tab h1 {
+    color: white;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.tab .subtitle {
+    color: rgba(255,255,255,0.9);
+    font-size: 0.8rem;
+    font-weight: 400;
+    margin-left: 0;
+    margin-top: 2px;
+    display: block;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.map-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+.control-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.control-btn.primary {
+    background: #007bff;
+    color: white;
+}
+
+.control-btn.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.control-btn.success {
+    background: #28a745;
+    color: white;
+}
+
+.control-btn.danger {
+    background: #dc3545;
+    color: white;
+}
+
+/* City Player Pro Control Panel */
+.player-control-panel {
+    width: 300px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    color: white;
+    overflow-y: auto;
+    max-height: calc(100vh - 40px);
+    min-height: 600px;
+}
+
+/* Custom scrollbar for player control panel */
+.player-control-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.player-control-panel::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.player-control-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.player-control-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Version Display */
+.version-display {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: monospace;
+    z-index: 1000;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.player-section {
+    margin-bottom: 25px;
+}
+
+.player-section h4 {
+    margin: 0 0 15px 0;
+    color: #ecf0f1;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+}
+
+.player-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* Specific styling for Building Rules section buttons */
+.building-rules-section {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.rules-controls {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.rules-controls .rules-btn,
+.rules-controls .tutorial-btn {
+    width: 100% !important;
+    margin: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.player-btn-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.cost-display {
+    font-size: 0.7rem;
+    color: #2c3e50;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-align: center;
+    min-width: 60px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.player-btn-container.insufficient-resources .cost-display {
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.player-btn-container.insufficient-resources .player-btn {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Infrastructure section with 8 buttons - 2x4 grid */
+.player-section:nth-of-type(2) .player-controls {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr 1fr;
+}
+
+.player-btn {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.player-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    background: linear-gradient(135deg, #5dade2 0%, #3498db 100%);
+}
+
+.player-btn.active {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
+.player-btn.active:hover {
+    background: linear-gradient(135deg, #ec7063 0%, #e74c3c 100%);
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.5);
+}
+
+/* Building-specific button colors to match tile colors */
+.player-btn[data-attribute="residential"] {
+    background: linear-gradient(135deg, #D0021B 0%, #B71C1C 100%);
+    box-shadow: 0 4px 15px rgba(208, 2, 27, 0.3);
+}
+
+.player-btn[data-attribute="residential"]:hover {
+    background: linear-gradient(135deg, #E53935 0%, #D0021B 100%);
+    box-shadow: 0 6px 20px rgba(208, 2, 27, 0.4);
+}
+
+.player-btn[data-attribute="commercial"] {
+    background: linear-gradient(135deg, #9013FE 0%, #7B1FA2 100%);
+    box-shadow: 0 4px 15px rgba(144, 19, 254, 0.3);
+}
+
+.player-btn[data-attribute="commercial"]:hover {
+    background: linear-gradient(135deg, #AB47BC 0%, #9013FE 100%);
+    box-shadow: 0 6px 20px rgba(144, 19, 254, 0.4);
+}
+
+.player-btn[data-attribute="industrial"] {
+    background: linear-gradient(135deg, #808080 0%, #616161 100%);
+    box-shadow: 0 4px 15px rgba(128, 128, 128, 0.3);
+}
+
+.player-btn[data-attribute="industrial"]:hover {
+    background: linear-gradient(135deg, #9E9E9E 0%, #808080 100%);
+    box-shadow: 0 6px 20px rgba(128, 128, 128, 0.4);
+}
+
+.player-btn[data-attribute="mixed"] {
+    background: linear-gradient(135deg, #FF6B6B 0%, #E53E3E 100%);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.player-btn[data-attribute="mixed"]:hover {
+    background: linear-gradient(135deg, #FF8A80 0%, #FF6B6B 100%);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+.player-btn[data-attribute="lumberYard"] {
+    background: linear-gradient(135deg, #8B4513 0%, #6D4C41 100%);
+    box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+}
+
+.player-btn[data-attribute="lumberYard"]:hover {
+    background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
+    box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+}
+
+.player-btn[data-attribute="miningOutpost"] {
+    background: linear-gradient(135deg, #2C2C2C 0%, #1A1A1A 100%);
+    box-shadow: 0 4px 15px rgba(44, 44, 44, 0.3);
+}
+
+.player-btn[data-attribute="miningOutpost"]:hover {
+    background: linear-gradient(135deg, #424242 0%, #2C2C2C 100%);
+    box-shadow: 0 6px 20px rgba(44, 44, 44, 0.4);
+}
+
+.player-btn[data-attribute="powerPlant"] {
+    background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    color: #333;
+}
+
+.player-btn[data-attribute="powerPlant"]:hover {
+    background: linear-gradient(135deg, #FFE082 0%, #FFD700 100%);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+}
+
+.player-btn[data-attribute="powerLines"] {
+    background: linear-gradient(135deg, #FFFF99 0%, #FFF176 100%);
+    box-shadow: 0 4px 15px rgba(255, 255, 153, 0.3);
+    color: #333;
+}
+
+.player-btn[data-attribute="powerLines"]:hover {
+    background: linear-gradient(135deg, #FFFFCC 0%, #FFFF99 100%);
+    box-shadow: 0 6px 20px rgba(255, 255, 153, 0.4);
+}
+
+.player-btn[data-attribute="road"] {
+    background: linear-gradient(135deg, #4A4A4A 0%, #3A3A3A 100%);
+    box-shadow: 0 4px 15px rgba(74, 74, 74, 0.3);
+}
+
+.player-btn[data-attribute="road"]:hover {
+    background: linear-gradient(135deg, #5A5A5A 0%, #4A4A4A 100%);
+    box-shadow: 0 6px 20px rgba(74, 74, 74, 0.4);
+}
+
+.player-btn[data-attribute="bridge"] {
+    background: linear-gradient(135deg, #708090 0%, #5A6B7D 100%);
+    box-shadow: 0 4px 15px rgba(112, 128, 144, 0.3);
+}
+
+.player-btn[data-attribute="bridge"]:hover {
+    background: linear-gradient(135deg, #8A9BA8 0%, #708090 100%);
+    box-shadow: 0 6px 20px rgba(112, 128, 144, 0.4);
+}
+
+.player-btn.erase-btn {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    border: 2px solid #e67e22;
+}
+
+.player-btn.erase-btn:hover {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    box-shadow: 0 6px 20px rgba(230, 126, 34, 0.5);
+}
+
+.player-btn.erase-btn.active {
+    background: linear-gradient(135deg, #d35400 0%, #c0392b 100%);
+    box-shadow: 0 6px 20px rgba(211, 84, 0, 0.7);
+}
+
+.player-stats {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #333;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Override for General Info tab */
+#general-info-tab .player-stats {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    box-shadow: none;
+    padding: 8px;
+    font-size: 0.8rem;
+}
+
+.player-stats .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    padding: 3px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.player-stats .stat-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.player-stats .stat-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.85rem;
+}
+
+.player-stats .stat-value {
+    font-weight: 700;
+    color: #007bff;
+    font-size: 0.9rem;
+    background: rgba(0, 123, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 123, 255, 0.2);
+}
+
+/* Override for General Info tab */
+#general-info-tab .player-stats .stat-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 2px;
+    padding: 2px 0;
+}
+
+#general-info-tab .player-stats .stat-label {
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    font-size: 0.75rem;
+}
+
+#general-info-tab .player-stats .stat-value {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    font-size: 0.75rem;
+    padding: 1px 6px;
+}
+
+.resource-display {
+    background: #28a745;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Override for General Info tab */
+#general-info-tab .resource-display {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 8px;
+    font-size: 0.8rem;
+}
+
+.resource-item {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2px;
+    padding: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    font-size: 0.7rem;
+}
+
+/* Override for General Info tab */
+#general-info-tab .resource-item {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    margin-bottom: 1px;
+    padding: 2px;
+    font-size: 0.65rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.resource-item:last-child {
+    margin-bottom: 0;
+}
+
+
+.resource-icon {
+    font-size: 1.2rem;
+    margin-right: 8px;
+}
+
+.resource-name {
+    font-weight: 600;
+}
+
+.resource-amount {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #ffd700;
+}
+
+.resource-rate {
+    font-size: 0.65rem;
+    opacity: 0.8;
+    color: #90EE90;
+    text-align: center;
+    padding: 1px 3px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+/* City Player Pro map sizing - exact same as City Builder Pro */
+[data-tab="player"] .map-grid {
+    width: min(100%, 100%) !important;
+    height: min(100%, 100%) !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    aspect-ratio: 1 !important;
+    object-fit: contain !important;
+    margin: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+}
+
+/* Player mode cell styling - efficient CSS-based approach */
+.player-mode .cell {
+    border: none !important;
+    border-radius: 0px !important;
+    display: block !important;
+}
+
+
+.viewer-control-panel {
+    width: 280px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    color: white;
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+
+.viewer-section {
+    margin-bottom: 20px;
+}
+
+.viewer-section h4 {
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.viewer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.viewer-btn {
+    padding: 12px 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.viewer-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+    transform: translateY(-2px);
+}
+
+.viewer-btn.active {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.6);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.viewer-stats {
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.viewer-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.viewer-stat-item:last-child {
+    border-bottom: none;
+}
+
+.viewer-stat-label {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.8);
+}
+
+.viewer-stat-value {
+    font-weight: 700;
+    color: white;
+    font-size: 1.1rem;
+}
+
+/* Testing Mode - Wave Pattern Tiles */
+.testing-ocean {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Preserve different water types in testing mode */
+.testing-ocean.water.ocean {
+    background-color: #1B4F72 !important;
+}
+
+.testing-ocean.water.lake {
+    background-color: #2E86AB !important;
+}
+
+.testing-ocean.water.river {
+    background-color: #5DADE2 !important;
+}
+
+.testing-ocean.water:not(.ocean):not(.lake):not(.river) {
+    background-color: #4A90E2 !important;
+}
+
+/* Mountain styling for City Viewer Pro - match City Builder Pro */
+.cell.viewer-mountain {
+    background-color: #D3D3D3 !important;
+}
+
+
+.wave-tile {
+    background: white !important;
+    animation: wavePulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+@keyframes wavePulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.15);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+    }
+}
+
+.control-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Main Content */
+.main-content {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 70px);
+    overflow: hidden;
+}
+
+/* Left Sidebar - Tools */
+.tools-panel {
+    width: 250px;
+    background: white;
+    border-right: 1px solid #e9ecef;
+    overflow: visible;
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin: 15px;
+}
+
+.panel-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 16px;
+    margin: 0;
+    border-radius: 12px 12px 0 0;
+}
+
+.panel-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.tool-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.tool-section h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tool-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.tool-btn {
+    padding: 8px 6px;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-weight: 600;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    min-height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.tool-btn.active {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+    border: 2px solid #667eea;
+}
+
+/* Map Area */
+.map-area {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    background: #ffffff;
+    padding: 15px;
+    overflow: hidden;
+    min-height: 0; /* Allow flex item to shrink */
+    gap: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.map-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    padding: 15px;
+    overflow: hidden; /* Prevent scrolling */
+    min-height: 0; /* Allow flex item to shrink */
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.map-grid {
+    display: grid;
+    grid-template-columns: repeat(60, 1fr);
+    grid-template-rows: repeat(60, 1fr);
+    gap: 0;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    width: min(100%, 100%);
+    height: min(100%, 100%);
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 1; /* Maintain square aspect ratio */
+    object-fit: contain; /* Ensure content fits within bounds */
+    margin: auto; /* Center the grid */
+    min-width: 0;
+    min-height: 0;
+}
+
+.cell {
+    width: 100%;
+    height: 100%;
+    background-color: #f8f9fa;
+    border: 0.5px solid rgba(0,0,0,0.12);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    user-select: none;
+    min-width: 0;
+    min-height: 0;
+}
+
+.cell:hover {
+    transform: scale(1.2);
+    z-index: 10;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+}
+
+.cell.invalid-placement {
+    background-color: #ff6b6b !important;
+    box-shadow: inset 0 0 0 2px #ff0000 !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+.tool-panel {
+    width: 280px;
+    max-width: 280px;
+    background: rgba(248, 249, 250, 0.8);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    height: calc(100vh - 100px); /* Constrain height to prevent clipping */
+    max-height: calc(100vh - 100px); /* Maximum height */
+    overflow-y: auto; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal scroll */
+    display: none; /* Hidden by default */
+}
+
+/* Show tool panel only in City Player Pro */
+[data-tab="player"] .tool-panel {
+    display: block;
+}
+
+.tool-section {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.tool-section:last-child {
+    margin-bottom: 0;
+}
+
+.tool-section h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.tool-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tool-btn {
+    padding: 6px 8px;
+    border: none;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    color: #333;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.tool-btn:hover {
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tool-btn.active {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+    color: white !important;
+    border-color: #1e7e34 !important;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
+}
+
+/* Ensure deselected tool buttons don't have active styling */
+.tool-btn:not(.active) {
+    background: linear-gradient(135deg, #e9ecef, #dee2e6) !important;
+    color: #495057 !important;
+    border-color: #ced4da !important;
+    box-shadow: none !important;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+@keyframes floatUp {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -150%) scale(1.2);
+    }
+}
+
+/* Right Sidebar - Info */
+.info-panel {
+    width: 300px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    overflow-y: visible;
+    padding: 0;
+    margin: 15px;
+    height: fit-content;
+    max-height: calc(100vh - 120px);
+}
+
+.info-section {
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-section h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ecf0f1;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cell-info {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 3px solid #3498db;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: #ecf0f1;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.stat-item {
+    background: rgba(52, 152, 219, 0.2);
+    padding: 8px;
+    border-radius: 6px;
+    text-align: center;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+    color: #ecf0f1;
+}
+
+.stat-item .count {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: white;
+    display: block;
+}
+
+.stat-item .label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 2px;
+    display: block;
+}
+
+.instructions {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #6c757d;
+}
+
+.instructions p {
+    margin-bottom: 6px;
+}
+
+/* Terrain Colors */
+.cell.water { background-color: #4A90E2; }
+.cell.water.lake { background-color: #2E86AB; }
+.cell.water.ocean { background-color: #1B4F72; }
+.cell.water.river { background-color: #5DADE2; }
+.cell.riverStart { background-color: #85C1E9; }
+.cell.riverEnd { background-color: #AED6F1; }
+.cell.grassland { background-color: #7ED321; }
+.cell.forest { background-color: #417505; }
+.cell.mountain { background-color: #D3D3D3; }
+.cell.desert { background-color: #F5A623; }
+
+/* City Building Colors */
+.cell.residential { background-color: #D0021B; }
+.cell.commercial { background-color: #9013FE; }
+.cell.powerPlant { background-color: #FFD700; }
+.cell.industrial { background-color: #808080; }
+.cell.powerLines { background-color: #FFFF99; }
+.cell.lumberYard { background-color: #8B4513; }
+.cell.miningOutpost { background-color: #2C2C2C; }
+.cell.road { background-color: #4A4A4A; }
+.cell.bridge { background-color: #708090; }
+.cell.mixed { background-color: #FF6B6B; }
+.cell.road.woodSupplyLines { background-color: #8B4513; }
+.cell.road.oreSupplyLines { background-color: #696969; }
+.cell.road.industrialSupply { background-color: #5A5A5A; }
+.cell.road.commercialRoad { background-color: #B19CD9; }
+
+/* Multi-class road gradients */
+.cell.road.woodSupplyLines.oreSupplyLines { 
+    background: linear-gradient(45deg, #8B4513 50%, #696969 50%);
+}
+.cell.road.woodSupplyLines.industrialSupply { 
+    background: linear-gradient(45deg, #8B4513 50%, #5A5A5A 50%);
+}
+.cell.road.oreSupplyLines.industrialSupply { 
+    background: linear-gradient(45deg, #696969 50%, #5A5A5A 50%);
+}
+.cell.road.woodSupplyLines.oreSupplyLines.industrialSupply { 
+    background: linear-gradient(45deg, #8B4513 33%, #696969 33%, #5A5A5A 33%);
+}
+.cell.road.woodSupplyLines.commercialRoad { 
+    background: linear-gradient(45deg, #8B4513 50%, #B19CD9 50%);
+}
+.cell.road.oreSupplyLines.commercialRoad { 
+    background: linear-gradient(45deg, #696969 50%, #B19CD9 50%);
+}
+.cell.road.industrialSupply.commercialRoad { 
+    background: linear-gradient(45deg, #5A5A5A 50%, #B19CD9 50%);
+}
+.cell.road.woodSupplyLines.oreSupplyLines.commercialRoad { 
+    background: linear-gradient(45deg, #8B4513 33%, #696969 33%, #B19CD9 33%);
+}
+.cell.road.woodSupplyLines.industrialSupply.commercialRoad { 
+    background: linear-gradient(45deg, #8B4513 33%, #5A5A5A 33%, #B19CD9 33%);
+}
+.cell.road.oreSupplyLines.industrialSupply.commercialRoad { 
+    background: linear-gradient(45deg, #696969 33%, #5A5A5A 33%, #B19CD9 33%);
+}
+.cell.road.woodSupplyLines.oreSupplyLines.industrialSupply.commercialRoad { 
+    background: linear-gradient(45deg, #8B4513 25%, #696969 25%, #5A5A5A 25%, #B19CD9 25%);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .tools-panel {
+        width: 240px;
+    }
+    
+    .info-panel {
+        width: 260px;
+    }
+    
+    .map-area {
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .map-container {
+        padding: 10px;
+    }
+    
+    .tool-panel {
+        width: 280px;
+        max-width: 280px;
+        padding: 15px;
+        height: calc(100vh - 120px); /* Adjust for smaller screens */
+        max-height: calc(100vh - 120px);
+    }
+}
+
+@media (max-width: 992px) {
+    .main-content {
+        flex-direction: column;
+    }
+    
+    .tools-panel {
+        width: 100%;
+        height: auto;
+        max-height: 180px;
+        order: 2;
+    }
+    
+    .map-area {
+        order: 1;
+        height: 50vh;
+        min-height: 400px;
+    }
+    
+    .info-panel {
+        width: 100%;
+        height: auto;
+        max-height: 180px;
+        order: 3;
+    }
+    
+    .tool-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .app-header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .header-left h1 {
+        font-size: 1.4rem;
+    }
+    
+    .map-area {
+        height: 45vh;
+        min-height: 350px;
+        padding: 8px;
+    }
+    
+    .map-container {
+        padding: 8px;
+    }
+    
+    .tool-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .control-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .map-area {
+        height: 40vh;
+        min-height: 300px;
+        padding: 5px;
+    }
+    
+    .map-container {
+        padding: 5px;
+    }
+    
+    .tool-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Sidebar Tab System */
+.sidebar-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+
+.sidebar-tab {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: #e9ecef;
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.sidebar-tab:hover {
+    background: #dee2e6;
+    color: #495057;
+}
+
+.sidebar-tab.active {
+    background: #007bff;
+    color: white;
+    border-bottom-color: #0056b3;
+}
+
+.sidebar-tab-content {
+    display: none;
+    padding: 12px;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    min-height: 200px;
+    max-height: none; /* Remove height constraint */
+    overflow: visible; /* Remove scrolling */
+}
+
+.sidebar-tab-content.active {
+    display: block;
+}
+
+/* Multiplayer tab specific styling */
+#multiplayer-tab {
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+/* General Info tab specific styling */
+#general-info-tab {
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Left sidebar info sections (General Info tab) */
+#general-info-tab .info-section {
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#general-info-tab .info-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+#general-info-tab .info-section:last-child {
+    margin-bottom: 0;
+}
+
+#general-info-tab .info-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    padding-bottom: 6px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    z-index: 1;
+}
+
+#general-info-tab .info-section .player-stats {
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+#general-info-tab .info-section .resource-display {
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+/* Right sidebar info sections (City Builder Pro) */
+.info-panel .info-section {
+    margin-bottom: 10px;
+    background: #2c3e50;
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid #34495e;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.info-panel .info-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    border-color: #3498db;
+}
+
+.info-panel .info-section:last-child {
+    margin-bottom: 0;
+}
+
+.info-panel .panel-header {
+    background: none;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+}
+
+.info-panel .panel-header h3 {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin: -10px -10px 10px -10px;
+    padding: 8px 15px;
+    border-radius: 8px 8px 0 0;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: auto;
+    min-height: auto;
+    line-height: 1.2;
+}
+
+.info-panel .info-section h4 {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.info-panel .cell-info {
+    background: #34495e;
+    border: 1px solid #3498db;
+    border-left: 4px solid #3498db;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.9rem;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.info-panel .cell-detail-item {
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.info-panel .cell-detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.info-panel .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.info-panel .stat-item {
+    background: #34495e;
+    border: 1px solid #3498db;
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+    transition: all 0.2s ease;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.info-panel .stat-item:nth-child(5) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    max-width: 50%;
+}
+
+.info-panel .stat-item:hover {
+    background: #3498db;
+    transform: scale(1.02);
+}
+
+.info-panel .stat-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ffffff;
+    display: block;
+    margin-bottom: 4px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.info-panel .stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: block;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.info-panel .instructions {
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.info-panel .instructions p {
+    margin: 0 0 8px 0;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    line-height: 1.4;
+}
+
+.info-panel .instructions p:last-child {
+    margin-bottom: 0;
+}
+
+.info-panel .instructions strong {
+    color: #3498db;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Multiplayer content styling */
+.multiplayer-content {
+    font-size: 0.9rem;
+}
+
+/* Players main section styling */
+.players-main-section {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.players-main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.players-main-header h5 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.players-main-list {
+    margin-bottom: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.players-main-list .player-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.players-main-list .player-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.players-main-list .player-info {
+    flex: 1;
+}
+
+.players-main-list .player-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 2px;
+}
+
+.players-main-list .player-resources {
+    font-size: 11px;
+    color: #666;
+}
+
+.room-info-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    margin-bottom: 10px;
+}
+
+.start-game-section {
+    text-align: center;
+}
+
+.start-game-section button {
+    margin-bottom: 8px;
+}
+
+.start-game-info {
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
+}
+
+/* Fixed Next Turn Button Container */
+.next-turn-container {
+    position: fixed;
+    bottom: 15px;
+    left: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
+}
+
+/* Fixed Next Turn Button */
+.next-turn-fixed {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+    transition: all 0.3s ease;
+    min-width: 80px;
+}
+
+.next-turn-fixed:hover {
+    background: linear-gradient(135deg, #45a049, #3d8b40);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.next-turn-fixed:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+}
+
+.next-turn-fixed:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Fixed Turn Timer */
+.turn-timer-fixed {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    min-width: 60px;
+    text-align: center;
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+    transition: all 0.3s ease;
+    border: none;
+}
+
+/* Ensure timer text is always white */
+.turn-timer-fixed * {
+    color: white !important;
+}
+
+/* Fixed Action Counter */
+.action-counter-fixed {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Arial', sans-serif;
+    min-width: 60px;
+    text-align: center;
+    box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
+    transition: all 0.3s ease;
+    border: none;
+}
+
+/* Action counter color states */
+.action-counter-fixed.low-actions {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.action-counter-fixed.no-actions {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+/* Disconnected road styling */
+.disconnected-road {
+    background-color: #ffcccc !important;
+    border: 2px solid #ff4444 !important;
+    position: relative;
+}
+
+.disconnected-road::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 68, 68, 0.9);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* No power indicator for industrial zones */
+.no-power-indicator {
+    position: relative;
+    background-color: #ff6b6b !important;
+    border: 2px solid #ff4444 !important;
+    box-sizing: border-box;
+}
+
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+
+.room-controls-section {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.room-controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.room-controls-header h5 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.status-inline {
+    display: flex;
+    align-items: center;
+}
+
+.status-value {
+    font-size: 0.8rem;
+    color: #3498db;
+    font-weight: 700;
+    background: rgba(52, 152, 219, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.room-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.room-info-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.room-label {
+    font-size: 0.8rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.room-value {
+    font-size: 0.8rem;
+    color: #3498db;
+    font-weight: 700;
+    background: rgba(52, 152, 219, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.additional-status {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.room-dependent {
+    transition: all 0.3s ease;
+}
+
+.additional-status .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.additional-status .stat-label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.8rem;
+}
+
+.additional-status .stat-value {
+    font-weight: 700;
+    color: #3498db;
+    font-size: 0.8rem;
+    background: rgba(52, 152, 219, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #007bff;
+}
+
+.multiplayer-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.multiplayer-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.multiplayer-btn.primary {
+    background: #007bff;
+    color: white;
+}
+
+.multiplayer-btn.primary:hover {
+    background: #0056b3;
+}
+
+.multiplayer-btn.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.multiplayer-btn.secondary:hover {
+    background: #5a6268;
+}
+
+.multiplayer-btn.dropdown {
+    background: #e9ecef;
+    color: #495057;
+    width: 100%;
+}
+
+.multiplayer-btn.dropdown:hover {
+    background: #dee2e6;
+}
+
+.dropdown-content {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #dee2e6;
+}
+
+.dropdown-section {
+    margin-bottom: 12px;
+}
+
+.dropdown-section h5 {
+    margin: 0 0 6px 0;
+    font-size: 0.85rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.room-controls, .team-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.multiplayer-input {
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.multiplayer-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: white;
+}
+
+.mode-description {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+.players-list {
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
+.no-players {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 8px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.multiplayer-btn.small {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    flex: 1;
+}
+
+.multiplayer-btn.danger {
+    background: #dc3545;
+    color: white;
+}
+
+.multiplayer-btn.danger:hover {
+    background: #c82333;
+}
+
+.multiplayer-btn.warning {
+    background: #ff9800;
+    color: white;
+}
+
+.multiplayer-btn.warning:hover {
+    background: #f57c00;
+}
+
+.multiplayer-btn.success {
+    background: #4CAF50;
+    color: white;
+}
+
+.multiplayer-btn.success:hover {
+    background: #388e3c;
+}
+
+/* Custom scrollbar for tool panel */
+.tool-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tool-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.tool-panel::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.tool-panel::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Custom scrollbar for sidebar tab content */
+.sidebar-tab-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-tab-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.sidebar-tab-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.sidebar-tab-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Removed scrollbar styling since scrolling is disabled */
+
+/* Rules Modal Styling */
+.rules-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.rules-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    max-height: 80vh;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.rules-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.rules-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.close-rules-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-rules-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.rules-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 80px);
+}
+
+.rules-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.rules-section h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.rules-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.rules-section li {
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.4;
+}
+
+.rules-section li::before {
+    content: "•";
+    color: #667eea;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+.rules-section strong {
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Tutorial Modal Styling */
+.tutorial-modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+}
+
+.tutorial-modal-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.tutorial-modal-header {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tutorial-modal-header h2 {
+    color: white;
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.close-tutorial-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.close-tutorial-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.tutorial-modal-body {
+    padding: 25px;
+    overflow-y: auto;
+    max-height: calc(80vh - 120px);
+}
+
+.tutorial-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    border-left: 5px solid #007bff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.tutorial-section.highlight {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 5px solid #ffc107;
+}
+
+.tutorial-section h3 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.tutorial-section p {
+    color: #555;
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.tutorial-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.tutorial-section li {
+    margin-bottom: 10px;
+    padding-left: 25px;
+    position: relative;
+    line-height: 1.5;
+}
+
+.tutorial-section li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: #28a745;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.tutorial-section strong {
+    color: #007bff;
+    font-weight: 700;
+}
+
+.tutorial-section em {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.95rem;
+}
+
+/* Rules Button Styling */
+.rules-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3) !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.rules-btn:hover {
+    background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+    transform: translateY(-2px);
+}
+
+.rules-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+}
+
+/* Tutorial Button Styling */
+.tutorial-btn {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3) !important;
+    margin-left: 8px !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+
+.tutorial-btn:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.tutorial-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(0, 123, 255, 0.3);
+}
+
+/* Resource Warning Notifications */
+@keyframes slideInRight {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+}
+
+@keyframes notificationPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(255, 68, 68, 0.5);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+}
+
+.resource-warning-notification {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.notification-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+/* Turn Start Alert Animations */
+@keyframes turnStartAlertSlide {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes turnStartAlertFadeOut {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+}
+
+/* Host Transfer Alert Animations */
+@keyframes hostTransferSlide {
+    0% {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+    50% {
+        transform: translateX(-50%) translateY(10px);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes hostTransferFadeOut {
+    0% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+    }
+}

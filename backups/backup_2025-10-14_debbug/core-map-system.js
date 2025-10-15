@@ -1120,14 +1120,6 @@ class MapSystem {
                 
                 const cell = this.cells[checkRow][checkCol];
                 if (['road', 'bridge', 'commercial'].includes(cell.attribute)) {
-                    // Check if this road is inoperable
-                    if (cell.attribute === 'road' || cell.attribute === 'bridge') {
-                        const cellElement = document.querySelector(`[data-row="${checkRow}"][data-col="${checkCol}"]`);
-                        if (cellElement && (cellElement.classList.contains('disconnected-road') || 
-                                           cellElement.getAttribute('data-power-inoperable') === 'true')) {
-                            continue; // Skip inoperable roads, check other directions
-                        }
-                    }
                     return true;
                 }
             }
