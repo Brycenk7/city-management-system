@@ -215,12 +215,31 @@ class TabManagement {
         const mapContainer = document.querySelector('.map-container');
         const mapArea = document.querySelector('.map-area');
         
-        // Make map container a perfect square
-        const containerSize = Math.min(window.innerWidth - 320, window.innerHeight - 120); // Account for viewer panel
+        // Calculate available space more accurately
+        // Account for sidebars, padding, and margins
+        const sidebarWidth = 280; // Tools panel width
+        const headerHeight = 80; // Approximate header height
+        const padding = 30; // Total padding/margins
+        
+        const availableWidth = window.innerWidth - sidebarWidth - padding;
+        const availableHeight = window.innerHeight - headerHeight - padding;
+        
+        // Make map container a perfect square based on available space
+        const containerSize = Math.min(availableWidth, availableHeight);
         mapContainer.style.width = `${containerSize}px`;
         mapContainer.style.height = `${containerSize}px`;
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
+        mapContainer.style.aspectRatio = '1'; // Ensure container is square
+        
+        // Ensure map grid maintains aspect ratio
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = 'auto';
+            mapGrid.style.aspectRatio = '1';
+            mapGrid.style.maxWidth = '100%';
+            mapGrid.style.maxHeight = '100%';
+        }
         
         // Center the map area
         mapArea.style.display = 'flex';
@@ -353,13 +372,32 @@ class TabManagement {
             mapGrid.style.opacity = '1';
         }
 
-        // Make map container a perfect square (similar to viewer)
-        const containerSize = Math.min(window.innerWidth - 320, window.innerHeight - 120); // Account for player panel
+        // Calculate available space more accurately
+        // Account for player panel, padding, and margins
+        const sidebarWidth = 280; // Player panel width
+        const headerHeight = 80; // Approximate header height
+        const padding = 30; // Total padding/margins
+        
+        const availableWidth = window.innerWidth - sidebarWidth - padding;
+        const availableHeight = window.innerHeight - headerHeight - padding;
+        
+        // Make map container a perfect square based on available space
+        const containerSize = Math.min(availableWidth, availableHeight);
         mapContainer.style.width = `${containerSize}px`;
         mapContainer.style.height = `${containerSize}px`;
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
         mapContainer.style.margin = 'auto';
+        mapContainer.style.aspectRatio = '1'; // Ensure container is square
+        
+        // Ensure map grid maintains aspect ratio
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = 'auto';
+            mapGrid.style.aspectRatio = '1';
+            mapGrid.style.maxWidth = '100%';
+            mapGrid.style.maxHeight = '100%';
+        }
 
         // Center the map area
         mapArea.style.display = 'flex';

@@ -278,13 +278,19 @@ class MapSystem {
             }
         });
         
-        // Window resize listener for viewer and player modes
+        // Window resize listener for viewer and player modes with debounce
+        let resizeTimeout;
         window.addEventListener('resize', () => {
-            if (this.currentTab === 'viewer') {
-                this.applyViewerStyling();
-            } else if (this.currentTab === 'player') {
-                this.applyPlayerStyling();
-            }
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (this.tabManagement) {
+                    if (this.currentTab === 'viewer') {
+                        this.tabManagement.applyViewerStyling();
+                    } else if (this.currentTab === 'player') {
+                        this.tabManagement.applyPlayerStyling();
+                    }
+                }
+            }, 150); // Debounce resize events
         });
         console.log('Window resize listener added in MapSystem');
     }
