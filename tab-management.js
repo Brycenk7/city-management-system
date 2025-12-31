@@ -44,8 +44,8 @@ class TabManagement {
             this.resetButtonVisibility();
             // Enable map interaction
             document.getElementById('map').style.pointerEvents = 'auto';
-            // Reset map styling for builder mode
-            this.resetMapStyling();
+            // Apply builder styling to ensure aspect ratio
+            this.applyBuilderStyling();
             console.log('Builder tab content updated');
         } else if (tabType === 'player') {
             // Hide tools panel and show player tools and functionality
@@ -194,10 +194,16 @@ class TabManagement {
         mapContainer.style.borderRadius = '';
         mapContainer.style.padding = '';
         mapContainer.style.margin = '';
+        mapContainer.style.aspectRatio = '';
         
         // Reset map grid styling
         mapGrid.style.transform = '';
         mapGrid.style.transformOrigin = '';
+        mapGrid.style.width = '';
+        mapGrid.style.height = '';
+        mapGrid.style.aspectRatio = '';
+        mapGrid.style.maxWidth = '';
+        mapGrid.style.maxHeight = '';
         
         // Reset all cells
         const cells = document.querySelectorAll('.cell');
@@ -207,6 +213,54 @@ class TabManagement {
             cell.style.display = 'block';
         });
         
+    }
+    
+    applyBuilderStyling() {
+        console.log('TabManagement applyBuilderStyling called');
+        const mapGrid = document.getElementById('map');
+        const mapContainer = document.querySelector('.map-container');
+        const mapArea = document.querySelector('.map-area');
+        
+        // Calculate available space for builder mode
+        // Account for both sidebars (tools and info panels), padding, and margins
+        const sidebarWidth = 280; // Tools panel width
+        const infoPanelWidth = 280; // Info panel width
+        const headerHeight = 80; // Approximate header height
+        const padding = 60; // Total padding/margins (both sides)
+        
+        const availableWidth = window.innerWidth - sidebarWidth - infoPanelWidth - padding;
+        const availableHeight = window.innerHeight - headerHeight - padding;
+        
+        // Make map container a perfect square based on available space
+        const containerSize = Math.min(availableWidth, availableHeight);
+        mapContainer.style.width = `${containerSize}px`;
+        mapContainer.style.height = `${containerSize}px`;
+        mapContainer.style.borderRadius = '8px';
+        mapContainer.style.padding = '15px';
+        mapContainer.style.margin = 'auto';
+        mapContainer.style.aspectRatio = '1'; // Ensure container is square
+        
+        // Ensure map grid maintains aspect ratio
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = 'auto';
+            mapGrid.style.aspectRatio = '1';
+            mapGrid.style.maxWidth = '100%';
+            mapGrid.style.maxHeight = '100%';
+            mapGrid.style.transform = '';
+            mapGrid.style.transformOrigin = '';
+        }
+        
+        // Center the map area
+        mapArea.style.display = 'flex';
+        mapArea.style.justifyContent = 'center';
+        mapArea.style.alignItems = 'center';
+        mapArea.style.width = '100%';
+        mapArea.style.height = '100%';
+        mapArea.style.overflow = 'hidden';
+        mapArea.style.position = 'relative';
+        
+        console.log('Builder styling applied');
     }
     
     applyViewerStyling() {

@@ -278,7 +278,7 @@ class MapSystem {
             }
         });
         
-        // Window resize listener for viewer and player modes with debounce
+        // Window resize listener for all modes with debounce
         let resizeTimeout;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
@@ -288,6 +288,8 @@ class MapSystem {
                         this.tabManagement.applyViewerStyling();
                     } else if (this.currentTab === 'player') {
                         this.tabManagement.applyPlayerStyling();
+                    } else if (this.currentTab === 'builder') {
+                        this.tabManagement.applyBuilderStyling();
                     }
                 }
             }, 150); // Debounce resize events

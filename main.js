@@ -77,6 +77,14 @@ class MainApplication {
         this.mapSystem.setupEventListeners();
         console.log('Event listeners set up');
         
+        // Apply initial builder styling to ensure aspect ratio is maintained
+        if (this.mapSystem.currentTab === 'builder' && this.tabManagement) {
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                this.tabManagement.applyBuilderStyling();
+            }, 100);
+        }
+        
         console.log('Initializing resource management...');
         this.resourceManagement.init();
         console.log('Resource management initialized');
