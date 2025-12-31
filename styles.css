@@ -135,11 +135,14 @@ body {
 
 /* City Player Pro Control Panel */
 .player-control-panel {
-    width: 300px;
+    width: 300px; /* Default, will be overridden by JavaScript */
+    min-width: 200px;
+    max-width: 350px;
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    flex-shrink: 0;
     color: white;
     overflow-y: auto;
     max-height: calc(100vh - 40px);
@@ -577,11 +580,14 @@ body {
 
 
 .viewer-control-panel {
-    width: 280px;
+    width: 280px; /* Default, will be overridden by JavaScript */
+    min-width: 200px;
+    max-width: 350px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    flex-shrink: 0;
     color: white;
     overflow-y: auto;
     max-height: 100vh;
@@ -727,7 +733,9 @@ body {
 
 /* Left Sidebar - Tools */
 .tools-panel {
-    width: 250px;
+    width: 250px; /* Default, will be overridden by JavaScript */
+    min-width: 200px;
+    max-width: 350px;
     background: white;
     border-right: 1px solid #e9ecef;
     overflow: visible;
@@ -882,8 +890,9 @@ body {
 }
 
 .tool-panel {
-    width: 280px;
-    max-width: 280px;
+    width: 280px; /* Default, will be overridden by JavaScript */
+    min-width: 200px;
+    max-width: 350px;
     background: rgba(248, 249, 250, 0.8);
     border-radius: 12px;
     padding: 15px;
@@ -894,6 +903,7 @@ body {
     overflow-y: auto; /* Enable vertical scrolling */
     overflow-x: hidden; /* Hide horizontal scroll */
     display: none; /* Hidden by default */
+    flex-shrink: 0;
 }
 
 /* Show tool panel only in City Player Pro */
@@ -979,7 +989,9 @@ body {
 
 /* Right Sidebar - Info */
 .info-panel {
-    width: 300px;
+    width: 300px; /* Default, will be overridden by JavaScript */
+    min-width: 200px;
+    max-width: 350px;
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.1);

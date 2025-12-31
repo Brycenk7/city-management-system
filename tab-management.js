@@ -220,16 +220,44 @@ class TabManagement {
         const mapGrid = document.getElementById('map');
         const mapContainer = document.querySelector('.map-container');
         const mapArea = document.querySelector('.map-area');
+        const toolsPanel = document.querySelector('.tools-panel');
+        const infoPanel = document.querySelector('.info-panel');
         
-        // Calculate available space for builder mode
-        // Account for both sidebars (tools and info panels), padding, and margins
-        const sidebarWidth = 280; // Tools panel width
-        const infoPanelWidth = 280; // Info panel width
-        const headerHeight = 80; // Approximate header height
-        const padding = 60; // Total padding/margins (both sides)
+        // Get header height
+        const header = document.querySelector('.app-header');
+        const headerHeight = header ? header.offsetHeight : 70;
         
-        const availableWidth = window.innerWidth - sidebarWidth - infoPanelWidth - padding;
-        const availableHeight = window.innerHeight - headerHeight - padding;
+        // Calculate available space
+        const mapAreaPadding = 30; // 15px on each side
+        const mapContainerPadding = 30; // 15px padding in container
+        const minSidebarWidth = 200; // Minimum usable sidebar width
+        const maxSidebarWidth = 350; // Maximum sidebar width
+        
+        // Calculate maximum square size based on available height
+        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
+        const maxSquareSize = availableHeight - mapContainerPadding;
+        
+        // Calculate how much width we need for the square
+        const squareWidthNeeded = maxSquareSize + mapContainerPadding;
+        
+        // Calculate remaining width for sidebars
+        const remainingWidth = window.innerWidth - squareWidthNeeded - mapAreaPadding;
+        
+        // Distribute remaining width between two sidebars (with min/max constraints)
+        let sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth / 2));
+        
+        // If we have extra space, use it for sidebars
+        if (remainingWidth > (minSidebarWidth * 2)) {
+            sidebarWidth = Math.min(maxSidebarWidth, remainingWidth / 2);
+        }
+        
+        // Apply calculated widths to sidebars
+        if (toolsPanel) {
+            toolsPanel.style.width = `${sidebarWidth}px`;
+        }
+        if (infoPanel) {
+            infoPanel.style.width = `${sidebarWidth}px`;
+        }
         
         // Reset container to use natural sizing - let grid size itself
         mapContainer.style.width = '';
@@ -267,15 +295,35 @@ class TabManagement {
         const mapGrid = document.getElementById('map');
         const mapContainer = document.querySelector('.map-container');
         const mapArea = document.querySelector('.map-area');
+        const viewerPanel = document.getElementById('viewerControls');
         
-        // Calculate available space more accurately
-        // Account for sidebars, padding, and margins
-        const sidebarWidth = 280; // Tools panel width
-        const headerHeight = 80; // Approximate header height
-        const padding = 30; // Total padding/margins
+        // Get header height
+        const header = document.querySelector('.app-header');
+        const headerHeight = header ? header.offsetHeight : 70;
         
-        const availableWidth = window.innerWidth - sidebarWidth - padding;
-        const availableHeight = window.innerHeight - headerHeight - padding;
+        // Calculate available space
+        const mapAreaPadding = 30; // 15px on each side
+        const mapContainerPadding = 0; // No padding in viewer mode
+        const minSidebarWidth = 200; // Minimum usable sidebar width
+        const maxSidebarWidth = 350; // Maximum sidebar width
+        
+        // Calculate maximum square size based on available height
+        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
+        const maxSquareSize = availableHeight - mapContainerPadding;
+        
+        // Calculate how much width we need for the square
+        const squareWidthNeeded = maxSquareSize + mapContainerPadding;
+        
+        // Calculate remaining width for sidebar
+        const remainingWidth = window.innerWidth - squareWidthNeeded - mapAreaPadding;
+        
+        // Set sidebar width (with min/max constraints)
+        const sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
+        
+        // Apply calculated width to viewer panel
+        if (viewerPanel) {
+            viewerPanel.style.width = `${sidebarWidth}px`;
+        }
         
         // Reset container to use natural sizing - let grid size itself
         mapContainer.style.width = '';
@@ -416,6 +464,8 @@ class TabManagement {
         const mapGrid = document.getElementById('map');
         const mapContainer = document.querySelector('.map-container');
         const mapArea = document.querySelector('.map-area');
+        const playerPanel = document.getElementById('playerControls');
+        const toolPanel = document.querySelector('.tool-panel');
 
         // Ensure map grid is visible
         if (mapGrid) {
@@ -424,14 +474,36 @@ class TabManagement {
             mapGrid.style.opacity = '1';
         }
 
-        // Calculate available space more accurately
-        // Account for player panel, padding, and margins
-        const sidebarWidth = 280; // Player panel width
-        const headerHeight = 80; // Approximate header height
-        const padding = 30; // Total padding/margins
+        // Get header height
+        const header = document.querySelector('.app-header');
+        const headerHeight = header ? header.offsetHeight : 70;
         
-        const availableWidth = window.innerWidth - sidebarWidth - padding;
-        const availableHeight = window.innerHeight - headerHeight - padding;
+        // Calculate available space
+        const mapAreaPadding = 30; // 15px on each side
+        const mapContainerPadding = 0; // No padding in player mode
+        const minSidebarWidth = 200; // Minimum usable sidebar width
+        const maxSidebarWidth = 350; // Maximum sidebar width
+        
+        // Calculate maximum square size based on available height
+        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
+        const maxSquareSize = availableHeight - mapContainerPadding;
+        
+        // Calculate how much width we need for the square
+        const squareWidthNeeded = maxSquareSize + mapContainerPadding;
+        
+        // Calculate remaining width for sidebar
+        const remainingWidth = window.innerWidth - squareWidthNeeded - mapAreaPadding;
+        
+        // Set sidebar width (with min/max constraints)
+        const sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
+        
+        // Apply calculated width to player panel and tool panel
+        if (playerPanel) {
+            playerPanel.style.width = `${sidebarWidth}px`;
+        }
+        if (toolPanel) {
+            toolPanel.style.width = `${sidebarWidth}px`;
+        }
         
         // Reset container to use natural sizing - let grid size itself
         mapContainer.style.width = '';
