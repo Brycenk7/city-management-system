@@ -255,7 +255,7 @@ class ResourceManagement {
         this.calculateConsumptionRates();
     }
     
-    // Update residential population growth
+    // Update residential population growth/decline
     updateResidentialPopulation() {
         const playerResources = this.getCurrentPlayerResources();
         
@@ -263,14 +263,13 @@ class ResourceManagement {
         const hasGoods = playerResources.commercialGoods > 0;
         const isProducingGoods = this.generationRates.commercialGoods > 0;
         
-        // Only grow population if goods are available and being produced
-        if (!hasGoods || !isProducingGoods) {
-            return; // No growth if no goods or not producing
-        }
-        
         // Growth rate: increase by 0.5 population per second per residential
-        // This means it takes 200 seconds (about 3.3 minutes) to reach max capacity
+        // Decline rate: decrease by 0.5 population per second when no goods
         const growthRate = 0.5; // 0.5 population per second
+        const declineRate = 0.5; // 0.5 population per second
+        
+        // Determine if population should grow or decline
+        const shouldGrow = hasGoods && isProducingGoods;
         
         for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
             for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
@@ -282,11 +281,18 @@ class ResourceManagement {
                         cell.population = 0;
                     }
                     
-                    // Only grow if not at max capacity
-                    if (cell.population < 100) {
-                        // Check if residential is connected to operable road
-                        if (this.isConnectedToOperableRoad(row, col)) {
-                            cell.population = Math.min(100, cell.population + growthRate);
+                    // Check if residential is connected to operable road
+                    if (this.isConnectedToOperableRoad(row, col)) {
+                        if (shouldGrow) {
+                            // Grow population if not at max capacity
+                            if (cell.population < 100) {
+                                cell.population = Math.min(100, cell.population + growthRate);
+                            }
+                        } else {
+                            // Decline population if no goods available or not being produced
+                            if (cell.population > 0) {
+                                cell.population = Math.max(0, cell.population - declineRate);
+                            }
                         }
                     }
                 }
