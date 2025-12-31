@@ -735,7 +735,7 @@ body {
 .tools-panel {
     width: 250px; /* Default, will be overridden by JavaScript */
     min-width: 250px;
-    max-width: 400px;
+    max-width: 450px;
     background: white;
     border-right: 1px solid #e9ecef;
     overflow-y: auto;
@@ -994,7 +994,7 @@ body {
 .info-panel {
     width: 300px; /* Default, will be overridden by JavaScript */
     min-width: 250px;
-    max-width: 400px;
+    max-width: 450px;
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.1);
