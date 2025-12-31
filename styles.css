@@ -734,16 +734,23 @@ body {
 /* Left Sidebar - Tools */
 .tools-panel {
     width: 250px; /* Default, will be overridden by JavaScript */
-    min-width: 200px;
-    max-width: 350px;
+    min-width: 250px;
+    max-width: 400px;
     background: white;
     border-right: 1px solid #e9ecef;
-    overflow: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 0;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin: 15px;
     flex-shrink: 0; /* Prevent sidebar from shrinking */
+    align-self: stretch; /* Fill vertical space */
+    height: calc(100vh - 100px); /* Fill from header to bottom */
+    max-height: calc(100vh - 100px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
 .panel-header {
@@ -752,6 +759,7 @@ body {
     padding: 12px 16px;
     margin: 0;
     border-radius: 12px 12px 0 0;
+    flex-shrink: 0; /* Keep header fixed at top */
 }
 
 .panel-header h3 {
@@ -985,8 +993,8 @@ body {
 /* Right Sidebar - Info */
 .info-panel {
     width: 300px; /* Default, will be overridden by JavaScript */
-    min-width: 200px;
-    max-width: 350px;
+    min-width: 250px;
+    max-width: 400px;
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.1);
@@ -994,10 +1002,13 @@ body {
     overflow-x: hidden;
     padding: 0;
     margin: 15px;
-    height: fit-content;
-    max-height: calc(100vh - 120px);
+    align-self: stretch; /* Fill vertical space */
+    height: calc(100vh - 100px); /* Fill from header to bottom */
+    max-height: calc(100vh - 100px);
     flex-shrink: 0; /* Prevent sidebar from shrinking */
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
 .info-section {

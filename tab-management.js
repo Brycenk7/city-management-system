@@ -231,8 +231,8 @@ class TabManagement {
         const mapAreaPadding = 30; // 15px padding on each side of map-area
         const mapAreaGap = 30; // 15px gap between each flex item (tools-container-info)
         const mapContainerPadding = 30; // 15px padding in container (15px on each side)
-        const minSidebarWidth = 200; // Minimum usable sidebar width
-        const maxSidebarWidth = 350; // Maximum sidebar width
+        const minSidebarWidth = 280; // Increased minimum sidebar width for better visibility
+        const maxSidebarWidth = 400; // Increased maximum sidebar width
         const minGridSize = 500; // Minimum grid size for better visibility
         
         // Calculate available dimensions
@@ -265,7 +265,7 @@ class TabManagement {
             const maxSidebarsWidth = availableWidth - minContainerWidthNeeded;
             
             // Distribute available width to sidebars (with minimum constraint)
-            sidebarWidth = Math.max(180, Math.min(maxSidebarWidth, maxSidebarsWidth / 2));
+            sidebarWidth = Math.max(250, Math.min(maxSidebarWidth, maxSidebarsWidth / 2));
             
             // Recalculate with new sidebar width
             const newSidebarsWidth = sidebarWidth * 2;
@@ -335,8 +335,8 @@ class TabManagement {
         const mapAreaPadding = 30; // 15px padding on each side of map-area
         const mapAreaGap = 15; // 15px gap between flex items
         const mapContainerPadding = 0; // No padding in viewer mode
-        const minSidebarWidth = 200; // Minimum usable sidebar width
-        const maxSidebarWidth = 350; // Maximum sidebar width
+        const minSidebarWidth = 280; // Increased minimum sidebar width for better visibility
+        const maxSidebarWidth = 400; // Increased maximum sidebar width
         const minGridSize = 500; // Minimum grid size for better visibility
         
         // Calculate available dimensions
@@ -363,7 +363,7 @@ class TabManagement {
             const maxSidebarWidthAvailable = availableWidth - minContainerWidthNeeded;
             
             // Set sidebar width (with minimum constraint)
-            sidebarWidth = Math.max(180, Math.min(maxSidebarWidth, maxSidebarWidthAvailable));
+            sidebarWidth = Math.max(250, Math.min(maxSidebarWidth, maxSidebarWidthAvailable));
             
             // Recalculate with new sidebar width
             const newAvailableWidthForContainer = availableWidth - sidebarWidth - totalSpacing;
@@ -535,8 +535,8 @@ class TabManagement {
         const mapAreaPadding = 30; // 15px padding on each side of map-area
         const mapAreaGap = 30; // 15px gap between each flex item (2 gaps = 30px total)
         const mapContainerPadding = 0; // No padding in player mode
-        const minSidebarWidth = 200; // Minimum usable sidebar width
-        const maxSidebarWidth = 350; // Maximum sidebar width
+        const minSidebarWidth = 280; // Increased minimum sidebar width for better visibility
+        const maxSidebarWidth = 400; // Increased maximum sidebar width
         const minGridSize = 500; // Minimum grid size for better visibility
         
         // Calculate available dimensions
@@ -564,7 +564,7 @@ class TabManagement {
             const maxSidebarsWidth = availableWidth - minContainerWidthNeeded;
             
             // Distribute available width to sidebars (with minimum constraint)
-            sidebarWidth = Math.max(180, Math.min(maxSidebarWidth, maxSidebarsWidth / 2));
+            sidebarWidth = Math.max(250, Math.min(maxSidebarWidth, maxSidebarsWidth / 2));
             
             // Recalculate with new sidebar width
             const newSidebarsWidth = sidebarWidth * 2;
