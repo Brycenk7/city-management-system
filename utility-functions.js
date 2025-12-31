@@ -125,10 +125,17 @@ class UtilityFunctions {
         const mapData = {
             mapSize: this.mapSystem.mapSize,
             cells: this.mapSystem.cells.map(row => 
-                row.map(cell => ({
-                    attribute: cell.attribute,
-                    class: cell.class
-                }))
+                row.map(cell => {
+                    const cellData = {
+                        attribute: cell.attribute,
+                        class: cell.class
+                    };
+                    // Include population data for residential cells
+                    if (cell.attribute === 'residential' && cell.population !== undefined) {
+                        cellData.population = cell.population;
+                    }
+                    return cellData;
+                })
             ),
             timestamp: new Date().toISOString()
         };
@@ -196,6 +203,15 @@ class UtilityFunctions {
                     const cellData = mapData.cells[row][col];
                     this.mapSystem.cells[row][col].attribute = cellData.attribute;
                     this.mapSystem.cells[row][col].class = cellData.class;
+                    
+                    // Initialize population for residential cells (preserve if loaded, otherwise start at 0)
+                    if (cellData.attribute === 'residential') {
+                        this.mapSystem.cells[row][col].population = cellData.population !== undefined ? cellData.population : 0;
+                    } else if (this.mapSystem.cells[row][col].population !== undefined) {
+                        // Remove population property if cell is no longer residential
+                        delete this.mapSystem.cells[row][col].population;
+                    }
+                    
                     this.mapSystem.updateCellVisual(row, col);
                 }
             }

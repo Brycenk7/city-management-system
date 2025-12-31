@@ -139,6 +139,9 @@ class ResourceManagement {
         // Update the player's resources in the map
         this.updateCurrentPlayerResources(playerResources);
         
+        // Update residential population growth
+        this.updateResidentialPopulation();
+        
         // Update road operability based on industrial power
         // Check more frequently when power is low for responsive power management
         if (this.resources.power <= 5 || this.updateCounter % 5 === 0) {
@@ -250,6 +253,50 @@ class ResourceManagement {
         }
         
         this.calculateConsumptionRates();
+    }
+    
+    // Update residential population growth
+    updateResidentialPopulation() {
+        const playerResources = this.getCurrentPlayerResources();
+        
+        // Check if goods are available and being produced
+        const hasGoods = playerResources.commercialGoods > 0;
+        const isProducingGoods = this.generationRates.commercialGoods > 0;
+        
+        // Only grow population if goods are available and being produced
+        if (!hasGoods || !isProducingGoods) {
+            return; // No growth if no goods or not producing
+        }
+        
+        // Growth rate: increase by 0.5 population per second per residential
+        // This means it takes 200 seconds (about 3.3 minutes) to reach max capacity
+        const growthRate = 0.5; // 0.5 population per second
+        
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                
+                if (cell.attribute === 'residential') {
+                    // Initialize population if not set
+                    if (cell.population === undefined) {
+                        cell.population = 0;
+                    }
+                    
+                    // Only grow if not at max capacity
+                    if (cell.population < 100) {
+                        // Check if residential is connected to operable road
+                        if (this.isConnectedToOperableRoad(row, col)) {
+                            cell.population = Math.min(100, cell.population + growthRate);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Update player stats display if in player tab
+        if (this.mapSystem.currentTab === 'player' && this.mapSystem.tabManagement) {
+            this.mapSystem.tabManagement.updatePlayerStats();
+        }
     }
     
     // Check if an attribute is a building

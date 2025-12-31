@@ -558,10 +558,13 @@ class TabManagement {
             const roads = this.mapSystem.countAttribute('road');
             const highways = this.mapSystem.countAttribute('highway');
             
+            // Calculate total population from individual residential cells
+            const totalPopulation = this.mapSystem.calculateTotalPopulation ? this.mapSystem.calculateTotalPopulation() : residential * 100;
+            
             playerStatsElement.innerHTML = `
                 <div class="stat-item">
                     <span class="stat-label">Population:</span>
-                    <span class="stat-value">${residential * 100}</span>
+                    <span class="stat-value">${totalPopulation}</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Commercial:</span>

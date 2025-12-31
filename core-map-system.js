@@ -608,6 +608,10 @@ class MapSystem {
                 this.cells[row][col].class = 'grassland';
                 this.cells[row][col].element.dataset.attribute = 'grassland';
                 this.cells[row][col].element.className = 'cell';
+                // Remove population data when clearing
+                if (this.cells[row][col].population !== undefined) {
+                    delete this.cells[row][col].population;
+                }
             }
         }
         this.updateStats();
@@ -831,10 +835,14 @@ class MapSystem {
         const playerStats = document.getElementById('playerStats');
         if (playerStats) {
             const stats = this.calculateMapStats();
+            
+            // Calculate total population from individual residential cells
+            const totalPopulation = this.calculateTotalPopulation ? this.calculateTotalPopulation() : stats.residential * 100;
+            
             playerStats.innerHTML = `
                 <div class="stat-item">
                     <span class="stat-label">Population:</span>
-                    <span class="stat-value">${stats.residential * 100}</span>
+                    <span class="stat-value">${totalPopulation}</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Zoning:</span>
@@ -1203,6 +1211,22 @@ class MapSystem {
         }
         
         return count;
+    }
+    
+    // Calculate total population from all residential cells
+    calculateTotalPopulation() {
+        let totalPopulation = 0;
+        
+        for (let row = 0; row < this.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSize.cols; col++) {
+                const cell = this.cells[row][col];
+                if (cell.attribute === 'residential' && cell.population !== undefined) {
+                    totalPopulation += cell.population || 0;
+                }
+            }
+        }
+        
+        return Math.round(totalPopulation);
     }
     
     calculateWaterCoverage() {

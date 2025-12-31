@@ -62,6 +62,14 @@ class CellInteraction {
         cell.attribute = attribute;
         cell.class = attribute;
         
+        // Initialize population for residential zones
+        if (attribute === 'residential') {
+            cell.population = 0;
+        } else if (attribute !== 'residential' && cell.population !== undefined) {
+            // Remove population property if cell is no longer residential
+            delete cell.population;
+        }
+        
         // Update visual representation
         if (this.mapSystem.updateCellVisual) {
             this.mapSystem.updateCellVisual(row, col);
@@ -225,6 +233,14 @@ class CellInteraction {
         // Update cell attribute and class
         this.mapSystem.cells[row][col].attribute = this.mapSystem.selectedAttribute;
         this.mapSystem.cells[row][col].class = this.mapSystem.selectedClass;
+        
+        // Initialize population for residential zones
+        if (this.mapSystem.selectedAttribute === 'residential') {
+            this.mapSystem.cells[row][col].population = 0;
+        } else if (this.mapSystem.selectedAttribute !== 'residential' && this.mapSystem.cells[row][col].population !== undefined) {
+            // Remove population property if cell is no longer residential
+            delete this.mapSystem.cells[row][col].population;
+        }
         
         // Send multiplayer update if in multiplayer mode
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
