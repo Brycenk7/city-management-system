@@ -194,14 +194,14 @@ class MainApplication {
     }
     
     getCurrentVersion() {
-        // Try to get version from localStorage, default to 1.0.0
+        // Try to get version from localStorage, default to 1.0.1
         const storedVersion = localStorage.getItem('cityBuilderVersion');
         if (storedVersion) {
             return storedVersion;
         }
         
         // Default version
-        const defaultVersion = '1.0.0';
+        const defaultVersion = '1.0.1';
         localStorage.setItem('cityBuilderVersion', defaultVersion);
         return defaultVersion;
     }
