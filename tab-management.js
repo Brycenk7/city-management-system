@@ -228,8 +228,8 @@ class TabManagement {
         const headerHeight = header ? header.offsetHeight : 70;
         
         // Calculate available space
-        const mapAreaPadding = 30; // 15px on each side
-        const mapAreaGap = 30; // 15px gap on each side of container
+        const mapAreaPadding = 30; // 15px padding on each side of map-area
+        const mapAreaGap = 30; // 15px gap between each flex item (tools-container-info)
         const mapContainerPadding = 30; // 15px padding in container (15px on each side)
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
@@ -242,10 +242,12 @@ class TabManagement {
         // Start with minimum sidebar width, then adjust based on available space
         let sidebarWidth = minSidebarWidth;
         
-        // Calculate how much width we need for sidebars
+        // Calculate how much width we need for sidebars and gaps
+        // Total spacing = left padding + gap + gap + right padding = 15 + 15 + 15 + 15 = 60px
+        const totalSpacing = mapAreaPadding + mapAreaGap; // 30px padding + 30px gap = 60px total
         const sidebarsWidth = sidebarWidth * 2;
-        // Available width for container = total width - sidebars - gaps
-        const availableWidthForContainer = availableWidth - sidebarsWidth - mapAreaGap;
+        // Available width for container = total width - sidebars - all spacing
+        const availableWidthForContainer = availableWidth - sidebarsWidth - totalSpacing;
         
         // Calculate maximum square size based on available height (accounting for container padding)
         const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
@@ -259,7 +261,7 @@ class TabManagement {
         // If grid size is too small, shrink sidebars to give container more room
         if (targetGridSize < minGridSize) {
             // Calculate how much width we need for minimum container size
-            const minContainerWidthNeeded = minGridSize + mapContainerPadding + mapAreaGap;
+            const minContainerWidthNeeded = minGridSize + mapContainerPadding + totalSpacing;
             const maxSidebarsWidth = availableWidth - minContainerWidthNeeded;
             
             // Distribute available width to sidebars (with minimum constraint)
@@ -267,7 +269,7 @@ class TabManagement {
             
             // Recalculate with new sidebar width
             const newSidebarsWidth = sidebarWidth * 2;
-            const newAvailableWidthForContainer = availableWidth - newSidebarsWidth - mapAreaGap;
+            const newAvailableWidthForContainer = availableWidth - newSidebarsWidth - totalSpacing;
             targetContainerSize = Math.min(maxSquareSizeByHeight + mapContainerPadding, newAvailableWidthForContainer);
             targetGridSize = targetContainerSize - mapContainerPadding;
             targetGridSize = Math.max(minGridSize, targetGridSize);
@@ -330,8 +332,8 @@ class TabManagement {
         const headerHeight = header ? header.offsetHeight : 70;
         
         // Calculate available space
-        const mapAreaPadding = 30; // 15px on each side
-        const mapAreaGap = 30; // 15px gap on each side of container
+        const mapAreaPadding = 30; // 15px padding on each side of map-area
+        const mapAreaGap = 15; // 15px gap between flex items
         const mapContainerPadding = 0; // No padding in viewer mode
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
@@ -344,8 +346,9 @@ class TabManagement {
         // Start with minimum sidebar width, then adjust based on available space
         let sidebarWidth = minSidebarWidth;
         
-        // Calculate how much width we need for sidebar and gap
-        const availableWidthForContainer = availableWidth - sidebarWidth - mapAreaGap;
+        // Calculate total spacing: padding (30px) + gap between sidebar and container (15px) = 45px
+        const totalSpacing = mapAreaPadding + mapAreaGap;
+        const availableWidthForContainer = availableWidth - sidebarWidth - totalSpacing;
         
         // Calculate maximum square size based on available height
         const maxSquareSizeByHeight = availableHeight;
@@ -356,14 +359,14 @@ class TabManagement {
         // If container size is too small, shrink sidebar to give container more room
         if (targetContainerSize < minGridSize) {
             // Calculate how much width we need for minimum container size
-            const minContainerWidthNeeded = minGridSize + mapAreaGap;
+            const minContainerWidthNeeded = minGridSize + totalSpacing;
             const maxSidebarWidthAvailable = availableWidth - minContainerWidthNeeded;
             
             // Set sidebar width (with minimum constraint)
             sidebarWidth = Math.max(180, Math.min(maxSidebarWidth, maxSidebarWidthAvailable));
             
             // Recalculate with new sidebar width
-            const newAvailableWidthForContainer = availableWidth - sidebarWidth - mapAreaGap;
+            const newAvailableWidthForContainer = availableWidth - sidebarWidth - totalSpacing;
             targetContainerSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForContainer);
             targetContainerSize = Math.max(minGridSize, targetContainerSize);
         }
@@ -529,8 +532,8 @@ class TabManagement {
         const headerHeight = header ? header.offsetHeight : 70;
         
         // Calculate available space
-        const mapAreaPadding = 30; // 15px on each side
-        const mapAreaGap = 30; // 15px gap on each side of container
+        const mapAreaPadding = 30; // 15px padding on each side of map-area
+        const mapAreaGap = 30; // 15px gap between each flex item (2 gaps = 30px total)
         const mapContainerPadding = 0; // No padding in player mode
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
@@ -543,9 +546,10 @@ class TabManagement {
         // Start with minimum sidebar width, then adjust based on available space
         let sidebarWidth = minSidebarWidth;
         
-        // Calculate how much width we need for sidebars (two sidebars in player mode) and gap
+        // Calculate total spacing: padding (30px) + gaps (30px) = 60px
+        const totalSpacing = mapAreaPadding + mapAreaGap;
         const sidebarsWidth = sidebarWidth * 2;
-        const availableWidthForContainer = availableWidth - sidebarsWidth - mapAreaGap;
+        const availableWidthForContainer = availableWidth - sidebarsWidth - totalSpacing;
         
         // Calculate maximum square size based on available height
         const maxSquareSizeByHeight = availableHeight;
@@ -556,7 +560,7 @@ class TabManagement {
         // If container size is too small, shrink sidebars to give container more room
         if (targetContainerSize < minGridSize) {
             // Calculate how much width we need for minimum container size
-            const minContainerWidthNeeded = minGridSize + mapAreaGap;
+            const minContainerWidthNeeded = minGridSize + totalSpacing;
             const maxSidebarsWidth = availableWidth - minContainerWidthNeeded;
             
             // Distribute available width to sidebars (with minimum constraint)
@@ -564,7 +568,7 @@ class TabManagement {
             
             // Recalculate with new sidebar width
             const newSidebarsWidth = sidebarWidth * 2;
-            const newAvailableWidthForContainer = availableWidth - newSidebarsWidth - mapAreaGap;
+            const newAvailableWidthForContainer = availableWidth - newSidebarsWidth - totalSpacing;
             targetContainerSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForContainer);
             targetContainerSize = Math.max(minGridSize, targetContainerSize);
         }
