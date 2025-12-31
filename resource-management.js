@@ -299,7 +299,8 @@ class ResourceManagement {
             }
         }
         
-        // Update player stats display if in player tab
+        // Update player stats display if in player tab (including city score)
+        // This ensures city score updates immediately when population changes
         if (this.mapSystem.currentTab === 'player' && this.mapSystem.tabManagement) {
             this.mapSystem.tabManagement.updatePlayerStats();
         }

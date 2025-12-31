@@ -663,10 +663,19 @@ class TabManagement {
         const roads = this.mapSystem.countAttribute('road');
         const highways = this.mapSystem.countAttribute('highway');
         
+        // Get actual population from residential cells
+        const totalPopulation = this.mapSystem.calculateTotalPopulation ? this.mapSystem.calculateTotalPopulation() : 0;
+        
         let score = 0;
         
         // Base score from infrastructure
         score += (roads + highways) * 10;
+        
+        // Score from population (actual population, not just zone count)
+        // Population contributes significantly to city score
+        // Scale: 1 point per 10 population, capped at 500 points for 5000 population
+        const populationScore = Math.min(500, totalPopulation / 10);
+        score += populationScore;
         
         // Score from zoning balance
         const totalZoned = residential + commercial + industrial;
@@ -684,7 +693,7 @@ class TabManagement {
         }
         
         const finalScore = Math.round(score);
-        console.log('City score calculated:', finalScore);
+        console.log('City score calculated:', finalScore, 'Population:', totalPopulation);
         return finalScore;
     }
     
