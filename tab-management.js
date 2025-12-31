@@ -232,7 +232,7 @@ class TabManagement {
         const mapContainerPadding = 30; // 15px padding in container
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
-        const minGridSize = 400; // Minimum grid size to ensure it's usable
+        const minGridSize = 500; // Increased minimum grid size for better visibility
         
         // Calculate available dimensions
         const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
@@ -241,24 +241,30 @@ class TabManagement {
         // Calculate maximum square size based on available height
         const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
         
-        // Calculate how much width we need for sidebars (minimum)
-        const minSidebarsWidth = minSidebarWidth * 2;
-        const availableWidthForGrid = availableWidth - minSidebarsWidth;
+        // Start with minimum sidebar width, then adjust based on available space
+        let sidebarWidth = minSidebarWidth;
         
-        // Use the smaller of: height-based size or width-based size, but ensure minimum
+        // Calculate how much width we need for sidebars
+        const sidebarsWidth = sidebarWidth * 2;
+        const availableWidthForGrid = availableWidth - sidebarsWidth;
+        
+        // Calculate target square size - use the smaller dimension, but ensure minimum
         let targetSquareSize = Math.min(maxSquareSizeByHeight, availableWidthForGrid);
-        targetSquareSize = Math.max(minGridSize, targetSquareSize); // Ensure minimum size
         
-        // Calculate remaining width after allocating space for the grid
-        const squareWidthNeeded = targetSquareSize + mapContainerPadding;
-        const remainingWidth = availableWidth - squareWidthNeeded;
-        
-        // Distribute remaining width between two sidebars (with min/max constraints)
-        let sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth / 2));
-        
-        // If remaining width is too small, reduce sidebar size to ensure grid gets minimum
-        if (remainingWidth < (minSidebarWidth * 2)) {
-            sidebarWidth = Math.max(180, remainingWidth / 2); // Allow sidebars to shrink slightly if needed
+        // If target size is too small, shrink sidebars to give grid more room
+        if (targetSquareSize < minGridSize) {
+            // Calculate how much width we need for minimum grid size
+            const minGridWidthNeeded = minGridSize + mapContainerPadding;
+            const maxSidebarsWidth = availableWidth - minGridWidthNeeded;
+            
+            // Distribute available width to sidebars (with minimum constraint)
+            sidebarWidth = Math.max(180, Math.min(maxSidebarWidth, maxSidebarsWidth / 2));
+            
+            // Recalculate with new sidebar width
+            const newSidebarsWidth = sidebarWidth * 2;
+            const newAvailableWidthForGrid = availableWidth - newSidebarsWidth;
+            targetSquareSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForGrid);
+            targetSquareSize = Math.max(minGridSize, targetSquareSize);
         }
         
         // Apply calculated widths to sidebars
@@ -269,24 +275,26 @@ class TabManagement {
             infoPanel.style.width = `${sidebarWidth}px`;
         }
         
-        // Reset container to use natural sizing - let grid size itself
+        // Set max constraints on grid to ensure it uses available space but stays square
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = 'auto';
+            mapGrid.style.aspectRatio = '1'; // Ensure grid stays square
+            mapGrid.style.maxWidth = `${targetSquareSize}px`;
+            mapGrid.style.maxHeight = `${targetSquareSize}px`;
+            mapGrid.style.transform = '';
+            mapGrid.style.transformOrigin = '';
+        }
+        
+        // Reset container to use natural sizing - it will size to fit the grid
         mapContainer.style.width = '';
         mapContainer.style.height = '';
         mapContainer.style.borderRadius = '8px';
         mapContainer.style.padding = '15px';
         mapContainer.style.margin = 'auto';
         mapContainer.style.aspectRatio = '';
-        
-        // Let grid size naturally - cells will be square, so grid will be square
-        if (mapGrid) {
-            mapGrid.style.width = '100%';
-            mapGrid.style.height = '';
-            mapGrid.style.aspectRatio = '';
-            mapGrid.style.maxWidth = '100%';
-            mapGrid.style.maxHeight = '100%';
-            mapGrid.style.transform = '';
-            mapGrid.style.transformOrigin = '';
-        }
+        mapContainer.style.flexShrink = '0'; // Prevent container from shrinking
+        mapContainer.style.flexGrow = '0'; // Prevent container from growing beyond grid
         
         // Center the map area
         mapArea.style.display = 'flex';
@@ -316,7 +324,7 @@ class TabManagement {
         const mapContainerPadding = 0; // No padding in viewer mode
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
-        const minGridSize = 400; // Minimum grid size to ensure it's usable
+        const minGridSize = 500; // Increased minimum grid size for better visibility
         
         // Calculate available dimensions
         const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
@@ -325,23 +333,28 @@ class TabManagement {
         // Calculate maximum square size based on available height
         const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
         
-        // Calculate how much width we need for sidebar (minimum)
-        const availableWidthForGrid = availableWidth - minSidebarWidth;
+        // Start with minimum sidebar width, then adjust based on available space
+        let sidebarWidth = minSidebarWidth;
         
-        // Use the smaller of: height-based size or width-based size, but ensure minimum
+        // Calculate how much width we need for sidebar
+        const availableWidthForGrid = availableWidth - sidebarWidth;
+        
+        // Calculate target square size - use the smaller dimension, but ensure minimum
         let targetSquareSize = Math.min(maxSquareSizeByHeight, availableWidthForGrid);
-        targetSquareSize = Math.max(minGridSize, targetSquareSize); // Ensure minimum size
         
-        // Calculate remaining width after allocating space for the grid
-        const squareWidthNeeded = targetSquareSize + mapContainerPadding;
-        const remainingWidth = availableWidth - squareWidthNeeded;
-        
-        // Set sidebar width (with min/max constraints)
-        let sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
-        
-        // If remaining width is too small, reduce sidebar size to ensure grid gets minimum
-        if (remainingWidth < minSidebarWidth) {
-            sidebarWidth = Math.max(180, remainingWidth); // Allow sidebar to shrink slightly if needed
+        // If target size is too small, shrink sidebar to give grid more room
+        if (targetSquareSize < minGridSize) {
+            // Calculate how much width we need for minimum grid size
+            const minGridWidthNeeded = minGridSize + mapContainerPadding;
+            const maxSidebarWidthAvailable = availableWidth - minGridWidthNeeded;
+            
+            // Set sidebar width (with minimum constraint)
+            sidebarWidth = Math.max(180, Math.min(maxSidebarWidth, maxSidebarWidthAvailable));
+            
+            // Recalculate with new sidebar width
+            const newAvailableWidthForGrid = availableWidth - sidebarWidth;
+            targetSquareSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForGrid);
+            targetSquareSize = Math.max(minGridSize, targetSquareSize);
         }
         
         // Apply calculated width to viewer panel
@@ -349,21 +362,23 @@ class TabManagement {
             viewerPanel.style.width = `${sidebarWidth}px`;
         }
         
-        // Reset container to use natural sizing - let grid size itself
+        // Set max constraints on grid to ensure it uses available space but stays square
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = 'auto';
+            mapGrid.style.aspectRatio = '1'; // Ensure grid stays square
+            mapGrid.style.maxWidth = `${targetSquareSize}px`;
+            mapGrid.style.maxHeight = `${targetSquareSize}px`;
+        }
+        
+        // Reset container to use natural sizing - it will size to fit the grid
         mapContainer.style.width = '';
         mapContainer.style.height = '';
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
         mapContainer.style.aspectRatio = '';
-        
-        // Let grid size naturally - cells will be square, so grid will be square
-        if (mapGrid) {
-            mapGrid.style.width = '100%';
-            mapGrid.style.height = '';
-            mapGrid.style.aspectRatio = '';
-            mapGrid.style.maxWidth = '100%';
-            mapGrid.style.maxHeight = '100%';
-        }
+        mapContainer.style.flexShrink = '0'; // Prevent container from shrinking
+        mapContainer.style.flexGrow = '0'; // Prevent container from growing beyond grid
         
         // Center the map area
         mapArea.style.display = 'flex';
@@ -507,7 +522,7 @@ class TabManagement {
         const mapContainerPadding = 0; // No padding in player mode
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
-        const minGridSize = 400; // Minimum grid size to ensure it's usable
+        const minGridSize = 500; // Increased minimum grid size for better visibility
         
         // Calculate available dimensions
         const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
@@ -516,23 +531,30 @@ class TabManagement {
         // Calculate maximum square size based on available height
         const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
         
-        // Calculate how much width we need for sidebar (minimum)
-        const availableWidthForGrid = availableWidth - minSidebarWidth;
+        // Start with minimum sidebar width, then adjust based on available space
+        let sidebarWidth = minSidebarWidth;
         
-        // Use the smaller of: height-based size or width-based size, but ensure minimum
+        // Calculate how much width we need for sidebars (two sidebars in player mode)
+        const sidebarsWidth = sidebarWidth * 2;
+        const availableWidthForGrid = availableWidth - sidebarsWidth;
+        
+        // Calculate target square size - use the smaller dimension, but ensure minimum
         let targetSquareSize = Math.min(maxSquareSizeByHeight, availableWidthForGrid);
-        targetSquareSize = Math.max(minGridSize, targetSquareSize); // Ensure minimum size
         
-        // Calculate remaining width after allocating space for the grid
-        const squareWidthNeeded = targetSquareSize + mapContainerPadding;
-        const remainingWidth = availableWidth - squareWidthNeeded;
-        
-        // Set sidebar width (with min/max constraints)
-        let sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
-        
-        // If remaining width is too small, reduce sidebar size to ensure grid gets minimum
-        if (remainingWidth < minSidebarWidth) {
-            sidebarWidth = Math.max(180, remainingWidth); // Allow sidebar to shrink slightly if needed
+        // If target size is too small, shrink sidebars to give grid more room
+        if (targetSquareSize < minGridSize) {
+            // Calculate how much width we need for minimum grid size
+            const minGridWidthNeeded = minGridSize + mapContainerPadding;
+            const maxSidebarsWidth = availableWidth - minGridWidthNeeded;
+            
+            // Distribute available width to sidebars (with minimum constraint)
+            sidebarWidth = Math.max(180, Math.min(maxSidebarWidth, maxSidebarsWidth / 2));
+            
+            // Recalculate with new sidebar width
+            const newSidebarsWidth = sidebarWidth * 2;
+            const newAvailableWidthForGrid = availableWidth - newSidebarsWidth;
+            targetSquareSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForGrid);
+            targetSquareSize = Math.max(minGridSize, targetSquareSize);
         }
         
         // Apply calculated width to player panel and tool panel
@@ -543,22 +565,24 @@ class TabManagement {
             toolPanel.style.width = `${sidebarWidth}px`;
         }
         
-        // Reset container to use natural sizing - let grid size itself
+        // Set max constraints on grid to ensure it uses available space but stays square
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = 'auto';
+            mapGrid.style.aspectRatio = '1'; // Ensure grid stays square
+            mapGrid.style.maxWidth = `${targetSquareSize}px`;
+            mapGrid.style.maxHeight = `${targetSquareSize}px`;
+        }
+        
+        // Reset container to use natural sizing - it will size to fit the grid
         mapContainer.style.width = '';
         mapContainer.style.height = '';
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
         mapContainer.style.margin = 'auto';
         mapContainer.style.aspectRatio = '';
-        
-        // Let grid size naturally - cells will be square, so grid will be square
-        if (mapGrid) {
-            mapGrid.style.width = '100%';
-            mapGrid.style.height = '';
-            mapGrid.style.aspectRatio = '';
-            mapGrid.style.maxWidth = '100%';
-            mapGrid.style.maxHeight = '100%';
-        }
+        mapContainer.style.flexShrink = '0'; // Prevent container from shrinking
+        mapContainer.style.flexGrow = '0'; // Prevent container from growing beyond grid
 
         // Center the map area
         mapArea.style.display = 'flex';
