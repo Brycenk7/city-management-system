@@ -231,22 +231,19 @@ class TabManagement {
         const availableWidth = window.innerWidth - sidebarWidth - infoPanelWidth - padding;
         const availableHeight = window.innerHeight - headerHeight - padding;
         
-        // Make map container a perfect square based on available space
-        // Account for padding in size calculation
-        const containerPadding = 30; // 15px on each side
-        const containerSize = Math.min(availableWidth, availableHeight) - containerPadding;
-        mapContainer.style.width = `${containerSize}px`;
-        mapContainer.style.height = `${containerSize}px`;
+        // Reset container to use natural sizing - let grid size itself
+        mapContainer.style.width = '';
+        mapContainer.style.height = '';
         mapContainer.style.borderRadius = '8px';
         mapContainer.style.padding = '15px';
         mapContainer.style.margin = 'auto';
-        mapContainer.style.aspectRatio = '1'; // Ensure container is square
+        mapContainer.style.aspectRatio = '';
         
-        // Ensure map grid maintains aspect ratio - fit within container
+        // Let grid size naturally - cells will be square, so grid will be square
         if (mapGrid) {
             mapGrid.style.width = '100%';
-            mapGrid.style.height = 'auto';
-            mapGrid.style.aspectRatio = '1';
+            mapGrid.style.height = '';
+            mapGrid.style.aspectRatio = '';
             mapGrid.style.maxWidth = '100%';
             mapGrid.style.maxHeight = '100%';
             mapGrid.style.transform = '';
@@ -280,19 +277,18 @@ class TabManagement {
         const availableWidth = window.innerWidth - sidebarWidth - padding;
         const availableHeight = window.innerHeight - headerHeight - padding;
         
-        // Make map container a perfect square based on available space
-        const containerSize = Math.min(availableWidth, availableHeight);
-        mapContainer.style.width = `${containerSize}px`;
-        mapContainer.style.height = `${containerSize}px`;
+        // Reset container to use natural sizing - let grid size itself
+        mapContainer.style.width = '';
+        mapContainer.style.height = '';
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
-        mapContainer.style.aspectRatio = '1'; // Ensure container is square
+        mapContainer.style.aspectRatio = '';
         
-        // Ensure map grid maintains aspect ratio - fit within container
+        // Let grid size naturally - cells will be square, so grid will be square
         if (mapGrid) {
             mapGrid.style.width = '100%';
-            mapGrid.style.height = 'auto';
-            mapGrid.style.aspectRatio = '1';
+            mapGrid.style.height = '';
+            mapGrid.style.aspectRatio = '';
             mapGrid.style.maxWidth = '100%';
             mapGrid.style.maxHeight = '100%';
         }
@@ -437,20 +433,19 @@ class TabManagement {
         const availableWidth = window.innerWidth - sidebarWidth - padding;
         const availableHeight = window.innerHeight - headerHeight - padding;
         
-        // Make map container a perfect square based on available space
-        const containerSize = Math.min(availableWidth, availableHeight);
-        mapContainer.style.width = `${containerSize}px`;
-        mapContainer.style.height = `${containerSize}px`;
+        // Reset container to use natural sizing - let grid size itself
+        mapContainer.style.width = '';
+        mapContainer.style.height = '';
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
         mapContainer.style.margin = 'auto';
-        mapContainer.style.aspectRatio = '1'; // Ensure container is square
+        mapContainer.style.aspectRatio = '';
         
-        // Ensure map grid maintains aspect ratio - fit within container
+        // Let grid size naturally - cells will be square, so grid will be square
         if (mapGrid) {
             mapGrid.style.width = '100%';
-            mapGrid.style.height = 'auto';
-            mapGrid.style.aspectRatio = '1';
+            mapGrid.style.height = '';
+            mapGrid.style.aspectRatio = '';
             mapGrid.style.maxWidth = '100%';
             mapGrid.style.maxHeight = '100%';
         }
