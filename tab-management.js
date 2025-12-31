@@ -241,18 +241,14 @@ class TabManagement {
         mapContainer.style.padding = '15px';
         mapContainer.style.margin = 'auto';
         mapContainer.style.aspectRatio = '1'; // Ensure container is square
-        mapContainer.style.flexShrink = '0'; // Prevent flex from shrinking
-        mapContainer.style.flexGrow = '0'; // Prevent flex from growing
         
         // Ensure map grid maintains aspect ratio - fit within container
         if (mapGrid) {
-            // Use 100% of container but maintain square
             mapGrid.style.width = '100%';
-            mapGrid.style.height = '100%';
+            mapGrid.style.height = 'auto';
             mapGrid.style.aspectRatio = '1';
             mapGrid.style.maxWidth = '100%';
             mapGrid.style.maxHeight = '100%';
-            mapGrid.style.objectFit = 'contain';
             mapGrid.style.transform = '';
             mapGrid.style.transformOrigin = '';
         }
@@ -291,17 +287,14 @@ class TabManagement {
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
         mapContainer.style.aspectRatio = '1'; // Ensure container is square
-        mapContainer.style.flexShrink = '0'; // Prevent flex from shrinking
-        mapContainer.style.flexGrow = '0'; // Prevent flex from growing
         
         // Ensure map grid maintains aspect ratio - fit within container
         if (mapGrid) {
             mapGrid.style.width = '100%';
-            mapGrid.style.height = '100%';
+            mapGrid.style.height = 'auto';
             mapGrid.style.aspectRatio = '1';
             mapGrid.style.maxWidth = '100%';
             mapGrid.style.maxHeight = '100%';
-            mapGrid.style.objectFit = 'contain';
         }
         
         // Center the map area
@@ -452,17 +445,14 @@ class TabManagement {
         mapContainer.style.padding = '0';
         mapContainer.style.margin = 'auto';
         mapContainer.style.aspectRatio = '1'; // Ensure container is square
-        mapContainer.style.flexShrink = '0'; // Prevent flex from shrinking
-        mapContainer.style.flexGrow = '0'; // Prevent flex from growing
         
         // Ensure map grid maintains aspect ratio - fit within container
         if (mapGrid) {
             mapGrid.style.width = '100%';
-            mapGrid.style.height = '100%';
+            mapGrid.style.height = 'auto';
             mapGrid.style.aspectRatio = '1';
             mapGrid.style.maxWidth = '100%';
             mapGrid.style.maxHeight = '100%';
-            mapGrid.style.objectFit = 'contain';
         }
 
         // Center the map area
