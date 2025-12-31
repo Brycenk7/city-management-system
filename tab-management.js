@@ -232,7 +232,7 @@ class TabManagement {
         const mapAreaGap = 30; // 15px gap between each flex item (tools-container-info)
         const mapContainerPadding = 30; // 15px padding in container (15px on each side)
         const minSidebarWidth = 280; // Minimum sidebar width for better visibility
-        const maxSidebarWidth = 450; // Increased maximum sidebar width for larger screens
+        const maxSidebarWidth = 450; // Maximum sidebar width
         const minGridSize = 500; // Minimum grid size for better visibility
         
         // Calculate available dimensions
@@ -242,42 +242,33 @@ class TabManagement {
         // Total spacing needed: padding (30px) + gaps (30px) = 60px
         const totalSpacing = mapAreaPadding + mapAreaGap;
         
-        // Calculate maximum square size based on available height (accounting for container padding)
+        // Use proportional scaling: maintain consistent layout proportions across screen sizes
+        // Calculate sidebar width as a percentage of screen width (scaled between min and max)
+        // This ensures sidebars grow proportionally with screen size
+        const screenWidth = window.innerWidth;
+        const sidebarWidthPercent = 0.18; // 18% of screen width per sidebar (36% total for both)
+        let sidebarWidth = screenWidth * sidebarWidthPercent;
+        sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, sidebarWidth));
+        
+        // Calculate available space for grid after allocating sidebars and spacing
+        const sidebarsWidth = sidebarWidth * 2;
+        const availableWidthForGrid = availableWidth - sidebarsWidth - totalSpacing;
+        
+        // Grid size is constrained by both height and width
         const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
+        const maxSquareSizeByWidth = availableWidthForGrid - mapContainerPadding;
         
-        // First, determine the ideal grid size (use height constraint)
-        let targetGridSize = maxSquareSizeByHeight;
-        targetGridSize = Math.max(minGridSize, targetGridSize); // Ensure minimum
+        // Grid size is the smaller of the two constraints (to keep it square)
+        let targetGridSize = Math.min(maxSquareSizeByHeight, maxSquareSizeByWidth);
+        targetGridSize = Math.max(minGridSize, targetGridSize);
         
-        // Calculate how much width the container needs (including padding)
-        const containerWidthNeeded = targetGridSize + mapContainerPadding;
-        
-        // Calculate remaining width after allocating space for container and spacing
-        const remainingWidth = availableWidth - containerWidthNeeded - totalSpacing;
-        
-        // Distribute remaining width to sidebars
-        // Start with minimum, then expand up to maximum if there's extra space
-        let sidebarWidth = minSidebarWidth;
-        
-        if (remainingWidth > 0) {
-            // There's extra space - expand sidebars
-            const extraWidthPerSidebar = remainingWidth / 2;
-            sidebarWidth = Math.min(maxSidebarWidth, minSidebarWidth + extraWidthPerSidebar);
-        } else {
-            // Not enough space - need to shrink either grid or sidebars
-            const minContainerWidthNeeded = minGridSize + mapContainerPadding + totalSpacing;
-            const maxSidebarsWidth = availableWidth - minContainerWidthNeeded;
-            
-            if (maxSidebarsWidth < (minSidebarWidth * 2)) {
-                // Not enough space for minimum sidebars - shrink sidebars
-                sidebarWidth = Math.max(250, maxSidebarsWidth / 2);
-                
-                // Recalculate grid size with smaller sidebars
-                const newSidebarsWidth = sidebarWidth * 2;
-                const newAvailableWidthForContainer = availableWidth - newSidebarsWidth - totalSpacing;
-                targetGridSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForContainer - mapContainerPadding);
-                targetGridSize = Math.max(minGridSize, targetGridSize);
-            }
+        // If grid is constrained by width, we might have extra height - that's okay
+        // If grid is constrained by height, we might have extra width - use it for sidebars
+        if (targetGridSize === maxSquareSizeByHeight && maxSquareSizeByWidth > maxSquareSizeByHeight) {
+            // Grid is height-constrained, we have extra width - expand sidebars if possible
+            const extraWidth = maxSquareSizeByWidth - maxSquareSizeByHeight;
+            const extraPerSidebar = extraWidth / 2;
+            sidebarWidth = Math.min(maxSidebarWidth, sidebarWidth + extraPerSidebar);
         }
         
         // Calculate final container size
@@ -354,40 +345,22 @@ class TabManagement {
         // Total spacing needed: padding (30px) + gap (15px) = 45px
         const totalSpacing = mapAreaPadding + mapAreaGap;
         
-        // Calculate maximum square size based on available height
+        // Use proportional scaling: sidebar width as percentage of screen width
+        const screenWidth = window.innerWidth;
+        const sidebarWidthPercent = 0.20; // 20% of screen width for single sidebar
+        let sidebarWidth = screenWidth * sidebarWidthPercent;
+        sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, sidebarWidth));
+        
+        // Calculate available space for grid after allocating sidebar and spacing
+        const availableWidthForGrid = availableWidth - sidebarWidth - totalSpacing;
+        
+        // Grid size is constrained by both height and width
         const maxSquareSizeByHeight = availableHeight;
+        const maxSquareSizeByWidth = availableWidthForGrid;
         
-        // Determine the ideal grid size (use height constraint)
-        let targetGridSize = maxSquareSizeByHeight;
-        targetGridSize = Math.max(minGridSize, targetGridSize); // Ensure minimum
-        
-        // Calculate how much width the container needs
-        const containerWidthNeeded = targetGridSize;
-        
-        // Calculate remaining width after allocating space for container and spacing
-        const remainingWidth = availableWidth - containerWidthNeeded - totalSpacing;
-        
-        // Distribute remaining width to sidebar
-        let sidebarWidth = minSidebarWidth;
-        
-        if (remainingWidth > 0) {
-            // There's extra space - expand sidebar
-            sidebarWidth = Math.min(maxSidebarWidth, minSidebarWidth + remainingWidth);
-        } else {
-            // Not enough space - need to shrink either grid or sidebar
-            const minContainerWidthNeeded = minGridSize + totalSpacing;
-            const maxSidebarWidthAvailable = availableWidth - minContainerWidthNeeded;
-            
-            if (maxSidebarWidthAvailable < minSidebarWidth) {
-                // Not enough space for minimum sidebar - shrink sidebar
-                sidebarWidth = Math.max(250, maxSidebarWidthAvailable);
-                
-                // Recalculate grid size with smaller sidebar
-                const newAvailableWidthForContainer = availableWidth - sidebarWidth - totalSpacing;
-                targetGridSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForContainer);
-                targetGridSize = Math.max(minGridSize, targetGridSize);
-            }
-        }
+        // Grid size is the smaller of the two constraints
+        let targetGridSize = Math.min(maxSquareSizeByHeight, maxSquareSizeByWidth);
+        targetGridSize = Math.max(minGridSize, targetGridSize);
         
         // Calculate final container size (same as grid size since no padding)
         const targetContainerSize = targetGridSize;
@@ -567,42 +540,23 @@ class TabManagement {
         // Total spacing needed: padding (30px) + gaps (30px) = 60px
         const totalSpacing = mapAreaPadding + mapAreaGap;
         
-        // Calculate maximum square size based on available height
+        // Use proportional scaling: sidebar width as percentage of screen width
+        const screenWidth = window.innerWidth;
+        const sidebarWidthPercent = 0.18; // 18% of screen width per sidebar (36% total for both)
+        let sidebarWidth = screenWidth * sidebarWidthPercent;
+        sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, sidebarWidth));
+        
+        // Calculate available space for grid after allocating sidebars and spacing
+        const sidebarsWidth = sidebarWidth * 2;
+        const availableWidthForGrid = availableWidth - sidebarsWidth - totalSpacing;
+        
+        // Grid size is constrained by both height and width
         const maxSquareSizeByHeight = availableHeight;
+        const maxSquareSizeByWidth = availableWidthForGrid;
         
-        // Determine the ideal grid size (use height constraint)
-        let targetGridSize = maxSquareSizeByHeight;
-        targetGridSize = Math.max(minGridSize, targetGridSize); // Ensure minimum
-        
-        // Calculate how much width the container needs
-        const containerWidthNeeded = targetGridSize;
-        
-        // Calculate remaining width after allocating space for container and spacing
-        const remainingWidth = availableWidth - containerWidthNeeded - totalSpacing;
-        
-        // Distribute remaining width to sidebars
-        let sidebarWidth = minSidebarWidth;
-        
-        if (remainingWidth > 0) {
-            // There's extra space - expand sidebars
-            const extraWidthPerSidebar = remainingWidth / 2;
-            sidebarWidth = Math.min(maxSidebarWidth, minSidebarWidth + extraWidthPerSidebar);
-        } else {
-            // Not enough space - need to shrink either grid or sidebars
-            const minContainerWidthNeeded = minGridSize + totalSpacing;
-            const maxSidebarsWidth = availableWidth - minContainerWidthNeeded;
-            
-            if (maxSidebarsWidth < (minSidebarWidth * 2)) {
-                // Not enough space for minimum sidebars - shrink sidebars
-                sidebarWidth = Math.max(250, maxSidebarsWidth / 2);
-                
-                // Recalculate grid size with smaller sidebars
-                const newSidebarsWidth = sidebarWidth * 2;
-                const newAvailableWidthForContainer = availableWidth - newSidebarsWidth - totalSpacing;
-                targetGridSize = Math.min(maxSquareSizeByHeight, newAvailableWidthForContainer);
-                targetGridSize = Math.max(minGridSize, targetGridSize);
-            }
-        }
+        // Grid size is the smaller of the two constraints
+        let targetGridSize = Math.min(maxSquareSizeByHeight, maxSquareSizeByWidth);
+        targetGridSize = Math.max(minGridSize, targetGridSize);
         
         // Calculate final container size (same as grid size since no padding)
         const targetContainerSize = targetGridSize;
