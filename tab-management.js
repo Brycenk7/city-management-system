@@ -232,23 +232,33 @@ class TabManagement {
         const mapContainerPadding = 30; // 15px padding in container
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
+        const minGridSize = 400; // Minimum grid size to ensure it's usable
+        
+        // Calculate available dimensions
+        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
+        const availableWidth = window.innerWidth - mapAreaPadding;
         
         // Calculate maximum square size based on available height
-        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
-        const maxSquareSize = availableHeight - mapContainerPadding;
+        const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
         
-        // Calculate how much width we need for the square
-        const squareWidthNeeded = maxSquareSize + mapContainerPadding;
+        // Calculate how much width we need for sidebars (minimum)
+        const minSidebarsWidth = minSidebarWidth * 2;
+        const availableWidthForGrid = availableWidth - minSidebarsWidth;
         
-        // Calculate remaining width for sidebars
-        const remainingWidth = window.innerWidth - squareWidthNeeded - mapAreaPadding;
+        // Use the smaller of: height-based size or width-based size, but ensure minimum
+        let targetSquareSize = Math.min(maxSquareSizeByHeight, availableWidthForGrid);
+        targetSquareSize = Math.max(minGridSize, targetSquareSize); // Ensure minimum size
+        
+        // Calculate remaining width after allocating space for the grid
+        const squareWidthNeeded = targetSquareSize + mapContainerPadding;
+        const remainingWidth = availableWidth - squareWidthNeeded;
         
         // Distribute remaining width between two sidebars (with min/max constraints)
         let sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth / 2));
         
-        // If we have extra space, use it for sidebars
-        if (remainingWidth > (minSidebarWidth * 2)) {
-            sidebarWidth = Math.min(maxSidebarWidth, remainingWidth / 2);
+        // If remaining width is too small, reduce sidebar size to ensure grid gets minimum
+        if (remainingWidth < (minSidebarWidth * 2)) {
+            sidebarWidth = Math.max(180, remainingWidth / 2); // Allow sidebars to shrink slightly if needed
         }
         
         // Apply calculated widths to sidebars
@@ -306,19 +316,33 @@ class TabManagement {
         const mapContainerPadding = 0; // No padding in viewer mode
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
+        const minGridSize = 400; // Minimum grid size to ensure it's usable
+        
+        // Calculate available dimensions
+        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
+        const availableWidth = window.innerWidth - mapAreaPadding;
         
         // Calculate maximum square size based on available height
-        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
-        const maxSquareSize = availableHeight - mapContainerPadding;
+        const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
         
-        // Calculate how much width we need for the square
-        const squareWidthNeeded = maxSquareSize + mapContainerPadding;
+        // Calculate how much width we need for sidebar (minimum)
+        const availableWidthForGrid = availableWidth - minSidebarWidth;
         
-        // Calculate remaining width for sidebar
-        const remainingWidth = window.innerWidth - squareWidthNeeded - mapAreaPadding;
+        // Use the smaller of: height-based size or width-based size, but ensure minimum
+        let targetSquareSize = Math.min(maxSquareSizeByHeight, availableWidthForGrid);
+        targetSquareSize = Math.max(minGridSize, targetSquareSize); // Ensure minimum size
+        
+        // Calculate remaining width after allocating space for the grid
+        const squareWidthNeeded = targetSquareSize + mapContainerPadding;
+        const remainingWidth = availableWidth - squareWidthNeeded;
         
         // Set sidebar width (with min/max constraints)
-        const sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
+        let sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
+        
+        // If remaining width is too small, reduce sidebar size to ensure grid gets minimum
+        if (remainingWidth < minSidebarWidth) {
+            sidebarWidth = Math.max(180, remainingWidth); // Allow sidebar to shrink slightly if needed
+        }
         
         // Apply calculated width to viewer panel
         if (viewerPanel) {
@@ -483,19 +507,33 @@ class TabManagement {
         const mapContainerPadding = 0; // No padding in player mode
         const minSidebarWidth = 200; // Minimum usable sidebar width
         const maxSidebarWidth = 350; // Maximum sidebar width
+        const minGridSize = 400; // Minimum grid size to ensure it's usable
+        
+        // Calculate available dimensions
+        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
+        const availableWidth = window.innerWidth - mapAreaPadding;
         
         // Calculate maximum square size based on available height
-        const availableHeight = window.innerHeight - headerHeight - mapAreaPadding;
-        const maxSquareSize = availableHeight - mapContainerPadding;
+        const maxSquareSizeByHeight = availableHeight - mapContainerPadding;
         
-        // Calculate how much width we need for the square
-        const squareWidthNeeded = maxSquareSize + mapContainerPadding;
+        // Calculate how much width we need for sidebar (minimum)
+        const availableWidthForGrid = availableWidth - minSidebarWidth;
         
-        // Calculate remaining width for sidebar
-        const remainingWidth = window.innerWidth - squareWidthNeeded - mapAreaPadding;
+        // Use the smaller of: height-based size or width-based size, but ensure minimum
+        let targetSquareSize = Math.min(maxSquareSizeByHeight, availableWidthForGrid);
+        targetSquareSize = Math.max(minGridSize, targetSquareSize); // Ensure minimum size
+        
+        // Calculate remaining width after allocating space for the grid
+        const squareWidthNeeded = targetSquareSize + mapContainerPadding;
+        const remainingWidth = availableWidth - squareWidthNeeded;
         
         // Set sidebar width (with min/max constraints)
-        const sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
+        let sidebarWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, remainingWidth));
+        
+        // If remaining width is too small, reduce sidebar size to ensure grid gets minimum
+        if (remainingWidth < minSidebarWidth) {
+            sidebarWidth = Math.max(180, remainingWidth); // Allow sidebar to shrink slightly if needed
+        }
         
         // Apply calculated width to player panel and tool panel
         if (playerPanel) {
