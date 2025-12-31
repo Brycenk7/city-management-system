@@ -275,26 +275,36 @@ class TabManagement {
             infoPanel.style.width = `${sidebarWidth}px`;
         }
         
-        // Set max constraints on grid to ensure it uses available space but stays square
+        // Ensure targetSquareSize is reasonable
+        targetSquareSize = Math.max(minGridSize, targetSquareSize);
+        
+        // Set container to calculated square size (targetSquareSize is the inner grid size)
+        const containerSize = targetSquareSize + mapContainerPadding;
+        mapContainer.style.width = `${containerSize}px`;
+        mapContainer.style.height = `${containerSize}px`;
+        mapContainer.style.borderRadius = '8px';
+        mapContainer.style.padding = '15px';
+        mapContainer.style.margin = 'auto';
+        mapContainer.style.aspectRatio = '1';
+        mapContainer.style.flexShrink = '0';
+        mapContainer.style.flexGrow = '0';
+        mapContainer.style.minWidth = `${containerSize}px`;
+        mapContainer.style.minHeight = `${containerSize}px`;
+        
+        // Let grid fill the container - cells will be square, so grid will be square
         if (mapGrid) {
             mapGrid.style.width = '100%';
-            mapGrid.style.height = 'auto';
-            mapGrid.style.aspectRatio = '1'; // Ensure grid stays square
-            mapGrid.style.maxWidth = `${targetSquareSize}px`;
-            mapGrid.style.maxHeight = `${targetSquareSize}px`;
+            mapGrid.style.height = '100%';
+            mapGrid.style.aspectRatio = '';
+            mapGrid.style.maxWidth = '100%';
+            mapGrid.style.maxHeight = '100%';
+            mapGrid.style.minWidth = '0';
+            mapGrid.style.minHeight = '0';
             mapGrid.style.transform = '';
             mapGrid.style.transformOrigin = '';
         }
         
-        // Reset container to use natural sizing - it will size to fit the grid
-        mapContainer.style.width = '';
-        mapContainer.style.height = '';
-        mapContainer.style.borderRadius = '8px';
-        mapContainer.style.padding = '15px';
-        mapContainer.style.margin = 'auto';
-        mapContainer.style.aspectRatio = '';
-        mapContainer.style.flexShrink = '0'; // Prevent container from shrinking
-        mapContainer.style.flexGrow = '0'; // Prevent container from growing beyond grid
+        console.log('Builder styling - targetSquareSize:', targetSquareSize, 'containerSize:', containerSize, 'sidebarWidth:', sidebarWidth);
         
         // Center the map area
         mapArea.style.display = 'flex';
@@ -362,23 +372,24 @@ class TabManagement {
             viewerPanel.style.width = `${sidebarWidth}px`;
         }
         
-        // Set max constraints on grid to ensure it uses available space but stays square
-        if (mapGrid) {
-            mapGrid.style.width = '100%';
-            mapGrid.style.height = 'auto';
-            mapGrid.style.aspectRatio = '1'; // Ensure grid stays square
-            mapGrid.style.maxWidth = `${targetSquareSize}px`;
-            mapGrid.style.maxHeight = `${targetSquareSize}px`;
-        }
-        
-        // Reset container to use natural sizing - it will size to fit the grid
-        mapContainer.style.width = '';
-        mapContainer.style.height = '';
+        // Set container to calculated square size
+        const containerSize = targetSquareSize + mapContainerPadding;
+        mapContainer.style.width = `${containerSize}px`;
+        mapContainer.style.height = `${containerSize}px`;
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
-        mapContainer.style.aspectRatio = '';
-        mapContainer.style.flexShrink = '0'; // Prevent container from shrinking
-        mapContainer.style.flexGrow = '0'; // Prevent container from growing beyond grid
+        mapContainer.style.aspectRatio = '1';
+        mapContainer.style.flexShrink = '0';
+        mapContainer.style.flexGrow = '0';
+        
+        // Let grid fill the container - cells will be square, so grid will be square
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = '100%';
+            mapGrid.style.aspectRatio = '';
+            mapGrid.style.maxWidth = '100%';
+            mapGrid.style.maxHeight = '100%';
+        }
         
         // Center the map area
         mapArea.style.display = 'flex';
@@ -565,24 +576,25 @@ class TabManagement {
             toolPanel.style.width = `${sidebarWidth}px`;
         }
         
-        // Set max constraints on grid to ensure it uses available space but stays square
-        if (mapGrid) {
-            mapGrid.style.width = '100%';
-            mapGrid.style.height = 'auto';
-            mapGrid.style.aspectRatio = '1'; // Ensure grid stays square
-            mapGrid.style.maxWidth = `${targetSquareSize}px`;
-            mapGrid.style.maxHeight = `${targetSquareSize}px`;
-        }
-        
-        // Reset container to use natural sizing - it will size to fit the grid
-        mapContainer.style.width = '';
-        mapContainer.style.height = '';
+        // Set container to calculated square size
+        const containerSize = targetSquareSize + mapContainerPadding;
+        mapContainer.style.width = `${containerSize}px`;
+        mapContainer.style.height = `${containerSize}px`;
         mapContainer.style.borderRadius = '0';
         mapContainer.style.padding = '0';
         mapContainer.style.margin = 'auto';
-        mapContainer.style.aspectRatio = '';
-        mapContainer.style.flexShrink = '0'; // Prevent container from shrinking
-        mapContainer.style.flexGrow = '0'; // Prevent container from growing beyond grid
+        mapContainer.style.aspectRatio = '1';
+        mapContainer.style.flexShrink = '0';
+        mapContainer.style.flexGrow = '0';
+        
+        // Let grid fill the container - cells will be square, so grid will be square
+        if (mapGrid) {
+            mapGrid.style.width = '100%';
+            mapGrid.style.height = '100%';
+            mapGrid.style.aspectRatio = '';
+            mapGrid.style.maxWidth = '100%';
+            mapGrid.style.maxHeight = '100%';
+        }
 
         // Center the map area
         mapArea.style.display = 'flex';
