@@ -160,9 +160,10 @@ class CellInteraction {
         
         // Handle erase mode
         if (this.mapSystem.selectedAttribute === 'erase') {
-            // Check if it's the player's turn in multiplayer mode
+            // Erase doesn't require actions - only check if it's the player's turn (not action count)
             if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
-                if (!window.multiplayerIntegration.canPlaceBuilding()) {
+                // Only check if it's the player's turn, not action count
+                if (!window.multiplayerIntegration.isMyTurn()) {
                     this.showTurnError(cell);
                     return;
                 }
@@ -243,10 +244,25 @@ class CellInteraction {
         }
         
         // Check if it's the player's turn in multiplayer mode AND has enough actions for this specific building
+        // Note: Erase is handled separately above and doesn't require actions
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
             // Check with the specific building type to verify exact action cost
             if (!window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
-                this.showTurnError(cell);
+                // Determine the actual reason: not your turn vs out of actions
+                const isMyTurn = window.multiplayerIntegration.isMyTurn();
+                const actionCost = window.multiplayerIntegration.getActionCost(this.mapSystem.selectedAttribute);
+                const actionsLeft = window.multiplayerIntegration.maxActionsPerTurn - window.multiplayerIntegration.actionsThisTurn;
+                
+                if (!isMyTurn) {
+                    this.showTurnError(cell);
+                } else if (actionsLeft < actionCost) {
+                    // Show out of actions error
+                    this.showOutOfActionsError(cell, actionsLeft, actionCost);
+                } else {
+                    // Fallback to turn error
+                    this.showTurnError(cell);
+                }
+                
                 // Stop dragging if actions run out
                 if (this.mapSystem.isDragging) {
                     this.mapSystem.isDragging = false;
@@ -292,9 +308,12 @@ class CellInteraction {
         // Send multiplayer update if in multiplayer mode
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
             // Optimistically deduct actions locally (will be confirmed by server)
-            const actionCost = window.multiplayerIntegration.getActionCost(this.mapSystem.selectedAttribute);
-            window.multiplayerIntegration.actionsThisTurn += actionCost;
-            window.multiplayerIntegration.updateActionCounter();
+            // Note: Erase doesn't consume actions, so skip deduction for erase
+            if (this.mapSystem.selectedAttribute !== 'erase') {
+                const actionCost = window.multiplayerIntegration.getActionCost(this.mapSystem.selectedAttribute);
+                window.multiplayerIntegration.actionsThisTurn += actionCost;
+                window.multiplayerIntegration.updateActionCounter();
+            }
             
             window.multiplayerIntegration.sendGameAction('place', row, col, this.mapSystem.selectedAttribute, this.mapSystem.selectedClass);
         }
@@ -733,6 +752,25 @@ class CellInteraction {
         
         // Show error message
         const errorMsg = 'Not your turn! Wait for your turn to place buildings.';
+        this.showErrorTooltip(cell, errorMsg);
+        
+        // Remove error styling after a delay
+        setTimeout(() => {
+            this.clearErrorStyling(cell);
+        }, 3000);
+    }
+    
+    showOutOfActionsError(cell, actionsLeft, actionCost) {
+        // Add error styling
+        cell.style.border = '2px solid #FF9800';
+        cell.style.backgroundColor = '#fff3cd';
+        
+        // Format action values nicely
+        const displayActionsLeft = actionsLeft % 1 === 0 ? actionsLeft.toString() : actionsLeft.toFixed(1);
+        const displayRequired = actionCost % 1 === 0 ? actionCost.toString() : actionCost.toFixed(1);
+        
+        // Show error message
+        const errorMsg = `Out of actions! Need ${displayRequired} action(s), have ${displayActionsLeft} remaining.`;
         this.showErrorTooltip(cell, errorMsg);
         
         // Remove error styling after a delay

@@ -85,11 +85,17 @@ class MapSystem {
         
         // Initialize power line connections after map is created
         if (this.powerLineSystem) {
+            // Initialize overlay immediately
+            if (this.powerLineSystem.initPowerLineOverlay) {
+                this.powerLineSystem.initPowerLineOverlay();
+            }
+            // Rebuild connections after a delay to ensure cells are fully rendered
             setTimeout(() => {
-                if (this.powerLineSystem.rebuildAllPowerLineConnections) {
+                if (this.powerLineSystem && this.powerLineSystem.rebuildAllPowerLineConnections) {
+                    console.log('Rebuilding all power line connections after map creation...');
                     this.powerLineSystem.rebuildAllPowerLineConnections();
                 }
-            }, 200);
+            }, 500);
         }
         
         console.log('Map created with', this.mapSize.rows * this.mapSize.cols, 'cells');

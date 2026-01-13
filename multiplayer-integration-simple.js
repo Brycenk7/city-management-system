@@ -769,15 +769,6 @@ class SimpleMultiplayerIntegration {
                         </div>
                     </div>
                     
-                    <!-- Team Panel -->
-                    <div class="dropdown-section">
-                        <h5>Team</h5>
-                        <div class="team-panel">
-                            <input type="text" id="team-name-input" placeholder="Team Name" class="multiplayer-input">
-                            <button id="create-team-btn" class="multiplayer-btn small">Create Team</button>
-                            <button id="join-team-btn" class="multiplayer-btn small">Join Team</button>
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
@@ -958,20 +949,7 @@ class SimpleMultiplayerIntegration {
         }
 
         // Team management buttons
-        const createTeamBtn = document.getElementById('create-team-btn');
-        if (createTeamBtn) {
-            createTeamBtn.addEventListener('click', () => this.showCreateTeamDialog());
-        }
-
-        const joinTeamBtn = document.getElementById('join-team-btn');
-        if (joinTeamBtn) {
-            joinTeamBtn.addEventListener('click', () => this.showJoinTeamDialog());
-        }
-
-        const leaveTeamBtn = document.getElementById('leave-team-btn');
-        if (leaveTeamBtn) {
-            leaveTeamBtn.addEventListener('click', () => this.leaveTeam());
-        }
+        // Team button event listeners removed - team system not used
 
         // Start game button - simplified approach
         const startGameBtn = document.getElementById('start-game-btn');
@@ -2652,8 +2630,7 @@ class SimpleMultiplayerIntegration {
         const teamMembers = document.getElementById('team-members');
         const teamIdDisplay = document.getElementById('team-id-display');
         const teamIdText = document.getElementById('team-id-text');
-        const createTeamBtn = document.getElementById('create-team-btn');
-        const joinTeamBtn = document.getElementById('join-team-btn');
+        // Team buttons removed - team system not used
         const leaveTeamBtn = document.getElementById('leave-team-btn');
 
         if (this.currentTeam) {

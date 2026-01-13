@@ -1729,6 +1729,26 @@ body {
     visibility: hidden !important;
 }
 
+/* Power line overlay styling - ensure it's visible */
+.power-line-overlay {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    z-index: 100 !important;
+    overflow: visible !important;
+}
+
+.power-line-overlay line {
+    stroke: #FFD700 !important;
+    stroke-width: 6px !important;
+    stroke-opacity: 1 !important;
+    opacity: 1 !important;
+    stroke-linecap: round !important;
+}
+
 /* No power indicator for industrial zones */
 .no-power-indicator {
     position: relative;

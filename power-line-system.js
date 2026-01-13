@@ -38,7 +38,7 @@ class PowerLineSystem {
         svg.style.width = '100%';
         svg.style.height = '100%';
         svg.style.pointerEvents = 'none';
-        svg.style.zIndex = '10'; // Higher z-index to be above cells
+        svg.style.zIndex = '100'; // Much higher z-index to be above all cells
         svg.style.overflow = 'visible';
         svg.setAttribute('preserveAspectRatio', 'none');
         
@@ -55,17 +55,6 @@ class PowerLineSystem {
         console.log('Power line overlay initialized and appended to map grid');
         console.log('SVG overlay element:', svg);
         console.log('SVG parent:', svg.parentElement);
-        
-        // Test: Draw a visible test line to verify overlay works
-        const testLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        testLine.setAttribute('x1', '10');
-        testLine.setAttribute('y1', '10');
-        testLine.setAttribute('x2', '100');
-        testLine.setAttribute('y2', '100');
-        testLine.setAttribute('stroke', '#FF0000'); // Red test line
-        testLine.setAttribute('stroke-width', '5');
-        svg.appendChild(testLine);
-        console.log('Added red test line to verify overlay is visible');
         
         // Refresh connections on window resize (only add listener once)
         if (!this._resizeHandlerAdded) {
@@ -101,7 +90,8 @@ class PowerLineSystem {
         this.clearPlayerConnections(playerId);
         
         // Find all power lines and power plants by this player within radius
-        const radius = 5; // Same radius as placement validation
+        // Use radius 1 for adjacent connections (8 directions) to create visible network
+        const radius = 1; // Connect to adjacent power lines for visible network
         const nearbyPowerSources = this.findNearbyPowerSources(placedRow, placedCol, radius, playerId);
         
         console.log(`Found ${nearbyPowerSources.length} nearby power sources within radius ${radius}`);
@@ -180,16 +170,15 @@ class PowerLineSystem {
             const cell2Rect = cell2.element.getBoundingClientRect();
             const gridRect = gridContainer.getBoundingClientRect();
             
-            // Calculate center positions relative to the grid container
+            // Calculate center positions relative to the SVG overlay itself
+            // The SVG should be positioned absolutely within the grid container
             const x1 = (cell1Rect.left - gridRect.left) + (cell1Rect.width / 2);
             const y1 = (cell1Rect.top - gridRect.top) + (cell1Rect.height / 2);
             const x2 = (cell2Rect.left - gridRect.left) + (cell2Rect.width / 2);
             const y2 = (cell2Rect.top - gridRect.top) + (cell2Rect.height / 2);
             
-            console.log(`Calculated positions: (${x1},${y1}) to (${x2},${y2})`);
-            console.log(`Cell1 rect:`, cell1Rect);
-            console.log(`Cell2 rect:`, cell2Rect);
-            console.log(`Grid rect:`, gridRect);
+            console.log(`Power line connection: (${row1},${col1}) to (${row2},${col2})`);
+            console.log(`Calculated positions: (${x1.toFixed(1)},${y1.toFixed(1)}) to (${x2.toFixed(1)},${y2.toFixed(1)})`);
             
             return { x1, y1, x2, y2 };
         };
@@ -215,8 +204,14 @@ class PowerLineSystem {
         line.setAttribute('x2', positions.x2);
         line.setAttribute('y2', positions.y2);
         line.setAttribute('stroke', '#FFD700'); // Gold color for power lines
-        line.setAttribute('stroke-width', '3'); // Make it thicker for visibility
-        line.setAttribute('stroke-opacity', '1'); // Fully opaque
+        line.setAttribute('stroke-width', '6'); // Make it even thicker for better visibility
+        line.setAttribute('stroke-opacity', '1.0'); // Fully opaque for maximum visibility
+        line.setAttribute('stroke-linecap', 'round'); // Rounded line caps for smoother appearance
+        // Also set via style for maximum compatibility
+        line.style.stroke = '#FFD700';
+        line.style.strokeWidth = '6px';
+        line.style.strokeOpacity = '1';
+        line.style.opacity = '1';
         line.setAttribute('data-player-id', playerId);
         line.setAttribute('data-row1', row1);
         line.setAttribute('data-col1', col1);
@@ -227,11 +222,17 @@ class PowerLineSystem {
         line._updatePosition = updateLinePosition;
         
         this.svgOverlay.appendChild(line);
-        console.log(`Successfully drew power line connection from (${row1},${col1}) to (${row2},${col2})`);
+        console.log(`✅ Successfully drew power line connection from (${row1},${col1}) to (${row2},${col2})`);
+        console.log(`Line element:`, line);
+        console.log(`SVG overlay has ${this.svgOverlay.children.length} children`);
+        console.log(`Line attributes: x1=${line.getAttribute('x1')}, y1=${line.getAttribute('y1')}, x2=${line.getAttribute('x2')}, y2=${line.getAttribute('y2')}`);
         
         // Store connection for cleanup
         const key = `${row1},${col1}-${row2},${col2}`;
         this.powerLineConnections.set(key, line);
+        
+        // Force a repaint by accessing the element
+        line.offsetHeight; // Trigger reflow
     }
     
     clearPlayerConnections(playerId) {
@@ -274,35 +275,44 @@ class PowerLineSystem {
         
         console.log(`Found ${powerSources.length} power sources for player ${playerId}`);
         
-        // Draw connections between all power sources within radius
+        // Draw connections between all adjacent power sources (8-directional)
         // Use a set to track already drawn connections to avoid duplicates
         const drawnConnections = new Set();
-        const radius = 5;
         
-        for (let i = 0; i < powerSources.length; i++) {
-            for (let j = i + 1; j < powerSources.length; j++) {
-                const source1 = powerSources[i];
-                const source2 = powerSources[j];
+        // For each power source, check all 8 adjacent cells for other power sources
+        for (const source of powerSources) {
+            const directions = [
+                { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+                { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+                { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+            ];
+            
+            for (const dir of directions) {
+                const checkRow = source.row + dir.dr;
+                const checkCol = source.col + dir.dc;
                 
-                const distance = Math.max(
-                    Math.abs(source1.row - source2.row),
-                    Math.abs(source1.col - source2.col)
-                );
-                
-                if (distance <= radius) {
-                    // Create a unique key for this connection (both directions)
-                    const key1 = `${source1.row},${source1.col}-${source2.row},${source2.col}`;
-                    const key2 = `${source2.row},${source2.col}-${source1.row},${source1.col}`;
+                if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                    checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
                     
-                    // Only draw if we haven't drawn this connection yet
-                    if (!drawnConnections.has(key1) && !drawnConnections.has(key2)) {
-                        this.drawPowerLineConnection(
-                            source1.row, source1.col,
-                            source2.row, source2.col,
-                            playerId
-                        );
-                        drawnConnections.add(key1);
-                        drawnConnections.add(key2);
+                    const cell = this.mapSystem.cells[checkRow][checkCol];
+                    const matchesPlayer = (playerId === 'single-player') ? true : (cell.playerId === playerId);
+                    
+                    if ((cell.attribute === 'powerPlant' || cell.attribute === 'powerLines') &&
+                        matchesPlayer) {
+                        // Found adjacent power source - create connection
+                        const key1 = `${source.row},${source.col}-${checkRow},${checkCol}`;
+                        const key2 = `${checkRow},${checkCol}-${source.row},${source.col}`;
+                        
+                        // Only draw if we haven't drawn this connection yet
+                        if (!drawnConnections.has(key1) && !drawnConnections.has(key2)) {
+                            this.drawPowerLineConnection(
+                                source.row, source.col,
+                                checkRow, checkCol,
+                                playerId
+                            );
+                            drawnConnections.add(key1);
+                            drawnConnections.add(key2);
+                        }
                     }
                 }
             }
@@ -409,8 +419,16 @@ class PowerLineSystem {
         
         // Update connections for each player
         playerIds.forEach(playerId => {
+            console.log(`Updating connections for player: ${playerId}`);
             this.updateAllPlayerConnections(playerId);
         });
+        
+        // Log final state
+        const totalLines = this.svgOverlay.querySelectorAll('line').length;
+        console.log(`✅ Power line rebuild complete. Total lines drawn: ${totalLines}`);
+        if (totalLines === 0) {
+            console.warn('⚠️ No power line connections were drawn! Check if power lines are adjacent.');
+        }
     }
     
     classifyPowerLineRegions() {
