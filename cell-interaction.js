@@ -242,10 +242,17 @@ class CellInteraction {
             return;
         }
         
-        // Check if it's the player's turn in multiplayer mode
-        if (window.multiplayerIntegration && !window.multiplayerIntegration.canPlaceBuilding()) {
-            this.showTurnError(cell);
-            return;
+        // Check if it's the player's turn in multiplayer mode AND has enough actions for this specific building
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            // Check with the specific building type to verify exact action cost
+            if (!window.multiplayerIntegration.canPlaceBuilding(this.mapSystem.selectedAttribute)) {
+                this.showTurnError(cell);
+                // Stop dragging if actions run out
+                if (this.mapSystem.isDragging) {
+                    this.mapSystem.isDragging = false;
+                }
+                return;
+            }
         }
 
         // Check if placement is valid for river start/end
@@ -284,6 +291,11 @@ class CellInteraction {
         
         // Send multiplayer update if in multiplayer mode
         if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            // Optimistically deduct actions locally (will be confirmed by server)
+            const actionCost = window.multiplayerIntegration.getActionCost(this.mapSystem.selectedAttribute);
+            window.multiplayerIntegration.actionsThisTurn += actionCost;
+            window.multiplayerIntegration.updateActionCounter();
+            
             window.multiplayerIntegration.sendGameAction('place', row, col, this.mapSystem.selectedAttribute, this.mapSystem.selectedClass);
         }
         

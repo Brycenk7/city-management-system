@@ -1969,10 +1969,11 @@ class SimpleMultiplayerIntegration {
         this.updatePendingActionsDisplay();
         
         // Update action counter if this is our action
+        // Note: Actions are already deducted optimistically in paintCell, so we don't deduct again here
+        // This prevents double-deduction. If the action was rejected, we'd need to refund, but that's handled elsewhere
         if (data.playerId === this.playerId && data.type === 'place') {
-            const actionCost = this.getActionCost(data.attribute);
-            this.actionsThisTurn += actionCost;
-            console.log(`Action counter updated: ${this.actionsThisTurn}/${this.maxActionsPerTurn} actions used`);
+            // Actions were already deducted optimistically in paintCell, just update UI
+            console.log(`Action confirmed: ${data.attribute} at (${data.row}, ${data.col}), actions: ${this.actionsThisTurn}/${this.maxActionsPerTurn}`);
             this.updateActionCounter();
             this.updateUI(); // Refresh UI to show updated action counter
         }
@@ -2112,6 +2113,15 @@ class SimpleMultiplayerIntegration {
 
     handleActionRejected(data) {
         console.log('Action rejected:', data);
+        
+        // If our action was rejected, refund the optimistically deducted actions
+        if (data.playerId === this.playerId && data.type === 'place') {
+            const actionCost = this.getActionCost(data.attribute);
+            this.actionsThisTurn = Math.max(0, this.actionsThisTurn - actionCost);
+            console.log(`Action rejected, refunded ${actionCost} action(s). Actions now: ${this.actionsThisTurn}/${this.maxActionsPerTurn}`);
+            this.updateActionCounter();
+            this.updateUI();
+        }
         
         // Remove from pending actions
         this.pendingActions.delete(data.actionId);
