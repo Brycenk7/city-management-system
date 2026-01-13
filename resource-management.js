@@ -408,6 +408,15 @@ class ResourceManagement {
         
         // Now let the road system update connections normally
         this.mapSystem.roadSystem.updateRoadConnections();
+        
+        // If player overlay is active, reapply it to restore player colors
+        if (window.multiplayerIntegration && window.multiplayerIntegration.showPlayerOverlay) {
+            setTimeout(() => {
+                if (window.multiplayerIntegration && window.multiplayerIntegration.applyPlayerOverlay) {
+                    window.multiplayerIntegration.applyPlayerOverlay();
+                }
+            }, 100);
+        }
     }
     
     // Mark all roads connected to a specific zone as inoperable

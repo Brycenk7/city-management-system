@@ -304,24 +304,37 @@ class RoadSystem {
                                 connectedCount++;
                                 // Road/Bridge is connected - normal appearance
                                 cellElement.classList.remove('disconnected-road');
-                                // Force the correct road color with !important to override CSS
-                                if (cell.attribute === 'road' || cell.class === 'road') {
-                                    cellElement.style.setProperty('background-color', '#4A4A4A', 'important');
-                                    // Preserve the grid border
-                                    cellElement.style.setProperty('border', '0.5px solid rgba(0,0,0,0.12)', 'important');
-                                } else if (cell.attribute === 'bridge' || cell.class === 'bridge') {
-                                    cellElement.style.setProperty('background-color', '#708090', 'important');
-                                    // Preserve the grid border
-                                    cellElement.style.setProperty('border', '0.5px solid rgba(0,0,0,0.12)', 'important');
+                                
+                                // Don't update colors if player overlay is active (let overlay handle colors)
+                                const overlayActive = window.multiplayerIntegration && 
+                                                    window.multiplayerIntegration.showPlayerOverlay;
+                                
+                                if (!overlayActive) {
+                                    // Force the correct road color with !important to override CSS
+                                    if (cell.attribute === 'road' || cell.class === 'road') {
+                                        cellElement.style.setProperty('background-color', '#4A4A4A', 'important');
+                                        // Preserve the grid border
+                                        cellElement.style.setProperty('border', '0.5px solid rgba(0,0,0,0.12)', 'important');
+                                    } else if (cell.attribute === 'bridge' || cell.class === 'bridge') {
+                                        cellElement.style.setProperty('background-color', '#708090', 'important');
+                                        // Preserve the grid border
+                                        cellElement.style.setProperty('border', '0.5px solid rgba(0,0,0,0.12)', 'important');
+                                    }
                                 }
                                 const type = (cell.attribute === 'bridge' || cell.class === 'bridge') ? 'Bridge' : 'Road';
                                 cellElement.title = `${type}: Connected to industrial network`;
                             } else {
                                 disconnectedCount++;
                                 // Road/Bridge is disconnected - show warning with red highlighting
-                                cellElement.classList.add('disconnected-road');
-                                cellElement.style.setProperty('background-color', '#ffcccc', 'important');
-                                cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
+                                // Don't update colors if player overlay is active
+                                const overlayActive = window.multiplayerIntegration && 
+                                                    window.multiplayerIntegration.showPlayerOverlay;
+                                
+                                if (!overlayActive) {
+                                    cellElement.classList.add('disconnected-road');
+                                    cellElement.style.setProperty('background-color', '#ffcccc', 'important');
+                                    cellElement.style.setProperty('border', '2px solid #ff4444', 'important');
+                                }
                                 const type = (cell.attribute === 'bridge' || cell.class === 'bridge') ? 'Bridge' : 'Road';
                                 cellElement.title = `${type}: Disconnected from industrial network - inoperable`;
                             }

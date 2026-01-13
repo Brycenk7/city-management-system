@@ -602,11 +602,30 @@ class CellInteraction {
         const hasRoadAccess = this.mapSystem.isAdjacentToCommercialRoad(row, col);
         const hasPowerAccess = this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
         
+        // Check ownership in multiplayer - cannot build off another player's roads
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            const currentPlayerId = window.multiplayerIntegration.playerId;
+            if (this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToOtherPlayerRoad(row, col, currentPlayerId)) {
+                this.mapSystem.showNotification('Cannot build commercial off another player\'s road', 'warning');
+                return false; // Cannot build off another player's road
+            }
+        }
+        
         return hasRoadAccess && hasPowerAccess;
     }
     
     isValidResidentialPlacement(row, col) {
         // Residential must be near roads and not too close to industrial
+        
+        // Check ownership in multiplayer - cannot build off another player's roads
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            const currentPlayerId = window.multiplayerIntegration.playerId;
+            if (this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToOtherPlayerRoad(row, col, currentPlayerId)) {
+                this.mapSystem.showNotification('Cannot build residential off another player\'s road', 'warning');
+                return false; // Cannot build off another player's road
+            }
+        }
+        
         return this.mapSystem.isAdjacentToCommercialRoad(row, col) && 
                !this.mapSystem.isAdjacentToIndustrial(row, col);
     }
