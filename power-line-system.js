@@ -2,6 +2,415 @@
 class PowerLineSystem {
     constructor(mapSystem) {
         this.mapSystem = mapSystem;
+        this.powerLineConnections = new Map(); // Store connection lines
+        this.svgOverlay = null; // Initialize lazily when needed
+    }
+    
+    initPowerLineOverlay() {
+        // Only initialize if not already done
+        if (this.svgOverlay) {
+            console.log('Overlay already exists');
+            return;
+        }
+        
+        // The #map element IS the map-grid itself
+        const mapGrid = document.getElementById('map');
+        if (!mapGrid) {
+            console.error('Map grid (#map) not found');
+            return;
+        }
+        
+        console.log('Map grid found, creating overlay...');
+        
+        // Remove existing overlay if present
+        const existingOverlay = mapGrid.querySelector('.power-line-overlay');
+        if (existingOverlay) {
+            console.log('Removing existing overlay');
+            existingOverlay.remove();
+        }
+        
+        // Create SVG overlay
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.className = 'power-line-overlay';
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.pointerEvents = 'none';
+        svg.style.zIndex = '10'; // Higher z-index to be above cells
+        svg.style.overflow = 'visible';
+        svg.setAttribute('preserveAspectRatio', 'none');
+        
+        // Only set grid to relative if it's not already positioned
+        const gridPosition = getComputedStyle(mapGrid).position;
+        console.log('Grid position:', gridPosition);
+        if (gridPosition === 'static') {
+            mapGrid.style.position = 'relative';
+            console.log('Set grid position to relative');
+        }
+        
+        mapGrid.appendChild(svg);
+        this.svgOverlay = svg;
+        console.log('Power line overlay initialized and appended to map grid');
+        console.log('SVG overlay element:', svg);
+        console.log('SVG parent:', svg.parentElement);
+        
+        // Test: Draw a visible test line to verify overlay works
+        const testLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        testLine.setAttribute('x1', '10');
+        testLine.setAttribute('y1', '10');
+        testLine.setAttribute('x2', '100');
+        testLine.setAttribute('y2', '100');
+        testLine.setAttribute('stroke', '#FF0000'); // Red test line
+        testLine.setAttribute('stroke-width', '5');
+        svg.appendChild(testLine);
+        console.log('Added red test line to verify overlay is visible');
+        
+        // Refresh connections on window resize (only add listener once)
+        if (!this._resizeHandlerAdded) {
+            let resizeTimeout;
+            const resizeHandler = () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (this.svgOverlay) {
+                        this.refreshPowerLineConnections();
+                    }
+                }, 250);
+            };
+            window.addEventListener('resize', resizeHandler);
+            this._resizeHandlerAdded = true;
+        }
+    }
+    
+    // Draw power line connections when a power line or power plant is placed
+    updatePowerLineConnections(placedRow, placedCol, playerId) {
+        console.log(`updatePowerLineConnections called for (${placedRow},${placedCol}) playerId: ${playerId}`);
+        
+        if (!this.svgOverlay) {
+            console.log('SVG overlay not found, initializing...');
+            this.initPowerLineOverlay();
+        }
+        
+        if (!this.svgOverlay) {
+            console.error('Failed to initialize SVG overlay');
+            return;
+        }
+        
+        // Clear existing connections for this player
+        this.clearPlayerConnections(playerId);
+        
+        // Find all power lines and power plants by this player within radius
+        const radius = 5; // Same radius as placement validation
+        const nearbyPowerSources = this.findNearbyPowerSources(placedRow, placedCol, radius, playerId);
+        
+        console.log(`Found ${nearbyPowerSources.length} nearby power sources within radius ${radius}`);
+        
+        // Draw connections to nearby power sources
+        nearbyPowerSources.forEach(target => {
+            console.log(`Drawing connection to nearby source at (${target.row},${target.col})`);
+            this.drawPowerLineConnection(placedRow, placedCol, target.row, target.col, playerId);
+        });
+        
+        // Also update connections for all other power sources by this player
+        this.updateAllPlayerConnections(playerId);
+    }
+    
+    findNearbyPowerSources(row, col, radius, playerId) {
+        const sources = [];
+        
+        for (let dr = -radius; dr <= radius; dr++) {
+            for (let dc = -radius; dc <= radius; dc++) {
+                // Skip if not within radius (use Chebyshev distance)
+                const distance = Math.max(Math.abs(dr), Math.abs(dc));
+                if (distance > radius || distance === 0) continue;
+                
+                const checkRow = row + dr;
+                const checkCol = col + dc;
+                
+                if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                    checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                    
+                    const cell = this.mapSystem.cells[checkRow][checkCol];
+                    // In single-player mode, match all power sources regardless of playerId
+                    const matchesPlayer = (playerId === 'single-player') ? true : (cell.playerId === playerId);
+                    
+                    if ((cell.attribute === 'powerPlant' || cell.attribute === 'powerLines') &&
+                        matchesPlayer) {
+                        sources.push({ row: checkRow, col: checkCol });
+                        console.log(`Found nearby power source at (${checkRow},${checkCol}) - attribute: ${cell.attribute}, playerId: ${cell.playerId}`);
+                    }
+                }
+            }
+        }
+        
+        return sources;
+    }
+    
+    drawPowerLineConnection(row1, col1, row2, col2, playerId) {
+        if (!this.svgOverlay) {
+            console.log('SVG overlay not initialized, attempting to create...');
+            this.initPowerLineOverlay();
+            if (!this.svgOverlay) {
+                console.error('Failed to create SVG overlay');
+                return;
+            }
+        }
+        
+        // Get cell positions
+        const cell1 = this.mapSystem.cells[row1] && this.mapSystem.cells[row1][col1];
+        const cell2 = this.mapSystem.cells[row2] && this.mapSystem.cells[row2][col2];
+        
+        if (!cell1 || !cell2 || !cell1.element || !cell2.element) {
+            console.log('Cells or elements not found:', { cell1: !!cell1, cell2: !!cell2 });
+            return;
+        }
+        
+        // Use a function to get positions that can be called on resize
+        const updateLinePosition = () => {
+            // Get the grid container (parent of SVG)
+            const gridContainer = this.svgOverlay.parentElement;
+            if (!gridContainer) {
+                console.error('Grid container not found');
+                return { x1: 0, y1: 0, x2: 0, y2: 0 };
+            }
+            
+            // Get cell positions relative to the grid container
+            const cell1Rect = cell1.element.getBoundingClientRect();
+            const cell2Rect = cell2.element.getBoundingClientRect();
+            const gridRect = gridContainer.getBoundingClientRect();
+            
+            // Calculate center positions relative to the grid container
+            const x1 = (cell1Rect.left - gridRect.left) + (cell1Rect.width / 2);
+            const y1 = (cell1Rect.top - gridRect.top) + (cell1Rect.height / 2);
+            const x2 = (cell2Rect.left - gridRect.left) + (cell2Rect.width / 2);
+            const y2 = (cell2Rect.top - gridRect.top) + (cell2Rect.height / 2);
+            
+            console.log(`Calculated positions: (${x1},${y1}) to (${x2},${y2})`);
+            console.log(`Cell1 rect:`, cell1Rect);
+            console.log(`Cell2 rect:`, cell2Rect);
+            console.log(`Grid rect:`, gridRect);
+            
+            return { x1, y1, x2, y2 };
+        };
+        
+        const positions = updateLinePosition();
+        
+        // Check if positions are valid
+        if (isNaN(positions.x1) || isNaN(positions.y1) || isNaN(positions.x2) || isNaN(positions.y2)) {
+            console.log('Invalid positions calculated:', positions, {
+                rect1: cell1.element.getBoundingClientRect(),
+                rect2: cell2.element.getBoundingClientRect(),
+                gridRect: this.svgOverlay.getBoundingClientRect()
+            });
+            return;
+        }
+        
+        console.log(`Drawing line from (${row1},${col1}) to (${row2},${col2}) at positions:`, positions);
+        
+        // Create line element
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', positions.x1);
+        line.setAttribute('y1', positions.y1);
+        line.setAttribute('x2', positions.x2);
+        line.setAttribute('y2', positions.y2);
+        line.setAttribute('stroke', '#FFD700'); // Gold color for power lines
+        line.setAttribute('stroke-width', '3'); // Make it thicker for visibility
+        line.setAttribute('stroke-opacity', '1'); // Fully opaque
+        line.setAttribute('data-player-id', playerId);
+        line.setAttribute('data-row1', row1);
+        line.setAttribute('data-col1', col1);
+        line.setAttribute('data-row2', row2);
+        line.setAttribute('data-col2', col2);
+        
+        // Store update function for resize
+        line._updatePosition = updateLinePosition;
+        
+        this.svgOverlay.appendChild(line);
+        console.log(`Successfully drew power line connection from (${row1},${col1}) to (${row2},${col2})`);
+        
+        // Store connection for cleanup
+        const key = `${row1},${col1}-${row2},${col2}`;
+        this.powerLineConnections.set(key, line);
+    }
+    
+    clearPlayerConnections(playerId) {
+        if (!this.svgOverlay) return;
+        
+        // Remove all lines for this player
+        const linesToRemove = [];
+        this.svgOverlay.querySelectorAll(`line[data-player-id="${playerId}"]`).forEach(line => {
+            linesToRemove.push(line);
+        });
+        
+        linesToRemove.forEach(line => {
+            line.remove();
+            // Remove from map
+            for (const [key, storedLine] of this.powerLineConnections.entries()) {
+                if (storedLine === line) {
+                    this.powerLineConnections.delete(key);
+                    break;
+                }
+            }
+        });
+    }
+    
+    updateAllPlayerConnections(playerId) {
+        // Find all power lines and power plants by this player
+        const powerSources = [];
+        
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                // In single-player mode, connect all power sources regardless of playerId
+                // In multiplayer, only connect same player's power sources
+                const matchesPlayer = (playerId === 'single-player') ? true : (cell.playerId === playerId);
+                if ((cell.attribute === 'powerPlant' || cell.attribute === 'powerLines') &&
+                    matchesPlayer) {
+                    powerSources.push({ row, col });
+                }
+            }
+        }
+        
+        console.log(`Found ${powerSources.length} power sources for player ${playerId}`);
+        
+        // Draw connections between all power sources within radius
+        // Use a set to track already drawn connections to avoid duplicates
+        const drawnConnections = new Set();
+        const radius = 5;
+        
+        for (let i = 0; i < powerSources.length; i++) {
+            for (let j = i + 1; j < powerSources.length; j++) {
+                const source1 = powerSources[i];
+                const source2 = powerSources[j];
+                
+                const distance = Math.max(
+                    Math.abs(source1.row - source2.row),
+                    Math.abs(source1.col - source2.col)
+                );
+                
+                if (distance <= radius) {
+                    // Create a unique key for this connection (both directions)
+                    const key1 = `${source1.row},${source1.col}-${source2.row},${source2.col}`;
+                    const key2 = `${source2.row},${source2.col}-${source1.row},${source1.col}`;
+                    
+                    // Only draw if we haven't drawn this connection yet
+                    if (!drawnConnections.has(key1) && !drawnConnections.has(key2)) {
+                        this.drawPowerLineConnection(
+                            source1.row, source1.col,
+                            source2.row, source2.col,
+                            playerId
+                        );
+                        drawnConnections.add(key1);
+                        drawnConnections.add(key2);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Remove connections when a power line or power plant is removed
+    removePowerLineConnections(row, col, playerId) {
+        if (!this.svgOverlay) return;
+        
+        // Remove all lines connected to this position
+        const linesToRemove = [];
+        this.svgOverlay.querySelectorAll(`line[data-player-id="${playerId}"]`).forEach(line => {
+            const x1 = parseFloat(line.getAttribute('x1'));
+            const y1 = parseFloat(line.getAttribute('y1'));
+            const x2 = parseFloat(line.getAttribute('x2'));
+            const y2 = parseFloat(line.getAttribute('y2'));
+            
+            // Check if line connects to this cell
+            const cell = this.mapSystem.cells[row][col];
+            if (cell && cell.element) {
+                const rect = cell.element.getBoundingClientRect();
+                const gridRect = this.svgOverlay.getBoundingClientRect();
+                const cellCenterX = rect.left + rect.width / 2 - gridRect.left;
+                const cellCenterY = rect.top + rect.height / 2 - gridRect.top;
+                
+                // Check if line endpoint is near this cell
+                const threshold = 5; // pixels
+                if ((Math.abs(x1 - cellCenterX) < threshold && Math.abs(y1 - cellCenterY) < threshold) ||
+                    (Math.abs(x2 - cellCenterX) < threshold && Math.abs(y2 - cellCenterY) < threshold)) {
+                    linesToRemove.push(line);
+                }
+            }
+        });
+        
+        linesToRemove.forEach(line => {
+            line.remove();
+            // Remove from map
+            for (const [key, storedLine] of this.powerLineConnections.entries()) {
+                if (storedLine === line) {
+                    this.powerLineConnections.delete(key);
+                    break;
+                }
+            }
+        });
+        
+        // Rebuild connections for remaining power sources
+        this.updateAllPlayerConnections(playerId);
+    }
+    
+    // Update line positions when map is resized
+    refreshPowerLineConnections() {
+        if (!this.svgOverlay) return;
+        
+        // Update positions of existing lines
+        this.svgOverlay.querySelectorAll('line').forEach(line => {
+            if (line._updatePosition) {
+                const positions = line._updatePosition();
+                line.setAttribute('x1', positions.x1);
+                line.setAttribute('y1', positions.y1);
+                line.setAttribute('x2', positions.x2);
+                line.setAttribute('y2', positions.y2);
+            }
+        });
+    }
+    
+    // Rebuild all connections from scratch
+    rebuildAllPowerLineConnections() {
+        // Initialize overlay if needed
+        if (!this.svgOverlay) {
+            this.initPowerLineOverlay();
+        }
+        
+        if (!this.svgOverlay) {
+            console.log('Could not initialize SVG overlay for power lines');
+            return;
+        }
+        
+        // Clear and redraw all connections
+        this.svgOverlay.innerHTML = '';
+        this.powerLineConnections.clear();
+        
+        // Get all unique player IDs with power sources, including single-player
+        const playerIds = new Set();
+        let hasPowerSources = false;
+        
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (cell.attribute === 'powerPlant' || cell.attribute === 'powerLines') {
+                    hasPowerSources = true;
+                    const playerId = cell.playerId || 'single-player';
+                    playerIds.add(playerId);
+                }
+            }
+        }
+        
+        if (!hasPowerSources) {
+            console.log('No power sources found to connect');
+            return;
+        }
+        
+        console.log(`Rebuilding power line connections for ${playerIds.size} player(s):`, Array.from(playerIds));
+        
+        // Update connections for each player
+        playerIds.forEach(playerId => {
+            this.updateAllPlayerConnections(playerId);
+        });
     }
     
     classifyPowerLineRegions() {

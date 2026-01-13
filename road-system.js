@@ -28,6 +28,17 @@ class RoadSystem {
             return false; // Cannot place roads on disconnected/inoperable roads
         }
         
+        // Check ownership in multiplayer - cannot build off another player's roads
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            const currentPlayerId = window.multiplayerIntegration.playerId;
+            if (this.isAdjacentToOtherPlayerRoad(row, col, currentPlayerId)) {
+                return false; // Cannot build off another player's road
+            }
+            if (this.isAdjacentToOtherPlayerIndustrial(row, col, currentPlayerId)) {
+                return false; // Cannot build off another player's industrial
+            }
+        }
+        
         // Roads must be adjacent to industrial zones, other roads, or bridges
         return this.isAdjacentToIndustrial(row, col) || this.isAdjacentToRoad(row, col) || this.isAdjacentToBridge(row, col);
     }
@@ -81,6 +92,62 @@ class RoadSystem {
                         return false; // Cannot connect to disconnected/inoperable roads
                     }
                     return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Check if adjacent to another player's road (for multiplayer ownership)
+    isAdjacentToOtherPlayerRoad(row, col, currentPlayerId) {
+        const directions = [
+            { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+            { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if (cell.attribute === 'road' || cell.class === 'road') {
+                    // Check if this road belongs to another player
+                    if (cell.playerId && cell.playerId !== currentPlayerId) {
+                        return true; // Adjacent to another player's road
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    // Check if adjacent to another player's industrial (for multiplayer ownership)
+    isAdjacentToOtherPlayerIndustrial(row, col, currentPlayerId) {
+        const directions = [
+            { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+            { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+            { dr: 1, dc: -1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }
+        ];
+        
+        for (let dir of directions) {
+            const checkRow = row + dir.dr;
+            const checkCol = col + dir.dc;
+            
+            if (checkRow >= 0 && checkRow < this.mapSystem.mapSize.rows &&
+                checkCol >= 0 && checkCol < this.mapSystem.mapSize.cols) {
+                
+                const cell = this.mapSystem.cells[checkRow][checkCol];
+                if (cell.attribute === 'industrial' || cell.class === 'industrial') {
+                    // Check if this industrial belongs to another player
+                    if (cell.playerId && cell.playerId !== currentPlayerId) {
+                        return true; // Adjacent to another player's industrial
+                    }
                 }
             }
         }
@@ -217,10 +284,20 @@ class RoadSystem {
                         
                         if (isPowerInoperable) {
                             // Road is inoperable due to power issues - keep it red
-                            disconnectedCount++;
-                            const type = (cell.attribute === 'bridge' || cell.class === 'bridge') ? 'Bridge' : 'Road';
-                            cellElement.title = `${type}: Inoperable due to power shortage`;
-                            console.log(`Road at ${row},${col} is power-inoperable - keeping red styling`);
+                            // BUT: Don't apply red styling if player overlay is active
+                            const overlayActive = window.multiplayerIntegration && 
+                                                window.multiplayerIntegration.showPlayerOverlay;
+                            
+                            if (!overlayActive) {
+                                disconnectedCount++;
+                                const type = (cell.attribute === 'bridge' || cell.class === 'bridge') ? 'Bridge' : 'Road';
+                                cellElement.title = `${type}: Inoperable due to power shortage`;
+                                console.log(`Road at ${row},${col} is power-inoperable - keeping red styling`);
+                            } else {
+                                // Overlay is active - don't apply inoperable styling
+                                // The overlay will handle the visual appearance
+                                console.log(`Road at ${row},${col} is power-inoperable but overlay is active - skipping red styling`);
+                            }
                         } else {
                             const isConnected = this.isRoadConnected(row, col);
                             if (isConnected) {

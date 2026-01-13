@@ -83,6 +83,15 @@ class MapSystem {
         // Initialize original terrain tracking
         this.initializeOriginalTerrain();
         
+        // Initialize power line connections after map is created
+        if (this.powerLineSystem) {
+            setTimeout(() => {
+                if (this.powerLineSystem.rebuildAllPowerLineConnections) {
+                    this.powerLineSystem.rebuildAllPowerLineConnections();
+                }
+            }, 200);
+        }
+        
         console.log('Map created with', this.mapSize.rows * this.mapSize.cols, 'cells');
     }
     
@@ -573,6 +582,12 @@ class MapSystem {
         console.log('MapSystem reclassifyPowerLineAfterRemoval called:', row, col);
         if (this.powerLineSystem) {
             this.powerLineSystem.reclassifyPowerLineAfterRemoval(row, col);
+            
+            // Remove power line connections if removing power line or power plant
+            const cell = this.cells[row][col];
+            if (cell && (cell.attribute === 'powerLines' || cell.attribute === 'powerPlant') && cell.playerId) {
+                this.powerLineSystem.removePowerLineConnections(row, col, cell.playerId);
+            }
         } else {
             console.error('Power line system not available for reclassifyPowerLineAfterRemoval');
         }

@@ -31,6 +31,7 @@ class SimpleMultiplayerIntegration {
         this.turnTimeRemaining = null; // Track remaining time when paused
         this.turnTimerPaused = false;
         this.playerJustLeft = false; // Track if a player just left to reset timer
+        this.showPlayerOverlay = false; // Track if player overlay is active
         // Leave game now just refreshes the page, no complex state needed
     }
 
@@ -739,6 +740,7 @@ class SimpleMultiplayerIntegration {
                 <div class="multiplayer-actions game-started-dependent" style="display: none;">
                     <button id="sync-map-btn" class="multiplayer-btn secondary">Sync Map</button>
                     <button id="pause-game-btn" class="multiplayer-btn warning">Pause Game</button>
+                    <button id="toggle-player-overlay-btn" class="multiplayer-btn secondary">Show Player Overlay</button>
                 </div>
                 
                 <!-- Dropdown Toggle -->
@@ -999,6 +1001,12 @@ class SimpleMultiplayerIntegration {
         const pauseGameBtn = document.getElementById('pause-game-btn');
         if (pauseGameBtn) {
             pauseGameBtn.addEventListener('click', () => this.toggleGamePause());
+        }
+
+        // Toggle Player Overlay button
+        const toggleOverlayBtn = document.getElementById('toggle-player-overlay-btn');
+        if (toggleOverlayBtn) {
+            toggleOverlayBtn.addEventListener('click', () => this.togglePlayerOverlay());
         }
     }
 
@@ -1990,6 +1998,22 @@ class SimpleMultiplayerIntegration {
                     this.mapSystem.updateCellVisual(data.row, data.col);
                 }
                 
+                // Update power line connections if placing power line or power plant
+                if ((data.attribute === 'powerLines' || data.attribute === 'powerPlant') &&
+                    this.mapSystem.powerLineSystem) {
+                    const playerId = data.playerId || 'single-player';
+                    setTimeout(() => {
+                        if (this.mapSystem.powerLineSystem) {
+                            this.mapSystem.powerLineSystem.updatePowerLineConnections(data.row, data.col, playerId);
+                        }
+                    }, 100);
+                }
+                
+                // Update overlay if active
+                if (this.showPlayerOverlay) {
+                    this.applyPlayerOverlay();
+                }
+                
                 // Update stats
                 if (this.mapSystem.updateStats) {
                     this.mapSystem.updateStats();
@@ -2008,14 +2032,55 @@ class SimpleMultiplayerIntegration {
         } else if (data.type === 'remove') {
             console.log(`Processing remove action at (${data.row}, ${data.col})`);
             
+            // Check if this cell belongs to the player who is removing it
+            const cell = this.mapSystem.cells[data.row] && this.mapSystem.cells[data.row][data.col];
+            if (cell && cell.playerId && cell.playerId !== data.playerId) {
+                console.warn(`Cannot remove building at (${data.row}, ${data.col}) - owned by different player`);
+                return;
+            }
+            
+            // Get action cost BEFORE erasing (since erasePlayerModifications might clear the data)
+            // Only refund if this is the current player's own action
+            let actionCost = 0;
+            if (data.playerId === this.playerId && cell) {
+                const wasPlacedThisTurn = cell.placedThisTurn === true;
+                if (wasPlacedThisTurn) {
+                    // Use data.attribute from server (more reliable) or fall back to cell.attribute
+                    const erasedAttribute = data.attribute || cell.attribute || cell.class;
+                    actionCost = this.getActionCost(erasedAttribute);
+                    console.log(`Erasing ${erasedAttribute} (from data: ${data.attribute}, cell: ${cell.attribute}) placed this turn, refunding ${actionCost} action(s)`);
+                }
+            }
+            
+            // Remove power line connections before erasing if it's a power line or power plant
+            const cellBeforeErase = this.mapSystem.cells[data.row] && this.mapSystem.cells[data.row][data.col];
+            if (cellBeforeErase && 
+                (cellBeforeErase.attribute === 'powerLines' || cellBeforeErase.attribute === 'powerPlant') &&
+                cellBeforeErase.playerId && this.mapSystem.powerLineSystem) {
+                this.mapSystem.powerLineSystem.removePowerLineConnections(data.row, data.col, cellBeforeErase.playerId);
+            }
+            
             // Erase the cell
             if (this.mapSystem && this.mapSystem.erasePlayerModifications) {
                 this.mapSystem.erasePlayerModifications(data.row, data.col);
             }
             
+            // Refund actions if it was placed this turn by the current player
+            // Only refund once when server confirms (not locally)
+            if (data.playerId === this.playerId && actionCost > 0) {
+                this.actionsThisTurn = Math.max(0, this.actionsThisTurn - actionCost);
+                this.updateActionCounter();
+                console.log(`Refunded ${actionCost} action(s) for removing building placed this turn`);
+            }
+            
             // Update visual representation
             if (this.mapSystem && this.mapSystem.updateCellVisual) {
                 this.mapSystem.updateCellVisual(data.row, data.col);
+            }
+            
+            // Update overlay if active
+            if (this.showPlayerOverlay) {
+                this.applyPlayerOverlay();
             }
             
             // Update stats
@@ -2767,6 +2832,11 @@ class SimpleMultiplayerIntegration {
             }
         }
         
+        // Refresh overlay if active
+        if (this.showPlayerOverlay) {
+            this.applyPlayerOverlay();
+        }
+        
         // Also try to force a complete map refresh
         if (this.mapSystem && typeof this.mapSystem.refreshMap === 'function') {
             console.log('🗺️ Calling refreshMap...');
@@ -3001,6 +3071,11 @@ class SimpleMultiplayerIntegration {
         }
 
         console.log(`Force updated ${cellsUpdated} cells`);
+        
+        // Refresh overlay if active
+        if (this.showPlayerOverlay) {
+            this.applyPlayerOverlay();
+        }
 
         // Update the visual representation
         this.mapSystem.updateStats();
@@ -3155,6 +3230,365 @@ class SimpleMultiplayerIntegration {
         if (this.gameStateUpdateInterval) {
             clearInterval(this.gameStateUpdateInterval);
             this.gameStateUpdateInterval = null;
+        }
+    }
+
+    // Toggle player overlay to show which tiles belong to which players
+    togglePlayerOverlay() {
+        this.showPlayerOverlay = !this.showPlayerOverlay;
+        this.applyPlayerOverlay();
+        this.updateOverlayUI();
+        
+        // Deselect current tool when toggling overlay
+        if (this.mapSystem) {
+            this.mapSystem.selectedAttribute = null;
+            this.mapSystem.selectedClass = null;
+            // Remove active class from all tool buttons
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Also remove active class from infrastructure/zoning buttons
+            document.querySelectorAll('.infrastructure-btn, .zoning-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+        
+        // Update button text
+        const toggleBtn = document.getElementById('toggle-player-overlay-btn');
+        if (toggleBtn) {
+            toggleBtn.textContent = this.showPlayerOverlay ? 'Hide Player Overlay' : 'Show Player Overlay';
+        }
+    }
+    
+    updateOverlayUI() {
+        const playerControls = document.getElementById('playerControls');
+        if (!playerControls) return;
+        
+        // Find infrastructure and zoning sections
+        const infrastructureSection = Array.from(playerControls.querySelectorAll('.player-section')).find(section => {
+            const h4 = section.querySelector('h4');
+            return h4 && h4.textContent.includes('Infrastructure');
+        });
+        
+        const zoningSection = Array.from(playerControls.querySelectorAll('.player-section')).find(section => {
+            const h4 = section.querySelector('h4');
+            return h4 && h4.textContent.includes('Zoning');
+        });
+        
+        // Find or create tile info section
+        let tileInfoSection = playerControls.querySelector('.tile-info-section');
+        if (!tileInfoSection) {
+            tileInfoSection = document.createElement('div');
+            tileInfoSection.className = 'player-section tile-info-section';
+            tileInfoSection.innerHTML = `
+                <h4>📍 Tile Information</h4>
+                <div id="tileInfoContent" class="tile-info-content">
+                    <p style="color: #7f8c8d; font-style: italic;">Hover over a tile to see its information</p>
+                </div>
+            `;
+            // Insert after building rules section
+            const buildingRulesSection = playerControls.querySelector('.building-rules-section');
+            if (buildingRulesSection && buildingRulesSection.nextSibling) {
+                playerControls.insertBefore(tileInfoSection, buildingRulesSection.nextSibling);
+            } else if (buildingRulesSection) {
+                buildingRulesSection.after(tileInfoSection);
+            } else {
+                playerControls.appendChild(tileInfoSection);
+            }
+        }
+        
+        if (this.showPlayerOverlay) {
+            // Hide infrastructure and zoning sections
+            if (infrastructureSection) infrastructureSection.style.display = 'none';
+            if (zoningSection) zoningSection.style.display = 'none';
+            // Show tile info section
+            tileInfoSection.style.display = 'block';
+        } else {
+            // Show infrastructure and zoning sections
+            if (infrastructureSection) infrastructureSection.style.display = 'block';
+            if (zoningSection) zoningSection.style.display = 'block';
+            // Hide tile info section
+            tileInfoSection.style.display = 'none';
+        }
+    }
+    
+    updateTileInfo(row, col) {
+        if (!this.showPlayerOverlay) return;
+        
+        const tileInfoContent = document.getElementById('tileInfoContent');
+        if (!tileInfoContent) return;
+        
+        const cell = this.mapSystem.cells[row] && this.mapSystem.cells[row][col];
+        if (!cell) return;
+        
+        // Get class info
+        const classData = this.mapSystem.classInfo.getClassData(cell.attribute);
+        
+        // Get building costs
+        let costs = null;
+        if (this.mapSystem.cellInteraction && this.mapSystem.cellInteraction.getBuildingCosts) {
+            costs = this.mapSystem.cellInteraction.getBuildingCosts(cell.attribute);
+        }
+        
+        // Get production info - check both description and known production rates
+        const description = classData.description || '';
+        let produces = null;
+        
+        // Known production rates per building
+        const productionRates = {
+            'lumberYard': '0.5 wood/s',
+            'miningOutpost': '0.5 ore/s',
+            'industrial': '1 commercial good/s (requires power)',
+            'powerPlant': 'Power generation',
+            'commercial': 'Commercial goods',
+            'residential': cell.population ? `${Math.round(cell.population)} population` : 'Population (grows over time)'
+        };
+        
+        if (productionRates[cell.attribute]) {
+            produces = productionRates[cell.attribute];
+        } else {
+            // Try to extract from description
+            const producesMatch = description.match(/produces\s+([^/\(]+)/i);
+            if (producesMatch) {
+                produces = producesMatch[1].trim();
+            }
+        }
+        
+        // Get player info
+        let playerInfo = null;
+        if (cell.playerId) {
+            const player = this.players.get(cell.playerId);
+            if (player && player.username) {
+                // Player found with username
+                const playerName = player.username;
+                // Add color indicator
+                const colorDot = `<span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: ${player.color || '#3498db'}; margin-right: 4px; vertical-align: middle;"></span>`;
+                playerInfo = `${colorDot}Placed by: ${playerName}`;
+            } else if (cell.playerId === this.playerId) {
+                // Current player - use playerName or default
+                const playerName = this.playerName || 'You';
+                playerInfo = `Placed by: ${playerName}`;
+            } else if (cell.playerId === 'single-player') {
+                playerInfo = 'Placed by: You';
+            } else {
+                // Player ID exists but player not found in map
+                playerInfo = `Placed by: Player ${cell.playerId}`;
+            }
+        } else {
+            // No playerId - check if it's a natural terrain or player-placed
+            const isPlayerPlaced = this.mapSystem.isPlayerPlaced ? this.mapSystem.isPlayerPlaced(row, col) : false;
+            if (!isPlayerPlaced) {
+                playerInfo = 'Natural terrain';
+            } else {
+                // Player-placed but no playerId - might be from before multiplayer was added
+                playerInfo = 'Placed by: Unknown';
+            }
+        }
+        
+        // Build info HTML - start with name (only if we have a valid name)
+        const tileName = classData.name && classData.name !== 'Unknown attribute' ? classData.name : cell.attribute;
+        let infoHTML = `
+            <div class="tile-info-item">
+                <strong style="font-size: 1.1rem; color: #2c3e50;">${tileName}</strong>
+            </div>
+        `;
+        
+        // Only show cost if it exists
+        if (costs) {
+            const costParts = [];
+            if (costs.wood) costParts.push(`${costs.wood}🪵`);
+            if (costs.ore) costParts.push(`${costs.ore}⛏️`);
+            if (costs.commercialGoods) costParts.push(`${costs.commercialGoods}📦`);
+            if (costParts.length > 0) {
+                infoHTML += `
+                    <div class="tile-info-item">
+                        <span class="tile-info-label">Cost:</span>
+                        <span class="tile-info-value">${costParts.join(' ')}</span>
+                    </div>
+                `;
+            }
+        }
+        
+        // Only show produces if it exists
+        if (produces) {
+            infoHTML += `
+                <div class="tile-info-item">
+                    <span class="tile-info-label">Produces:</span>
+                    <span class="tile-info-value">${produces}</span>
+                </div>
+            `;
+        }
+        
+        // Show player info
+        if (playerInfo) {
+            infoHTML += `
+                <div class="tile-info-item">
+                    <span class="tile-info-label">${playerInfo}</span>
+                </div>
+            `;
+        }
+        
+        // Only show description if it exists and is meaningful (not "Unknown attribute")
+        if (description && description !== 'Unknown attribute' && description.trim().length > 0) {
+            // Clean up description - remove cost info if we already showed it
+            let cleanDescription = description;
+            if (costs) {
+                // Remove cost info from description since we show it separately
+                cleanDescription = cleanDescription.replace(/Cost:\s*[^\-]+/gi, '').trim();
+            }
+            if (cleanDescription && cleanDescription !== 'Unknown attribute') {
+                infoHTML += `
+                    <div class="tile-info-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ecf0f1;">
+                        <span class="tile-info-value" style="font-size: 0.85rem; color: #7f8c8d;">${cleanDescription}</span>
+                    </div>
+                `;
+            }
+        }
+        
+        tileInfoContent.innerHTML = infoHTML;
+    }
+
+    // Apply or remove player overlay on cells
+    applyPlayerOverlay() {
+        if (!this.mapSystem || !this.mapSystem.cells) {
+            return;
+        }
+
+        // Get player color map
+        const playerColorMap = new Map();
+        this.players.forEach((player, playerId) => {
+            playerColorMap.set(playerId, player.color);
+        });
+
+        // Apply overlay to all cells
+        for (let row = 0; row < this.mapSystem.mapSize.rows; row++) {
+            for (let col = 0; col < this.mapSystem.mapSize.cols; col++) {
+                const cell = this.mapSystem.cells[row][col];
+                if (!cell || !cell.element) {
+                    continue;
+                }
+
+                // Remove existing overlay class
+                cell.element.classList.remove('player-overlay-active');
+
+                if (this.showPlayerOverlay) {
+                    // Check if this is a road/bridge - we want to show them in overlay but remove inoperable styling
+                    const isRoad = cell.attribute === 'road' || cell.class === 'road' || 
+                                   cell.attribute === 'bridge' || cell.class === 'bridge';
+                    const isInoperable = cell.element.getAttribute('data-power-inoperable') === 'true';
+                    
+                    if (isInoperable) {
+                        if (isRoad) {
+                            // For roads/bridges, keep them visible but remove inoperable styling
+                            cell.element.style.display = '';
+                            // Remove the disconnected-road class to remove red border and dashed line
+                            cell.element.classList.remove('disconnected-road');
+                            // Use a data attribute to track overlay state for CSS override
+                            cell.element.setAttribute('data-overlay-active', 'true');
+                            // Apply player color if available (will be applied below)
+                            // Note: We'll apply player color with !important to override any styling
+                        } else {
+                            // For other inoperable infrastructure, hide them
+                            cell.element.style.display = 'none';
+                            continue; // Skip processing this cell
+                        }
+                    } else {
+                        // Make sure cells are visible when overlay is on
+                        cell.element.style.display = '';
+                    }
+                    
+                    // Handle terrain types with specific colors
+                    // Check both attribute and class, and also check element's classList
+                    const isWater = ['ocean', 'lake', 'water', 'river', 'riverStart', 'riverEnd'].includes(cell.attribute) ||
+                                   (cell.class && ['ocean', 'lake', 'water', 'river', 'riverStart', 'riverEnd'].includes(cell.class)) ||
+                                   cell.element.classList.contains('water') || 
+                                   cell.element.classList.contains('ocean') || 
+                                   cell.element.classList.contains('lake') ||
+                                   cell.element.classList.contains('river');
+                    
+                    if (cell.attribute === 'grassland' || cell.element.classList.contains('grassland')) {
+                        cell.element.classList.add('player-overlay-active');
+                        cell.element.style.setProperty('background-color', '#808080', 'important'); // Gray
+                        cell.element.style.opacity = '';
+                    } else if (isWater) {
+                        cell.element.classList.add('player-overlay-active');
+                        cell.element.style.setProperty('background-color', '#A0A0A0', 'important'); // Lighter gray
+                        cell.element.style.opacity = '';
+                    } else if (['forest', 'mountain'].includes(cell.attribute) || 
+                               (cell.class && ['forest', 'mountain'].includes(cell.class)) ||
+                               cell.element.classList.contains('forest') ||
+                               cell.element.classList.contains('mountain')) {
+                        cell.element.classList.add('player-overlay-active');
+                        cell.element.style.setProperty('background-color', '#000000', 'important'); // Black
+                        cell.element.style.opacity = '';
+                    } else if (cell.playerId) {
+                        // For infrastructure, zoning, and buildings (including inoperable roads), use player colors
+                        const playerColor = playerColorMap.get(cell.playerId);
+                        if (playerColor) {
+                            const isInfrastructure = ['road', 'highway', 'bridge', 'tunnel', 'powerLines'].includes(cell.attribute);
+                            const isZoning = ['residential', 'commercial', 'industrial', 'mixed'].includes(cell.attribute);
+                            const isBuilding = ['powerPlant', 'lumberYard', 'miningOutpost'].includes(cell.attribute);
+                            
+                            if (isInfrastructure || isZoning || isBuilding) {
+                                cell.element.classList.add('player-overlay-active');
+                                // Apply color as background color - use the player's color directly
+                                // Use !important to override any disconnected-road styling
+                                cell.element.style.setProperty('--player-color', playerColor);
+                                cell.element.style.setProperty('background-color', playerColor, 'important');
+                                cell.element.style.setProperty('border', '0.5px solid rgba(0,0,0,0.12)', 'important');
+                                cell.element.style.opacity = '';
+                            }
+                        }
+                    }
+                    
+                    // For inoperable roads, ensure player color is applied even if they don't have playerId set yet
+                    // This handles the case where the road is inoperable but we still want to show it
+                    if (isInoperable && isRoad && cell.playerId) {
+                        const playerColor = playerColorMap.get(cell.playerId);
+                        if (playerColor) {
+                            cell.element.classList.add('player-overlay-active');
+                            // Force player color with !important to override disconnected-road CSS
+                            cell.element.style.setProperty('--player-color', playerColor);
+                            cell.element.style.setProperty('background-color', playerColor, 'important');
+                            cell.element.style.setProperty('border', '0.5px solid rgba(0,0,0,0.12)', 'important');
+                            cell.element.style.opacity = '';
+                        }
+                    }
+                } else {
+                    // Restore visibility for all cells when overlay is off
+                    cell.element.style.display = '';
+                    
+                    // Remove any inline styles when overlay is off to restore original appearance
+                    cell.element.style.removeProperty('--player-color');
+                    cell.element.style.removeProperty('opacity');
+                    
+                    // Remove overlay data attribute
+                    cell.element.removeAttribute('data-overlay-active');
+                    
+                    // For roads/bridges, remove the disconnected-road class temporarily
+                    // so that updateRoadConnections can properly restore the state
+                    const isRoad = cell.attribute === 'road' || cell.class === 'road' || 
+                                   cell.attribute === 'bridge' || cell.class === 'bridge';
+                    if (isRoad) {
+                        // Remove background-color and border so road system can restore them
+                        cell.element.style.removeProperty('background-color');
+                        cell.element.style.removeProperty('border');
+                    } else {
+                        // For non-roads, remove background-color
+                        cell.element.style.removeProperty('background-color');
+                    }
+                }
+            }
+        }
+        
+        // After turning off overlay, update road connections to restore inoperable states
+        if (!this.showPlayerOverlay && this.mapSystem.roadSystem) {
+            // Use setTimeout to ensure this runs after all style removals
+            setTimeout(() => {
+                if (this.mapSystem.roadSystem && this.mapSystem.roadSystem.updateRoadConnections) {
+                    this.mapSystem.roadSystem.updateRoadConnections();
+                }
+            }, 50);
         }
     }
 

@@ -160,6 +160,14 @@ class CellInteraction {
         
         // Handle erase mode
         if (this.mapSystem.selectedAttribute === 'erase') {
+            // Check if it's the player's turn in multiplayer mode
+            if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                if (!window.multiplayerIntegration.canPlaceBuilding()) {
+                    this.showTurnError(cell);
+                    return;
+                }
+            }
+            
             // Check if current tile is protected natural terrain
             const currentCell = this.mapSystem.cells[row][col];
             const protectedTerrain = ['ocean', 'lake', 'forest', 'mountain', 'water', 'river', 'riverStart', 'riverEnd'];
@@ -172,16 +180,48 @@ class CellInteraction {
             
             // Only erase if it's player-placed infrastructure/zoning
             if (this.mapSystem.isPlayerPlaced(row, col)) {
+                // In multiplayer mode, check if the current player owns this cell
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    const cellPlayerId = currentCell.playerId;
+                    const currentPlayerId = window.multiplayerIntegration.playerId;
+                    
+                    // Only allow erasing if the current player owns the cell
+                    if (cellPlayerId && cellPlayerId !== currentPlayerId) {
+                        // Show error - can't erase other player's buildings
+                        this.showEraseError(cell, 'other player\'s building');
+                        return;
+                    }
+                }
+                
                 // Get the cost of the item being erased for refund calculation
                 const erasedAttribute = currentCell.attribute;
                 const refundAmounts = this.calculateRefundAmounts(erasedAttribute);
+                
+                // Check if this was placed this turn (for action refund)
+                const wasPlacedThisTurn = currentCell.placedThisTurn === true;
+                let actionCost = 0;
+                
+                // Get action cost if it was placed this turn
+                if (wasPlacedThisTurn && window.multiplayerIntegration) {
+                    actionCost = window.multiplayerIntegration.getActionCost(erasedAttribute);
+                }
                 
                 // Erase the item
                 this.mapSystem.erasePlayerModifications(row, col);
                 
                 // Send multiplayer update if in multiplayer mode
+                // Note: Action refund will be handled by handleActionExecuted when server confirms
+                // This prevents double refunding (local + server)
                 if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
                     window.multiplayerIntegration.sendGameAction('remove', row, col, erasedAttribute, null);
+                    // Don't refund actions here - wait for server confirmation in handleActionExecuted
+                } else {
+                    // Only refund actions locally if NOT in multiplayer mode
+                    if (wasPlacedThisTurn && window.multiplayerIntegration && actionCost > 0) {
+                        window.multiplayerIntegration.actionsThisTurn = Math.max(0, window.multiplayerIntegration.actionsThisTurn - actionCost);
+                        window.multiplayerIntegration.updateActionCounter();
+                        console.log(`Refunded ${actionCost} action(s) for erasing ${erasedAttribute} placed this turn`);
+                    }
                 }
                 
                 // Add refund to resources
@@ -250,6 +290,29 @@ class CellInteraction {
         // Update visual representation
         this.mapSystem.updateCellVisual(row, col);
         
+        // Update power line connections if placing power line or power plant
+        if ((this.mapSystem.selectedAttribute === 'powerLines' || this.mapSystem.selectedAttribute === 'powerPlant') &&
+            this.mapSystem.powerLineSystem) {
+            // Get player ID for multiplayer, or use 'single-player' for single player mode
+            let playerId = 'single-player';
+            if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                playerId = window.multiplayerIntegration.playerId || 'single-player';
+            }
+            
+            // Set playerId on the cell for connection matching
+            this.mapSystem.cells[row][col].playerId = playerId;
+            
+            console.log(`Placed ${this.mapSystem.selectedAttribute} at (${row},${col}) with playerId: ${playerId}`);
+            
+            // Update connections after a short delay to ensure cell is fully updated
+            setTimeout(() => {
+                if (this.mapSystem.powerLineSystem) {
+                    console.log(`Updating power line connections for (${row},${col})`);
+                    this.mapSystem.powerLineSystem.updatePowerLineConnections(row, col, playerId);
+                }
+            }, 200);
+        }
+        
         // Handle water region reclassification
         if (['ocean', 'lake', 'river', 'riverStart', 'riverEnd'].includes(this.mapSystem.selectedAttribute)) {
             if (this.mapSystem.waterSystem) {
@@ -302,6 +365,13 @@ class CellInteraction {
         const col = parseInt(e.target.dataset.col);
         const cell = this.mapSystem.cells[row][col];
         
+        // If player overlay is active, update tile info in player panel
+        if (window.multiplayerIntegration && window.multiplayerIntegration.showPlayerOverlay) {
+            if (window.multiplayerIntegration.updateTileInfo) {
+                window.multiplayerIntegration.updateTileInfo(row, col);
+            }
+        }
+        
         // Update info panel with hovered cell info
         document.getElementById('cellInfo').innerHTML = `
             <div class="info-item">
@@ -320,6 +390,14 @@ class CellInteraction {
     }
     
     handleCellLeave(e) {
+        // If player overlay is active, clear tile info
+        if (window.multiplayerIntegration && window.multiplayerIntegration.showPlayerOverlay) {
+            const tileInfoContent = document.getElementById('tileInfoContent');
+            if (tileInfoContent) {
+                tileInfoContent.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Hover over a tile to see its information</p>';
+            }
+        }
+        
         // Reset info panel to selected tool info
         this.updateCellInfo();
     }
@@ -401,6 +479,18 @@ class CellInteraction {
             case 'mixed':
                 return this.isValidMixedPlacement(row, col);
             case 'road':
+                // Check ownership in multiplayer - cannot build off another player's roads
+                if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+                    const currentPlayerId = window.multiplayerIntegration.playerId;
+                    if (this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToOtherPlayerRoad(row, col, currentPlayerId)) {
+                        this.mapSystem.showNotification('Cannot build road off another player\'s road', 'warning');
+                        return false; // Cannot build off another player's road
+                    }
+                    if (this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToOtherPlayerIndustrial(row, col, currentPlayerId)) {
+                        this.mapSystem.showNotification('Cannot build road off another player\'s industrial', 'warning');
+                        return false; // Cannot build off another player's industrial
+                    }
+                }
                 return this.isValidRoadPlacement(row, col);
             default:
                 return true;
@@ -490,6 +580,19 @@ class CellInteraction {
         const hasPower = this.mapSystem.isAdjacentToPowerPlantOrPowerLines(row, col);
         
         console.log(`Industrial placement at (${row}, ${col}): water=${hasWater}, power=${hasPower}`);
+        
+        // Check ownership in multiplayer - cannot build off another player's roads
+        if (window.multiplayerIntegration && window.multiplayerIntegration.isInMultiplayerMode()) {
+            const currentPlayerId = window.multiplayerIntegration.playerId;
+            if (this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToOtherPlayerRoad(row, col, currentPlayerId)) {
+                this.mapSystem.showNotification('Cannot build industrial off another player\'s road', 'warning');
+                return false; // Cannot build off another player's road
+            }
+            if (this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToOtherPlayerIndustrial(row, col, currentPlayerId)) {
+                this.mapSystem.showNotification('Cannot build industrial off another player\'s industrial', 'warning');
+                return false; // Cannot build off another player's industrial
+            }
+        }
         
         return hasWater && hasPower;
     }

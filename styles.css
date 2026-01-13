@@ -264,6 +264,45 @@ body {
     grid-template-rows: 1fr 1fr 1fr 1fr;
 }
 
+/* Tile Info Section for Player Overlay */
+.tile-info-section {
+    display: none; /* Hidden by default, shown when overlay is active */
+}
+
+.tile-info-content {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-height: 100px;
+}
+
+.tile-info-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    border-left: 3px solid #3498db;
+}
+
+.tile-info-item:last-child {
+    margin-bottom: 0;
+}
+
+.tile-info-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.tile-info-value {
+    display: block;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
 .player-btn {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
@@ -890,6 +929,13 @@ body {
     background-color: #ff6b6b !important;
     box-shadow: inset 0 0 0 2px #ff0000 !important;
     animation: shake 0.5s ease-in-out;
+}
+
+/* Player overlay for multiplayer - highlights tiles by player color */
+.cell.player-overlay-active {
+    position: relative;
+    z-index: 5;
+    /* Background color is set inline via JavaScript to override CSS classes */
 }
 
 .tool-panel {
@@ -1663,6 +1709,24 @@ body {
     white-space: nowrap;
     z-index: 10;
     pointer-events: none;
+}
+
+/* Hide disconnected-road styling when player overlay is active */
+[data-overlay-active="true"].disconnected-road,
+.disconnected-road[data-overlay-active="true"],
+.player-overlay-active.disconnected-road,
+.disconnected-road.player-overlay-active {
+    background-color: transparent !important;
+    border: none !important;
+}
+
+[data-overlay-active="true"].disconnected-road::after,
+.disconnected-road[data-overlay-active="true"]::after,
+.player-overlay-active.disconnected-road::after,
+.disconnected-road.player-overlay-active::after {
+    display: none !important;
+    content: none !important;
+    visibility: hidden !important;
 }
 
 /* No power indicator for industrial zones */
