@@ -40,6 +40,9 @@ class PowerLineSystem {
         svg.style.pointerEvents = 'none';
         svg.style.zIndex = '100'; // Much higher z-index to be above all cells
         svg.style.overflow = 'visible';
+        svg.style.display = 'block'; // Always visible
+        svg.style.visibility = 'visible'; // Always visible
+        svg.style.opacity = '1'; // Fully opaque
         svg.setAttribute('preserveAspectRatio', 'none');
         
         // Only set grid to relative if it's not already positioned
@@ -86,24 +89,9 @@ class PowerLineSystem {
             return;
         }
         
-        // Clear existing connections for this player
-        this.clearPlayerConnections(playerId);
-        
-        // Find all power lines and power plants by this player within radius
-        // Use radius 1 for adjacent connections (8 directions) to create visible network
-        const radius = 1; // Connect to adjacent power lines for visible network
-        const nearbyPowerSources = this.findNearbyPowerSources(placedRow, placedCol, radius, playerId);
-        
-        console.log(`Found ${nearbyPowerSources.length} nearby power sources within radius ${radius}`);
-        
-        // Draw connections to nearby power sources
-        nearbyPowerSources.forEach(target => {
-            console.log(`Drawing connection to nearby source at (${target.row},${target.col})`);
-            this.drawPowerLineConnection(placedRow, placedCol, target.row, target.col, playerId);
-        });
-        
-        // Also update connections for all other power sources by this player
-        this.updateAllPlayerConnections(playerId);
+        // Instead of clearing and rebuilding just for this player, rebuild all connections
+        // This ensures the entire network is properly connected
+        this.rebuildAllPowerLineConnections();
     }
     
     findNearbyPowerSources(row, col, radius, playerId) {
@@ -204,12 +192,12 @@ class PowerLineSystem {
         line.setAttribute('x2', positions.x2);
         line.setAttribute('y2', positions.y2);
         line.setAttribute('stroke', '#FFD700'); // Gold color for power lines
-        line.setAttribute('stroke-width', '6'); // Make it even thicker for better visibility
+        line.setAttribute('stroke-width', '3'); // 3px line as requested
         line.setAttribute('stroke-opacity', '1.0'); // Fully opaque for maximum visibility
         line.setAttribute('stroke-linecap', 'round'); // Rounded line caps for smoother appearance
         // Also set via style for maximum compatibility
         line.style.stroke = '#FFD700';
-        line.style.strokeWidth = '6px';
+        line.style.strokeWidth = '3px';
         line.style.strokeOpacity = '1';
         line.style.opacity = '1';
         line.setAttribute('data-player-id', playerId);

@@ -95,7 +95,7 @@ class MapSystem {
                     console.log('Rebuilding all power line connections after map creation...');
                     this.powerLineSystem.rebuildAllPowerLineConnections();
                 }
-            }, 500);
+            }, 1000); // Increased delay to ensure everything is rendered
         }
         
         console.log('Map created with', this.mapSize.rows * this.mapSize.cols, 'cells');

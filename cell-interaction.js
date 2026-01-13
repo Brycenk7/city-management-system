@@ -464,12 +464,24 @@ class CellInteraction {
         if (this.mapSystem.currentTab === 'player') {
             const currentCell = this.mapSystem.cells[row][col];
             const naturalTerrain = ['forest', 'mountain', 'lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
+            const waterTerrain = ['lake', 'ocean', 'water', 'river', 'riverStart', 'riverEnd'];
             const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];
             const zoning = ['residential', 'commercial', 'industrial', 'mixed'];
             
             // Check if current cell is natural terrain
+            // EXCEPTION: Bridges are allowed on water if adjacent to a road or another bridge
+            const isWater = waterTerrain.includes(currentCell.attribute) || waterTerrain.includes(currentCell.class);
+            const isBridgePlacement = attribute === 'bridge';
+            const isAdjacentToRoad = this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToRoad(row, col);
+            const isAdjacentToBridge = this.mapSystem.roadSystem && this.mapSystem.roadSystem.isAdjacentToBridge(row, col);
+            
             if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
-                return false;
+                // Allow bridges on water if adjacent to a road or another bridge
+                if (isWater && isBridgePlacement && (isAdjacentToRoad || isAdjacentToBridge)) {
+                    // This is allowed, continue to bridge-specific validation
+                } else {
+                    return false;
+                }
             }
             
             // Prevent replacing existing infrastructure unless using erase
@@ -663,10 +675,26 @@ class CellInteraction {
     
     
     isValidBridgePlacement(row, col) {
-        // Bridge must be over water
+        // Bridge must be over water AND adjacent to a road or another bridge
         const currentCell = this.mapSystem.cells[row][col];
-        return ['water', 'lake', 'ocean', 'river'].includes(currentCell.attribute) || 
-               ['water', 'lake', 'ocean', 'river'].includes(currentCell.class);
+        const waterTypes = ['water', 'lake', 'ocean', 'river', 'riverStart', 'riverEnd'];
+        const isWater = waterTypes.includes(currentCell.attribute) || waterTypes.includes(currentCell.class);
+        
+        if (!isWater) {
+            return false; // Bridge must be on water
+        }
+        
+        // Bridge must be adjacent to a road or another bridge
+        if (this.mapSystem.roadSystem) {
+            if (this.mapSystem.roadSystem.isAdjacentToRoad(row, col)) {
+                return true; // Adjacent to a road
+            }
+            if (this.mapSystem.roadSystem.isAdjacentToBridge(row, col)) {
+                return true; // Adjacent to another bridge (allows continuous bridge networks)
+            }
+        }
+        
+        return false; // Not adjacent to a road or bridge
     }
     
     
@@ -696,7 +724,18 @@ class CellInteraction {
             let errorMessage = '';
             
             if (naturalTerrain.includes(currentCell.attribute) || naturalTerrain.includes(currentCell.class)) {
-                errorMessage = `Cannot place ${attribute} on ${currentCell.attribute || currentCell.class} terrain`;
+                // Special message for bridges
+                if (attribute === 'bridge') {
+                    const waterTypes = ['water', 'lake', 'ocean', 'river', 'riverStart', 'riverEnd'];
+                    const isWater = waterTypes.includes(currentCell.attribute) || waterTypes.includes(currentCell.class);
+                    if (isWater) {
+                        errorMessage = 'Bridge must be placed on water and adjacent to a road or another bridge';
+                    } else {
+                        errorMessage = `Cannot place bridge on ${currentCell.attribute || currentCell.class} terrain. Bridges must be placed on water.`;
+                    }
+                } else {
+                    errorMessage = `Cannot place ${attribute} on ${currentCell.attribute || currentCell.class} terrain`;
+                }
             } else {
                 // Check if trying to replace existing infrastructure
                 const infrastructure = ['road', 'bridge', 'powerPlant', 'powerLines', 'lumberYard', 'miningOutpost'];

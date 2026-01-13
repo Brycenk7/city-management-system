@@ -153,6 +153,16 @@ class UtilityFunctions {
     }
     
     loadMap() {
+        // Rebuild power line connections after map is loaded
+        if (this.mapSystem.powerLineSystem) {
+            setTimeout(() => {
+                if (this.mapSystem.powerLineSystem && this.mapSystem.powerLineSystem.rebuildAllPowerLineConnections) {
+                    console.log('Rebuilding power line connections after map load...');
+                    this.mapSystem.powerLineSystem.rebuildAllPowerLineConnections();
+                }
+            }, 500);
+        }
+        
         console.log('UtilityFunctions loadMap called');
         const input = document.getElementById('fileInput');
         if (input) {
@@ -219,6 +229,16 @@ class UtilityFunctions {
         
         // Update stats
         this.mapSystem.updateStats();
+        
+        // Rebuild power line connections after map data is loaded
+        if (this.mapSystem.powerLineSystem) {
+            setTimeout(() => {
+                if (this.mapSystem.powerLineSystem && this.mapSystem.powerLineSystem.rebuildAllPowerLineConnections) {
+                    console.log('Rebuilding power line connections after map data load...');
+                    this.mapSystem.powerLineSystem.rebuildAllPowerLineConnections();
+                }
+            }, 500);
+        }
         
         // Apply art mode if in viewer tab
         if (this.mapSystem.currentTab === 'viewer') {

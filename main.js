@@ -85,6 +85,19 @@ class MainApplication {
             }, 100);
         }
         
+        // Initialize power line overlay on page load
+        if (this.mapSystem.powerLineSystem) {
+            setTimeout(() => {
+                if (this.mapSystem.powerLineSystem && this.mapSystem.powerLineSystem.initPowerLineOverlay) {
+                    this.mapSystem.powerLineSystem.initPowerLineOverlay();
+                    // Rebuild connections if there are any power lines on the map
+                    if (this.mapSystem.powerLineSystem.rebuildAllPowerLineConnections) {
+                        this.mapSystem.powerLineSystem.rebuildAllPowerLineConnections();
+                    }
+                }
+            }, 1500); // Wait for map to be fully rendered
+        }
+        
         console.log('Initializing resource management...');
         this.resourceManagement.init();
         console.log('Resource management initialized');

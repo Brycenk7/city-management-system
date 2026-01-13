@@ -1729,7 +1729,7 @@ body {
     visibility: hidden !important;
 }
 
-/* Power line overlay styling - ensure it's visible */
+/* Power line overlay styling - ensure it's always visible */
 .power-line-overlay {
     position: absolute !important;
     top: 0 !important;
@@ -1739,11 +1739,14 @@ body {
     pointer-events: none !important;
     z-index: 100 !important;
     overflow: visible !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .power-line-overlay line {
     stroke: #FFD700 !important;
-    stroke-width: 6px !important;
+    stroke-width: 3px !important;
     stroke-opacity: 1 !important;
     opacity: 1 !important;
     stroke-linecap: round !important;
